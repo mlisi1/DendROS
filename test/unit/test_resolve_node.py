@@ -96,3 +96,73 @@ class TestExtractPackageName:
     def test_first_positional_not_flag(self):
         # The first non-flag arg is returned even if it looks odd
         assert extract_package_name(['launch', 'pkg', '--some-flag', 'file.py']) == 'pkg'
+
+
+# ── resolve_node — wildcard matching ─────────────────────────────────────────
+
+class TestResolveNodeWildcard:
+    def test_wildcard_suffix_matches_node(self):
+        color_map = {'nav2_*': '32'}
+        tag_map   = {'nav2_*': 'NAV'}
+        assert resolve_node('nav2_controller', color_map, tag_map) == ('32', 'NAV')
+
+    def test_wildcard_suffix_matches_second_node(self):
+        color_map = {'nav2_*': '32'}
+        tag_map   = {'nav2_*': 'NAV'}
+        assert resolve_node('nav2_planner', color_map, tag_map) == ('32', 'NAV')
+
+    def test_wildcard_does_not_match_unrelated_node(self):
+        color_map = {'nav2_*': '32'}
+        tag_map   = {'nav2_*': 'NAV'}
+        assert resolve_node('controller', color_map, tag_map) == (None, None)
+
+    def test_wildcard_prefix_pattern_matches_namespaced(self):
+        color_map = {'*/amcl': '34'}
+        tag_map   = {'*/amcl': 'LOC'}
+        assert resolve_node('/robot/amcl', color_map, tag_map) == ('34', 'LOC')
+
+    def test_wildcard_prefix_pattern_matches_deep_namespace(self):
+        color_map = {'*/amcl': '34'}
+        tag_map   = {'*/amcl': 'LOC'}
+        assert resolve_node('/a/b/c/amcl', color_map, tag_map) == ('34', 'LOC')
+
+    def test_exact_full_path_beats_wildcard(self):
+        color_map = {'nav2_controller': '31', 'nav2_*': '32'}
+        tag_map   = {'nav2_controller': 'CTRL', 'nav2_*': 'NAV'}
+        code, label = resolve_node('nav2_controller', color_map, tag_map)
+        assert code == '31'
+        assert label == 'CTRL'
+
+    def test_exact_basename_beats_wildcard(self):
+        color_map = {'nav2_planner': '31', 'nav2_*': '32'}
+        tag_map   = {'nav2_planner': 'PLAN', 'nav2_*': 'NAV'}
+        code, label = resolve_node('/ns/nav2_planner', color_map, tag_map)
+        assert code == '31'
+        assert label == 'PLAN'
+
+    def test_wildcard_basename_matches(self):
+        color_map = {'nav2_*': '32'}
+        tag_map   = {'nav2_*': 'NAV'}
+        assert resolve_node('/my_ns/nav2_controller', color_map, tag_map) == ('32', 'NAV')
+
+    def test_first_matching_wildcard_wins(self):
+        color_map = {'nav2_*': '32', 'nav*': '33'}
+        tag_map   = {'nav2_*': 'NAV2', 'nav*': 'NAV'}
+        code, _ = resolve_node('nav2_planner', color_map, tag_map)
+        assert code == '32'
+
+    def test_no_wildcard_match_returns_none(self):
+        color_map = {'nav2_*': '32'}
+        tag_map   = {'nav2_*': 'NAV'}
+        assert resolve_node('localization', color_map, tag_map) == (None, None)
+
+    def test_question_mark_wildcard(self):
+        color_map = {'node_?': '35'}
+        tag_map   = {'node_?': 'N'}
+        assert resolve_node('node_a', color_map, tag_map) == ('35', 'N')
+        assert resolve_node('node_ab', color_map, tag_map) == (None, None)
+
+    def test_wildcard_star_matches_anything(self):
+        color_map = {'*': '36'}
+        tag_map   = {'*': 'ALL'}
+        assert resolve_node('any_node_name', color_map, tag_map) == ('36', 'ALL')

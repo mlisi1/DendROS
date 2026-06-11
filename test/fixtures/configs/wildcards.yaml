@@ -1,0 +1,17 @@
+groups:
+  navigation:
+    color: "bold green"
+    label: "NAV"
+    nodes:
+      - nav2_*
+
+  localization:
+    color: "bold blue"
+    label: "LOC"
+    nodes:
+      - "*/amcl"
+
+defaults:
+  color_mode: "tag_only"
+  show_group_tag: true
+  unmatched_color: null

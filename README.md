@@ -83,14 +83,13 @@ groups:
     label: "LOC"
     nodes:
       - slam_toolbox
-      - robot_localization
+      - "*/amcl"            # wildcard: matches /any_ns/amcl
 
   navigation:
     color: "bold green"
     label: "NAV"
     nodes:
-      - bt_navigator
-      - controller_server
+      - nav2_*              # wildcard: covers all nav2_* nodes at once
 
   hardware:
     color: "#CC8800"        # hex truecolor
@@ -105,6 +104,19 @@ defaults:
 ```
 
 See [`docs/dendROS.yaml.example`](docs/dendROS.yaml.example) for the full annotated reference.
+
+### Wildcard node matching
+
+Node names support `fnmatch` shell-glob patterns. This is handy for stacks like Nav2 that spawn many nodes with a common prefix:
+
+| Pattern | Matches |
+|---|---|
+| `nav2_*` | `nav2_controller`, `nav2_planner`, `nav2_bt_navigator`, … |
+| `*/amcl` | `/robot/amcl`, `/my_ns/amcl`, … |
+| `*controller*` | any node whose basename contains "controller" |
+| `node_?` | `node_a`, `node_b`, … (one character) |
+
+Lookup order: exact full-path → exact basename → wildcard full-path → wildcard basename. The first match wins.
 
 ---
 ### Colors
@@ -164,4 +176,22 @@ DENDROS_DISABLE=1 ros2 launch my_pkg my_launch.py
 bash uninstall.sh
 ```
 
+
+## Tests
+
+Unit tests run without ROS or Docker:
+
+```bash
+python3 -m pytest test/unit/ -v
+```
+
+Automated pipeline (generates a timestamped report):
+
+```bash
+bash test/run_tests.sh           # unit only
+bash test/run_tests.sh --host    # unit + host integration
+bash test/run_tests.sh --docker  # unit + docker integration
+```
+
+CI runs on every push to `main` via GitHub Actions.
 

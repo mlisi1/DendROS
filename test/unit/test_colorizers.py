@@ -290,3 +290,58 @@ class TestColorizeLaunchMsg:
     def test_preserves_newline_tag_only(self):
         result = colorize_launch_msg(LAUNCH_LINE, CODE_BLUE, 'tag_only')
         assert result.endswith('\n')
+
+
+# ── WARN/ERROR embedded ANSI preservation ────────────────────────────────────
+
+class TestWarnErrorColors:
+    """Verify that ROS severity ANSI codes survive in tag_only mode and are stripped in full_line."""
+
+    # ROS 2 embeds e.g. \033[33m before [WARN] and \033[0m after — these live in
+    # the "rest" of the line, which tag_only never touches.
+    WARN_ANSI  = "[talker-1] \033[33m[WARN]\033[0m [1234.5] [/t]: Something slow\n"
+    ERROR_ANSI = "[talker-1] \033[31m[ERROR]\033[0m [1234.5] [/t]: Fatal issue\n"
+
+    def test_tag_only_warn_ansi_preserved(self):
+        result = colorize_tag_only(self.WARN_ANSI, CODE_BLUE, LABEL, show_tag=False)
+        # The yellow WARN code from ROS must still be in the output
+        assert '\033[33m' in result
+
+    def test_tag_only_error_ansi_preserved(self):
+        result = colorize_tag_only(self.ERROR_ANSI, CODE_BLUE, LABEL, show_tag=False)
+        assert '\033[31m' in result
+
+    def test_tag_only_warn_prefix_still_colored(self):
+        result = colorize_tag_only(self.WARN_ANSI, CODE_BLUE, LABEL, show_tag=False)
+        assert_segment_colored(result, '[talker-1]', CODE_BLUE)
+
+    def test_tag_only_error_prefix_still_colored(self):
+        result = colorize_tag_only(self.ERROR_ANSI, CODE_BLUE, LABEL, show_tag=False)
+        assert_segment_colored(result, '[talker-1]', CODE_BLUE)
+
+    def test_tag_only_message_uncolored(self):
+        result = colorize_tag_only(self.WARN_ANSI, CODE_BLUE, LABEL, show_tag=False)
+        assert_segment_uncolored(result, 'Something slow')
+
+    def test_full_line_warn_ansi_stripped(self):
+        result = colorize_full_line(self.WARN_ANSI, CODE_BLUE)
+        codes = ANSI_RE.findall(result)
+        assert '33' not in codes
+
+    def test_full_line_error_ansi_stripped(self):
+        result = colorize_full_line(self.ERROR_ANSI, CODE_BLUE)
+        codes = ANSI_RE.findall(result)
+        assert '31' not in codes
+
+    def test_full_line_only_node_code_remains(self):
+        result = colorize_full_line(self.WARN_ANSI, CODE_BLUE)
+        active = [c for c in ANSI_RE.findall(result) if c not in ('0', '')]
+        assert active == [CODE_BLUE]
+
+    def test_full_line_warn_text_preserved(self):
+        result = colorize_full_line(self.WARN_ANSI, CODE_BLUE)
+        assert 'Something slow' in strip_ansi(result)
+
+    def test_full_line_error_text_preserved(self):
+        result = colorize_full_line(self.ERROR_ANSI, CODE_BLUE)
+        assert 'Fatal issue' in strip_ansi(result)

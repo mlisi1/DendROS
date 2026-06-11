@@ -1,0 +1,16 @@
+[talker-1] [INFO] [1234.5] [/talker]: Publishing: 'Hello'
+[talker-1] [WARN] [1234.6] [/talker]: Queue is filling up
+[talker-1] [ERROR] [1234.7] [/talker]: Failed to publish message
+[talker-1] [INFO] [1234.8] [/talker]: Retrying...
+Traceback (most recent call last):
+  File "/opt/ros/humble/lib/demo_nodes_py/talker.py", line 42, in timer_callback
+    self.publisher_.publish(msg)
+  File "/opt/ros/humble/lib/python3.10/site-packages/rclpy/publisher.py", line 96, in publish
+    self._publisher.publish(msg)
+RuntimeError: publisher handle is invalid
+[ERROR] [talker-1]: process has died [pid 12345, exit code 1, cmd '/opt/ros/humble/lib/demo_nodes_cpp/talker']
+Segmentation fault (core dumped)
+[ros2run]: Process '[/opt/ros/humble/lib/demo_nodes_cpp/talker]' died with signal 11
+[INFO] [talker-1]: process started with pid [99999]
+
+[talker-1] [INFO] [1235.0] [/talker]: Recovered

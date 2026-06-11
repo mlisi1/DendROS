@@ -40,6 +40,15 @@ groups:
   # label: short tag shown as [LOC], [NAV], etc. in tag_only mode.
   # nodes: list of ROS 2 node names matched against the launch output prefix [node-N].
   #        Use bare name (slam_toolbox) or full namespace (/my_ns/slam_toolbox).
+  #
+  #   Wildcard patterns (fnmatch syntax) are supported:
+  #     nav2_*          — any node whose basename starts with nav2_
+  #     */amcl          — any node named amcl under any namespace
+  #     *controller*    — any node whose basename contains "controller"
+  #     node_?          — node_a, node_b, … (? matches one character)
+  #
+  #   Lookup order: exact full-path → exact basename → wildcard full-path → wildcard basename.
+  #   First matching pattern wins.
 
   localization:
     color: "bold blue"
@@ -47,15 +56,13 @@ groups:
     nodes:
       - slam_toolbox
       - robot_localization
+      - "*/amcl"             # matches /any_ns/amcl
 
   navigation:
     color: "bold green"
     label: "NAV"
     nodes:
-      - bt_navigator
-      - controller_server
-      - planner_server
-      - recoveries_server
+      - nav2_*              # covers bt_navigator, controller_server, planner_server, …
 
   perception:
     color: "light cyan"

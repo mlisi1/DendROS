@@ -183,3 +183,55 @@ class TestDebugNoConfig:
         stdout, _, _ = run_pipe(str(tmp_path), 'nonexistent_pkg', lines,
                                 env_extra={'DENDROS_DEBUG': '1'})
         assert stdout == ''.join(lines)
+
+
+# ── Config error reporting ────────────────────────────────────────────────────
+
+class TestConfigErrors:
+    """Verify that config parse errors are reported to stderr and passthrough is preserved."""
+
+    def _make_bad_config(self, tmp_path, pkg_name, content):
+        config_dir = tmp_path / 'share' / pkg_name / 'config'
+        config_dir.mkdir(parents=True)
+        (config_dir / 'dendROS.yaml').write_text(content)
+        return str(tmp_path)
+
+    def test_malformed_yaml_reports_to_stderr(self, tmp_path):
+        prefix = self._make_bad_config(tmp_path, 'err_pkg', 'groups: [\nbad yaml]]]')
+        _, stderr, _ = run_pipe(prefix, 'err_pkg', [INPUT_LINE])
+        plain = strip_ansi(stderr)
+        assert 'config error' in plain
+
+    def test_malformed_yaml_includes_dendros_tag(self, tmp_path):
+        prefix = self._make_bad_config(tmp_path, 'err_pkg2', 'groups: [\nbad yaml]]]')
+        _, stderr, _ = run_pipe(prefix, 'err_pkg2', [INPUT_LINE])
+        assert '[dendROS]' in stderr
+
+    def test_malformed_yaml_includes_config_path(self, tmp_path):
+        prefix = self._make_bad_config(tmp_path, 'err_pkg3', ': bad\n  yaml:')
+        _, stderr, _ = run_pipe(prefix, 'err_pkg3', [INPUT_LINE])
+        plain = strip_ansi(stderr)
+        assert 'dendROS.yaml' in plain
+
+    def test_malformed_yaml_stdout_passthrough(self, tmp_path):
+        prefix = self._make_bad_config(tmp_path, 'err_pkg4', 'groups: [\nbad yaml]]]')
+        lines = [INPUT_LINE, "plain line\n"]
+        stdout, _, _ = run_pipe(prefix, 'err_pkg4', lines)
+        assert stdout == ''.join(lines)
+
+    def test_malformed_yaml_no_ansi_on_stdout(self, tmp_path):
+        prefix = self._make_bad_config(tmp_path, 'err_pkg5', ': bad\n  yaml:')
+        stdout, _, _ = run_pipe(prefix, 'err_pkg5', [INPUT_LINE])
+        assert not ANSI_RE.search(stdout)
+
+    def test_valid_config_no_error_on_stderr(self, tmp_path):
+        prefix = make_prefix(tmp_path, PKG, 'basic.yaml')
+        _, stderr, _ = run_pipe(prefix, PKG, [INPUT_LINE])
+        plain = strip_ansi(stderr).strip()
+        assert 'config error' not in plain
+
+    def test_error_message_uses_magenta_dendros_tag(self, tmp_path):
+        prefix = self._make_bad_config(tmp_path, 'err_pkg6', 'groups: [\nbad yaml]]]')
+        _, stderr, _ = run_pipe(prefix, 'err_pkg6', [INPUT_LINE])
+        # The [dendROS] tag is styled with \033[35;1m (magenta bold)
+        assert '\033[35;1m' in stderr

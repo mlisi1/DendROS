@@ -307,3 +307,59 @@ class TestMixedInput:
         lines = fixture_lines('mixed.txt')
         stdout, _, _ = run_pipe(prefix, self.PKG, lines)
         assert len(stdout.splitlines()) == len(lines)
+
+
+# ── wildcard node matching ────────────────────────────────────────────────────
+
+class TestWildcardPipeline:
+    PKG = 'test_pkg_wc'
+
+    def test_wildcard_suffix_colors_matching_node(self, tmp_path):
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('wildcards.yaml'))
+        from dendROS_pipe import _resolve_color
+        nav_code = _resolve_color('bold green')
+        lines = ["[nav2_controller-1] [INFO] [1.0] [n]: Planning\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        assert_segment_colored(stdout, '[nav2_controller-1]', nav_code)
+
+    def test_wildcard_matches_second_node_same_pattern(self, tmp_path):
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('wildcards.yaml'))
+        from dendROS_pipe import _resolve_color
+        nav_code = _resolve_color('bold green')
+        lines = ["[nav2_planner-1] [INFO] [1.0] [n]: Computing path\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        assert_segment_colored(stdout, '[nav2_planner-1]', nav_code)
+
+    def test_non_matching_node_passes_through(self, tmp_path):
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('wildcards.yaml'))
+        lines = ["[other_node-1] [INFO] [1.0] [o]: message\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        assert not ANSI_RE.search(stdout)
+
+    def test_wildcard_namespace_pattern_matches(self, tmp_path):
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('wildcards.yaml'))
+        from dendROS_pipe import _resolve_color
+        loc_code = _resolve_color('bold blue')
+        lines = ["[/robot/amcl-1] [INFO] [1.0] [a]: Localizing\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        assert_segment_colored(stdout, '[/robot/amcl-1]', loc_code)
+
+    def test_wildcard_badge_inserted(self, tmp_path):
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('wildcards.yaml'))
+        lines = ["[nav2_controller-1] [INFO] [1.0] [n]: msg\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        assert '[NAV]' in stdout
+
+    def test_message_text_uncolored_with_wildcard(self, tmp_path):
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('wildcards.yaml'))
+        lines = ["[nav2_controller-1] [INFO] [1.0] [n]: Planning route\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        assert_segment_uncolored(stdout, 'Planning route')
+
+    def test_wildcard_launch_framework_line(self, tmp_path):
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('wildcards.yaml'))
+        from dendROS_pipe import _resolve_color
+        nav_code = _resolve_color('bold green')
+        lines = ["[INFO] [nav2_controller-1]: process started with pid [1234]\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        assert_segment_colored(stdout, '[nav2_controller-1]', nav_code)

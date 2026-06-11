@@ -4,6 +4,7 @@
 import sys
 import os
 import re
+import fnmatch
 import subprocess
 
 try:
@@ -207,12 +208,26 @@ def colorize_launch_msg(line, ansi_code, color_mode):
 
 
 def resolve_node(node_name, color_map, tag_map):
-    """Return (ansi_code, label) for node_name, trying full name then basename."""
+    """Return (ansi_code, label) for node_name.
+
+    Lookup order:
+      1. Exact full-path match  (/ns/talker  vs  /ns/talker)
+      2. Exact basename match   (/ns/talker  vs  talker)
+      3. Wildcard full-path     (/ns/talker  vs  /ns/talk*)
+      4. Wildcard basename      (/ns/talker  vs  talk*)
+    First matching pattern wins.
+    """
     if node_name in color_map:
         return color_map[node_name], tag_map.get(node_name)
     basename = node_name.rsplit('/', 1)[-1]
     if basename in color_map:
         return color_map[basename], tag_map.get(basename)
+    for pattern, code in color_map.items():
+        if fnmatch.fnmatch(node_name, pattern):
+            return code, tag_map.get(pattern)
+    for pattern, code in color_map.items():
+        if fnmatch.fnmatch(basename, pattern):
+            return code, tag_map.get(pattern)
     return None, None
 
 
@@ -226,8 +241,9 @@ def main():
     if config_path:
         try:
             color_map, tag_map, defaults = load_config(config_path)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f'\033[35;1m[dendROS]\033[0m config error ({config_path}): {e}',
+                  file=sys.stderr, flush=True)
 
     show_tag = defaults.get('show_group_tag', True)
     color_mode = defaults.get('color_mode', 'tag_only')
