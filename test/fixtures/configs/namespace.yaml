@@ -1,0 +1,12 @@
+groups:
+  ns_group:
+    color: "magenta"
+    label: "NS"
+    nodes:
+      - /robot/talker
+      - /robot/listener
+
+defaults:
+  color_mode: "tag_only"
+  show_group_tag: true
+  unmatched_color: null

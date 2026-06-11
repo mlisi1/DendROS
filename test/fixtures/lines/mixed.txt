@@ -1,0 +1,9 @@
+[INFO] [talker-1]: process started with pid [12345]
+[INFO] [listener-1]: process started with pid [12346]
+[talker-1] [INFO] [1234.567890123] [talker]: Publishing: 'Hello World: 1'
+[listener-1] [INFO] [1234.570000000] [listener]: I heard: [Hello World: 1]
+[talker-1] [INFO] [1235.000000000] [talker]: Publishing: 'Hello World: 2'
+[WARN] [talker-1]: process had stderr output: some warning
+Some plain text that is not from any ROS node
+[listener-1] [WARN] [1235.050000000] [listener]: Slow callback detected
+[ERROR] [listener-1]: process has died [pid 12346, exit code -11, signal 11]

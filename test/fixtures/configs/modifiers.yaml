@@ -1,0 +1,41 @@
+groups:
+  bold_group:
+    color: "bold red"
+    label: "BOLD"
+    nodes:
+      - bold_node
+
+  light_group:
+    color: "light blue"
+    label: "LIT"
+    nodes:
+      - light_node
+
+  dark_group:
+    color: "dark green"
+    label: "DRK"
+    nodes:
+      - dark_node
+
+  bold_light_group:
+    color: "bold light cyan"
+    label: "BLC"
+    nodes:
+      - boldlight_node
+
+  bright_group:
+    color: "bright magenta"
+    label: "BRT"
+    nodes:
+      - bright_node
+
+  dim_group:
+    color: "dim yellow"
+    label: "DIM"
+    nodes:
+      - dim_node
+
+defaults:
+  color_mode: "tag_only"
+  show_group_tag: true
+  unmatched_color: null

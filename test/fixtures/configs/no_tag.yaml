@@ -1,0 +1,11 @@
+groups:
+  talkers:
+    color: "blue"
+    label: "TALK"
+    nodes:
+      - talker
+
+defaults:
+  color_mode: "tag_only"
+  show_group_tag: false
+  unmatched_color: null

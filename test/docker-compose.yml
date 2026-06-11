@@ -1,0 +1,17 @@
+services:
+  dendros_test:
+    build:
+      context: ..           # build context is the repo root
+      dockerfile: test/Dockerfile
+    tty: true               # allocates a PTY so ANSI codes render
+    stdin_open: true        # needed for interactive docker compose exec
+    environment:
+      - RCUTILS_COLORIZED_OUTPUT=1
+    # Container stays alive; connect with:
+    #   docker compose exec dendros_test bash
+    # Then run:
+    #   ros2 launch test_bringup test.launch.py
+    #
+    # To see dendROS debug output:
+    #   DENDROS_DEBUG=1 ros2 launch test_bringup test.launch.py
+    command: sleep infinity

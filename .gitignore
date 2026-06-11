@@ -1,3 +1,12 @@
-*.md
+# Python cache
 __pycache__/
-test/
+
+# Colcon build artifacts inside test/
+test/build/
+test/install/
+test/log/
+
+# Generated test reports
+test/reports/
+
+*.md

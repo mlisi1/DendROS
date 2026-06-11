@@ -1,0 +1,3 @@
+pytest>=7.0
+pytest-html>=3.0
+pyyaml>=5.0

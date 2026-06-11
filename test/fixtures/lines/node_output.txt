@@ -1,0 +1,7 @@
+[talker-1] [INFO] [1234.567890123] [talker]: Publishing: 'Hello World: 1'
+[talker-2] [INFO] [1234.580000000] [talker]: Publishing: 'Hello World: 1'
+[listener-1] [INFO] [1234.570000000] [listener]: I heard: [Hello World: 1]
+[listener-1] [WARN] [1234.590000000] [listener]: Queue is getting full
+[talker-1] [INFO] [1235.567890123] [talker]: Publishing: 'Hello World: 2'
+[listener-1] [ERROR] [1235.600000000] [listener]: Message processing failed
+[listener-2] [INFO] [1235.610000000] [listener]: I heard: [Hello World: 2]

@@ -1,0 +1,6 @@
+groups: {}
+
+defaults:
+  color_mode: "tag_only"
+  show_group_tag: true
+  unmatched_color: null

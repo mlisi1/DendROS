@@ -1,0 +1,4 @@
+[unknown_node-1] [INFO] [1234.567890] [unknown_node]: Some message from unknown node
+[another_node-1] [INFO] [1234.570000] [another_node]: Another message from another node
+[INFO] [unknown_node-1]: process started with pid [9999]
+[third_node-1] [WARN] [1234.580000] [third_node]: Warning from third unmatched node

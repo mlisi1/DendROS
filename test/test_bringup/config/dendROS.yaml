@@ -1,0 +1,18 @@
+groups:
+
+  talkers:
+    color: "@#FF6600"
+    label: "TALK"
+    nodes:
+      - talker         # matches [talker-N] from both demo_nodes_cpp and demo_nodes_py
+
+  listeners:
+    color: "bold yellow"
+    label: "LISTEN"
+    nodes:
+      - listener
+
+defaults:
+  color_mode: "tag_only"
+  show_group_tag: true
+  unmatched_color: null

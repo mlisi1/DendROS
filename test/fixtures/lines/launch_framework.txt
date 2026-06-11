@@ -1,0 +1,6 @@
+[INFO] [talker-1]: process started with pid [12345]
+[INFO] [listener-1]: process started with pid [12346]
+[INFO] [talker-2]: process started with pid [12347]
+[WARN] [talker-1]: process had stderr output: warning message here
+[ERROR] [listener-1]: process has died [pid 12346, exit code -11, signal 11]
+[INFO] [talker-1]: process has finished cleanly [pid 12345, exit code 0]

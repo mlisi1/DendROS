@@ -231,7 +231,8 @@ def main():
 
     show_tag = defaults.get('show_group_tag', True)
     color_mode = defaults.get('color_mode', 'tag_only')
-    unmatched_color = defaults.get('unmatched_color') or None
+    raw_unmatched = defaults.get('unmatched_color') or None
+    unmatched_color = _resolve_color(str(raw_unmatched)) if raw_unmatched else None
 
     if _DEBUG:
         n_groups = len({v for v in color_map.values()})

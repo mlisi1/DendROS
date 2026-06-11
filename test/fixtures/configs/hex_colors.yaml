@@ -1,0 +1,23 @@
+groups:
+  group_a:
+    color: "#FF6600"
+    label: "ORG"
+    nodes:
+      - node_a
+
+  group_b:
+    color: "@#00AAFF"
+    label: "BLU"
+    nodes:
+      - node_b
+
+  group_c:
+    color: "bold #00FF44"
+    label: "GRN"
+    nodes:
+      - node_c
+
+defaults:
+  color_mode: "tag_only"
+  show_group_tag: true
+  unmatched_color: null

@@ -1,0 +1,11 @@
+groups:
+  raw_group:
+    color: "34;1"
+    label: "RAW"
+    nodes:
+      - raw_node
+
+defaults:
+  color_mode: "tag_only"
+  show_group_tag: true
+  unmatched_color: null

@@ -1,0 +1,26 @@
+groups:
+  navigation:
+    color: "bold green"
+    label: "NAV"
+    nodes:
+      - nav2_controller
+      - nav2_planner
+
+  localization:
+    color: "bold blue"
+    label: "LOC"
+    nodes:
+      - slam_toolbox
+      - amcl
+
+  hardware:
+    color: "bold yellow"
+    label: "HW"
+    nodes:
+      - lidar_driver
+      - imu_driver
+
+defaults:
+  color_mode: "tag_only"
+  show_group_tag: true
+  unmatched_color: null
