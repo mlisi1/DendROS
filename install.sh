@@ -46,8 +46,11 @@ fi
 # Copy files
 $SUDO mkdir -p "$INSTALL_DIR"
 $SUDO cp "${SCRIPT_DIR}/dendROS/dendROS_pipe.py" "$INSTALL_DIR/"
+$SUDO cp "${SCRIPT_DIR}/dendROS/dendros_config.py" "$INSTALL_DIR/"
 $SUDO cp "${SCRIPT_DIR}/dendROS/dendROS.sh" "$INSTALL_DIR/"
+[[ -f "${SCRIPT_DIR}/res/dendros.png" ]] && $SUDO cp "${SCRIPT_DIR}/res/dendros.png" "$INSTALL_DIR/"
 $SUDO chmod +x "$INSTALL_DIR/dendROS_pipe.py"
+$SUDO chmod +x "$INSTALL_DIR/dendros_config.py"
 $SUDO chmod 644 "$INSTALL_DIR/dendROS.sh"
 
 echo -e "${GREEN}[DendROS] Files installed to ${INSTALL_DIR}${RESET}"

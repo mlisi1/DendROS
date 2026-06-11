@@ -231,16 +231,43 @@ def resolve_node(node_name, color_map, tag_map):
     return None, None
 
 
+def _load_global_defaults():
+    """Load ~/.config/dendROS/defaults.yaml as baseline defaults."""
+    path = os.path.expanduser('~/.config/dendROS/defaults.yaml')
+    if not os.path.isfile(path):
+        return {}
+    try:
+        with open(path) as f:
+            data = yaml.safe_load(f) or {}
+        keys = ('color_mode', 'show_group_tag', 'unmatched_color', 'debug')
+        return {k: v for k, v in data.items() if k in keys}
+    except Exception:
+        return {}
+
+
 def main():
+    global _DEBUG
     argv = sys.argv[1:]
+
+    global_cfg = _load_global_defaults()
+    if global_cfg.get('debug', False):
+        _DEBUG = True
 
     pkg_name = extract_package_name(argv) if argv else None
     config_path = find_config(pkg_name) if pkg_name else None
 
-    color_map, tag_map, defaults = {}, {}, {}
+    # Start with global defaults, then let per-package config override
+    base = {
+        'color_mode':      global_cfg.get('color_mode',      'tag_only'),
+        'show_group_tag':  global_cfg.get('show_group_tag',  True),
+        'unmatched_color': global_cfg.get('unmatched_color', None),
+    }
+
+    color_map, tag_map, defaults = {}, {}, base
     if config_path:
         try:
-            color_map, tag_map, defaults = load_config(config_path)
+            color_map, tag_map, pkg_defaults = load_config(config_path)
+            defaults = {**base, **pkg_defaults}
         except Exception as e:
             print(f'\033[35;1m[dendROS]\033[0m config error ({config_path}): {e}',
                   file=sys.stderr, flush=True)

@@ -1,6 +1,18 @@
 _DENDROS_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 _DENDROS_PIPE="${_DENDROS_DIR}/dendROS_pipe.py"
 
+dendros() {
+    case "${1:-}" in
+        config) python3 "${_DENDROS_DIR}/dendros_config.py" ;;
+        *)
+            echo "Usage: dendros <command>"
+            echo ""
+            echo "Commands:"
+            echo "  config    Open the interactive config editor"
+            ;;
+    esac
+}
+
 ros2() {
     # Set DENDROS_DISABLE=1 to bypass colorization and use the real ros2 directly
     if [[ -n "${DENDROS_DISABLE:-}" && "${DENDROS_DISABLE}" != "0" ]]; then

@@ -154,6 +154,35 @@ Available names: `black` `red` `green` `yellow` `blue` `magenta` `cyan` `white`
 
 ---
 
+## Global config
+
+Run `dendros config` to open an interactive TUI for setting global defaults that apply across all packages:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  DendROS config                                      │
+│                                                      │
+│  color_mode        [ tag_only ]                      │
+│  show_group_tag    [ on      ]                       │
+│  unmatched_color   [ null    ]                       │
+│  debug             [ off     ]                       │
+│                                                      │
+│  s save   q quit                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+| Key | Action |
+|---|---|
+| `↑` / `↓` | Move between fields |
+| `→` / `←` / `Space` | Cycle option forward / backward |
+| `e` / `Enter` | Edit text field |
+| `s` | Save |
+| `q` | Quit |
+
+Settings are written to `~/.config/dendROS/defaults.yaml` and used as a baseline whenever `ros2 launch` or `ros2 run` is invoked. Per-package `dendROS.yaml` `defaults:` sections override them.
+
+---
+
 ## Environment variables
 
 | Variable | Effect |

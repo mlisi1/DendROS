@@ -111,6 +111,9 @@ def run_pipe(ament_prefix: str, pkg_name: str, lines: list,
     env['AMENT_PREFIX_PATH'] = ament_prefix
     # Prevent accidental ros2-binary lookup from interfering
     env.pop('ROS_DISTRO', None)
+    # Isolate from the user's ~/.config/dendROS/defaults.yaml so global
+    # debug/color settings don't leak into tests
+    env['HOME'] = ament_prefix
     if env_extra:
         env.update(env_extra)
 
