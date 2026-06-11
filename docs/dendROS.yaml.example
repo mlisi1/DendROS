@@ -1,0 +1,88 @@
+# dendROS.yaml — color configuration for DendROS
+#
+# Place this file at: <your_package>/config/dendROS.yaml
+# (e.g. my_robot_bringup/config/dendROS.yaml)
+#
+# DendROS reads this file from the package named in your ros2 launch command.
+# All nodes in your launch graph — including those from included packages —
+# can be listed here under the appropriate group.
+
+groups:
+
+  # Each group gets a color and an optional short label badge.
+  #
+  # color: accepts color names OR raw ANSI SGR codes.
+  #
+  #   Color names:
+  #     black, red, green, yellow, blue, magenta, cyan, white
+  #
+  #   Modifiers (can be combined):
+  #     light / bright  →  bright variant  (light yellow, bright blue)
+  #     dark  / dim     →  dim variant     (dark red, dim cyan)
+  #     bold            →  bold            (bold green, bold light magenta)
+  #
+  #   Examples:
+  #     "yellow"             standard yellow
+  #     "light yellow"       bright yellow
+  #     "dark yellow"        dim yellow
+  #     "bold blue"          bold blue
+  #     "bold light cyan"    bold bright cyan
+  #
+  #   Hex truecolor (24-bit, requires a modern terminal):
+  #     "#FF6600"            orange, normal
+  #     "@#FF6600"           orange, bold  (@-prefix = bold)
+  #     "bold #FF6600"       same as above
+  #
+  #   Raw ANSI SGR codes still work:
+  #     "34;1"               bold blue (same as "bold blue")
+  #     "92"                 bright green (same as "light green")
+  #
+  # label: short tag shown as [LOC], [NAV], etc. in tag_only mode.
+  # nodes: list of ROS 2 node names matched against the launch output prefix [node-N].
+  #        Use bare name (slam_toolbox) or full namespace (/my_ns/slam_toolbox).
+
+  localization:
+    color: "bold blue"
+    label: "LOC"
+    nodes:
+      - slam_toolbox
+      - robot_localization
+
+  navigation:
+    color: "bold green"
+    label: "NAV"
+    nodes:
+      - bt_navigator
+      - controller_server
+      - planner_server
+      - recoveries_server
+
+  perception:
+    color: "light cyan"
+    label: "PERC"
+    nodes:
+      - obstacle_detector
+      - costmap_filter_info_server
+
+  hardware:
+    color: "dark yellow"
+    label: "HW"
+    nodes:
+      - robot_state_publisher
+      - joint_state_publisher
+      - base_controller
+
+defaults:
+  # null = unlisted nodes are passed through unchanged (recommended).
+  # Accepts a color name or raw ANSI code to tint all unmatched nodes.
+  unmatched_color: null
+
+  # Show colored [LOC] / [NAV] badges after the [node-N] prefix.
+  show_group_tag: true
+
+  # "tag_only"  — color only the [node-N] prefix and [TAG] badge.
+  #               Preserves ROS 2 severity colors (WARN=yellow, ERROR=red).
+  #               Recommended for mixed-severity output.
+  # "full_line" — color the entire line. Good for at-a-glance group separation
+  #               but overrides severity colors.
+  color_mode: "tag_only"

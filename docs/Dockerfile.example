@@ -1,0 +1,15 @@
+# Dockerfile.example — dendROS integration for a ROS 2 image
+#
+# Copy this snippet into your own Dockerfile (after your ROS 2 base image setup).
+# dendROS requires no changes to your launch files or ROS 2 commands.
+
+# --- Example base (adapt to your distro) ---
+# FROM ros:humble
+# ... your existing layers ...
+
+# --- dendROS ---
+COPY dendROS/ /usr/local/dendROS/
+RUN pip3 install --no-cache-dir pyyaml \
+ && chmod +x /usr/local/dendROS/dendROS_pipe.py \
+ && printf '\n# dendROS — colorized ROS 2 output\nsource /usr/local/dendROS/dendROS.sh\n' \
+    >> /root/.bashrc
