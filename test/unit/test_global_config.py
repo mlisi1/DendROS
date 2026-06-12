@@ -73,10 +73,14 @@ class TestLoadGlobalConfig:
             "unmatched_color": "bold blue",
             "debug": True,
             "config_merge": False,
+            "colorize_launch_msgs": False,
+            "unmatched_tag": "?",
+            "dim_unmatched": True,
             "init_modify_build": False,
             "init_on_existing": "overwrite",
             "init_color": "null",
             "init_color_bold": True,
+            "init_label": True,
         }
         with open(tmp_config, "w") as f:
             yaml.dump(data, f)
@@ -142,10 +146,14 @@ class TestSaveGlobalConfig:
             "unmatched_color": "#FF6600",
             "debug": True,
             "config_merge": False,
+            "colorize_launch_msgs": False,
+            "unmatched_tag": "?",
+            "dim_unmatched": True,
             "init_modify_build": False,
             "init_on_existing": "overwrite",
             "init_color": "null",
             "init_color_bold": True,
+            "init_label": True,
         }
         save_global_config(custom)
         result = load_global_config()

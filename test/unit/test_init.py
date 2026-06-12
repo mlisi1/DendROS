@@ -339,14 +339,15 @@ class TestWriteConfig:
             data = yaml.safe_load(f)
         assert list(data['groups'].keys()) == ['aaa', 'zzz']
 
-    def test_each_group_has_color_no_label(self, tmp_path):
+    def test_each_group_has_color_and_empty_label(self, tmp_path):
         path = str(tmp_path / 'dendROS.yaml')
         write_config(path, {'nav2_bringup': ['node_a']})
         with open(path) as f:
             data = yaml.safe_load(f)
         grp = data['groups']['nav2_bringup']
         assert 'color' in grp
-        assert 'label' not in grp
+        assert 'label' in grp
+        assert grp['label'] == ''
 
     def test_null_color_when_palette_disabled(self, tmp_path):
         path = str(tmp_path / 'dendROS.yaml')
@@ -405,6 +406,35 @@ class TestWriteConfig:
         from dendros_init import _bold_color
         assert _bold_color('null') == 'null'
 
+    def test_use_label_false_writes_empty_label(self, tmp_path):
+        path = str(tmp_path / 'dendROS.yaml')
+        write_config(path, {'nav2_bringup': ['node_a']}, use_label=False)
+        with open(path) as f:
+            data = yaml.safe_load(f)
+        assert data['groups']['nav2_bringup']['label'] == ''
+
+    def test_use_label_true_writes_auto_label(self, tmp_path):
+        path = str(tmp_path / 'dendROS.yaml')
+        write_config(path, {'nav2_bringup': ['node_a']}, use_label=True)
+        with open(path) as f:
+            data = yaml.safe_load(f)
+        label = data['groups']['nav2_bringup']['label']
+        assert label == 'NB'
+
+    def test_use_label_true_single_word_package(self, tmp_path):
+        path = str(tmp_path / 'dendROS.yaml')
+        write_config(path, {'slam': ['node_a']}, use_label=True)
+        with open(path) as f:
+            data = yaml.safe_load(f)
+        assert data['groups']['slam']['label'] == 'SLA'
+
+    def test_default_label_entry_is_always_written(self, tmp_path):
+        path = str(tmp_path / 'dendROS.yaml')
+        write_config(path, {'my_pkg': ['n']})
+        with open(path) as f:
+            data = yaml.safe_load(f)
+        assert 'label' in data['groups']['my_pkg']
+
 
 # ── merge_config ──────────────────────────────────────────────────────────────
 
@@ -445,12 +475,12 @@ class TestMergeConfig:
         path = self._make_config(tmp_path, {'pkg_a': ['n1', 'n2']})
         assert merge_config(path, {'pkg_a': ['n1', 'n2']}) == 0
 
-    def test_new_group_has_no_label(self, tmp_path):
+    def test_new_group_has_empty_label(self, tmp_path):
         path = self._make_config(tmp_path, {'pkg_a': ['n1']})
         merge_config(path, {'pkg_b': ['n2']})
         with open(path) as f:
             data = yaml.safe_load(f)
-        assert 'label' not in data['groups']['pkg_b']
+        assert data['groups']['pkg_b'].get('label') == ''
 
     def test_new_group_use_bold(self, tmp_path):
         path = self._make_config(tmp_path, {'pkg_a': ['n1']})
@@ -458,6 +488,117 @@ class TestMergeConfig:
         with open(path) as f:
             data = yaml.safe_load(f)
         assert data['groups']['pkg_b']['color'].startswith('bold ')
+
+    def test_new_group_use_label_true_writes_auto_label(self, tmp_path):
+        path = self._make_config(tmp_path, {'pkg_a': ['n1']})
+        merge_config(path, {'nav2_bringup': ['n2']}, use_label=True)
+        with open(path) as f:
+            data = yaml.safe_load(f)
+        assert data['groups']['nav2_bringup']['label'] == 'NB'
+
+    def test_new_group_use_label_false_writes_empty_label(self, tmp_path):
+        path = self._make_config(tmp_path, {'pkg_a': ['n1']})
+        merge_config(path, {'pkg_b': ['n2']}, use_label=False)
+        with open(path) as f:
+            data = yaml.safe_load(f)
+        assert data['groups']['pkg_b'].get('label') == ''
+
+
+# ── CLI flag aliases (-r / -l) ────────────────────────────────────────────────
+
+class TestCLIFlags:
+    def _make_pkg_with_launch(self, tmp_path, pkg_name='test_pkg'):
+        pkg_dir = tmp_path / pkg_name
+        (pkg_dir / 'launch').mkdir(parents=True)
+        (pkg_dir / 'config').mkdir()
+        (pkg_dir / 'package.xml').write_text(
+            f'<?xml version="1.0"?><package format="3"><name>{pkg_name}</name></package>'
+        )
+        (pkg_dir / 'launch' / 'main.launch.py').write_text(
+            "Node(package='test_pkg', executable='my_node', name='my_node')\n"
+        )
+        return pkg_dir
+
+    def test_short_r_flag_equals_recursive(self, tmp_path, capsys):
+        pkg_dir = self._make_pkg_with_launch(tmp_path)
+        orig_cwd = os.getcwd()
+        os.chdir(str(pkg_dir))
+        try:
+            main(['-r'])
+        except SystemExit:
+            pass
+        finally:
+            os.chdir(orig_cwd)
+        out = capsys.readouterr().out
+        assert 'recursive' in out.lower() or 'scanning' in out.lower()
+
+    def test_long_recursive_flag_still_works(self, tmp_path, capsys):
+        pkg_dir = self._make_pkg_with_launch(tmp_path)
+        orig_cwd = os.getcwd()
+        os.chdir(str(pkg_dir))
+        try:
+            main(['--recursive'])
+        except SystemExit:
+            pass
+        finally:
+            os.chdir(orig_cwd)
+        out = capsys.readouterr().out
+        assert 'recursive' in out.lower() or 'scanning' in out.lower()
+
+    def test_short_l_flag_generates_auto_labels(self, tmp_path, capsys):
+        pkg_dir = self._make_pkg_with_launch(tmp_path, 'slam_toolbox')
+        orig_cwd = os.getcwd()
+        os.chdir(str(pkg_dir))
+        try:
+            main(['-l'])
+        except SystemExit:
+            pass
+        finally:
+            os.chdir(orig_cwd)
+        config_path = pkg_dir / 'config' / 'dendROS.yaml'
+        if config_path.exists():
+            with open(config_path) as f:
+                data = yaml.safe_load(f)
+            groups = data.get('groups') or {}
+            for grp in groups.values():
+                assert grp.get('label') != ''
+
+    def test_long_labels_flag_generates_auto_labels(self, tmp_path, capsys):
+        pkg_dir = self._make_pkg_with_launch(tmp_path, 'nav2_bringup')
+        orig_cwd = os.getcwd()
+        os.chdir(str(pkg_dir))
+        try:
+            main(['--labels'])
+        except SystemExit:
+            pass
+        finally:
+            os.chdir(orig_cwd)
+        config_path = pkg_dir / 'config' / 'dendROS.yaml'
+        if config_path.exists():
+            with open(config_path) as f:
+                data = yaml.safe_load(f)
+            groups = data.get('groups') or {}
+            for grp in groups.values():
+                assert grp.get('label') != ''
+
+    def test_no_label_flag_writes_empty_label(self, tmp_path, capsys):
+        pkg_dir = self._make_pkg_with_launch(tmp_path, 'my_pkg')
+        orig_cwd = os.getcwd()
+        os.chdir(str(pkg_dir))
+        try:
+            main([])
+        except SystemExit:
+            pass
+        finally:
+            os.chdir(orig_cwd)
+        config_path = pkg_dir / 'config' / 'dendROS.yaml'
+        if config_path.exists():
+            with open(config_path) as f:
+                data = yaml.safe_load(f)
+            groups = data.get('groups') or {}
+            for grp in groups.values():
+                assert 'label' in grp
+                assert grp['label'] == ''
 
 
 # ── modify_cmake ──────────────────────────────────────────────────────────────

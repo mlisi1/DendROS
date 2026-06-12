@@ -1,0 +1,17 @@
+groups:
+  nav:
+    color: "bold green"
+    label: "NAV"
+    nodes:
+      - nav2_controller
+
+  hardware:
+    color: "dark yellow"
+    label: "HW"
+    color_mode: full_line
+    nodes:
+      - robot_state_publisher
+
+defaults:
+  color_mode: tag_only
+  show_group_tag: true

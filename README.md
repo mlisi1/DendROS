@@ -80,7 +80,7 @@ groups:
 
   localization:
     color: "bold blue"
-    label: "LOC"            # optional — shows [LOC] badge after the node prefix
+    label: "LOC"            # shows [LOC] badge after the node prefix; "" = no badge
     nodes:
       - slam_toolbox
       - "*/amcl"            # wildcard: matches /any_ns/amcl
@@ -93,13 +93,18 @@ groups:
 
   hardware:
     color: "#CC8800"        # hex truecolor
+    show_tag: false         # suppress badge for this group only
+    color_mode: full_line   # per-group override: color the entire line
     nodes:
       - robot_state_publisher
 
 defaults:
   color_mode: "tag_only"
   show_group_tag: true
+  colorize_launch_msgs: true  # false = pass [INFO] [node-N]: lifecycle lines through
   unmatched_color: null
+  unmatched_tag: null         # badge for unlisted nodes, e.g. "?" → [?]
+  dim_unmatched: false        # true = dim unlisted nodes (when unmatched_color: null)
 ```
 
 See [`docs/dendROS.yaml.example`](docs/dendROS.yaml.example) for the full annotated reference.
@@ -151,6 +156,8 @@ Available names: `black` `red` `green` `yellow` `blue` `magenta` `cyan` `white`
 | `tag_only` *(default)* | Colors the `[node-N]` prefix and `[TAG]` badge only. ROS 2 severity colors (WARN=yellow, ERROR=red) are preserved. |
 | `full_line` | Colors the entire line. At-a-glance group separation; severity colors are overridden. |
 
+Set `color_mode:` in the `defaults:` section to apply it to the whole package, or add `color_mode: full_line` directly under a single group to override just that group.
+
 ---
 
 ## Config merging
@@ -183,16 +190,18 @@ dendros init
 DendROS scans every `.py` and `.xml` file in `launch/`, extracts all `Node()` / `ComposableNode()` / `<node/>` calls, groups them by source package, and writes `config/dendROS.yaml`. It also patches `CMakeLists.txt` / `setup.py` / `setup.cfg` so the config is installed with the package.
 
 ```yaml
-# generated config/dendROS.yaml
+# generated config/dendROS.yaml (label: "" written for every group — fill in manually)
 groups:
   nav2_bringup:
     color: blue
+    label: ""
     nodes:
       - bt_navigator
       - controller_server
       - planner_server
   slam_toolbox:
     color: green
+    label: ""
     nodes:
       - slam_toolbox
 
@@ -202,10 +211,16 @@ defaults:
   unmatched_color: null
 ```
 
+Pass `--labels` (or `-l`) to auto-generate short labels from package names (`nav2_bringup` → `NB`, `slam_toolbox` → `ST`):
+
+```bash
+dendros init --labels
+```
+
 ### Recursive mode
 
 ```bash
-dendros init --recursive
+dendros init --recursive   # or: dendros init -r
 ```
 
 Follows `IncludeLaunchDescription` / `<include>` references into external packages (BFS, cycle-safe). Packages are found via `ros2 pkg prefix`, `AMENT_PREFIX_PATH`, or as sibling directories in the same workspace `src/` folder. Packages that cannot be located produce a warning but do not abort.
@@ -231,6 +246,8 @@ All behaviors are configurable via `dendros config`:
 | `init_on_existing` | `abort` *(default)* / `merge` / `overwrite` | What to do if `config/dendROS.yaml` already exists |
 | `init_modify_build` | `on` *(default)* / `off` | Auto-patch `CMakeLists.txt` / `setup.py` / `setup.cfg` |
 | `init_color` | `palette` *(default)* / `null` | Assign cycling colors or leave all groups as `color: null` for manual editing |
+| `init_color_bold` | `off` *(default)* / `on` | Prefix every generated palette color with `bold` |
+| `init_label` | `off` *(default)* / `on` | Auto-generate labels (same as `--labels` flag); `off` writes `label: ""` |
 
 ---
 
@@ -241,14 +258,20 @@ Run `dendros config` to open an interactive TUI for setting global defaults that
 ```
   DendROS Config  ~/.config/dendROS/defaults.yaml
 
-   ► Color mode          [tag_only]  full_line
-     Show group tag      [on]  off
-     Unmatched color     null
-     Debug mode          [off]  on
-     Config merge        [on]  off
-     Init: modify build  [on]  off
-     Init: on existing   [abort]  merge  overwrite
-     Init: color         [palette]  null
+   ► Color mode             [tag_only]  full_line
+     Show group tag         [on]  off
+     Tag position           [after]  before
+     Unmatched color        null
+     Debug mode             [off]  on
+     Config merge           [on]  off
+     Colorize launch msgs   [on]  off
+     Unmatched tag          null
+     Dim unmatched          [off]  on
+     Init: modify build     [on]  off
+     Init: on existing      [abort]  merge  overwrite
+     Init: color            [palette]  null
+     Init: bold colors      [off]  on
+     Init: auto label       [off]  on
 
   ──────────────────────────────────────────────────
   tag_only — color [node-N] prefix and [TAG] badge only;
@@ -266,6 +289,12 @@ Run `dendros config` to open an interactive TUI for setting global defaults that
 | `q` | Quit |
 
 Settings are written to `~/.config/dendROS/defaults.yaml` and used as a baseline whenever `ros2 launch` or `ros2 run` is invoked. Per-package `dendROS.yaml` `defaults:` sections override them.
+
+**Colorize launch msgs** — when off, `[INFO] [node-N]: process started …` lifecycle lines pass through unchanged; node output lines are still colorized.
+
+**Unmatched tag** — set to a short string like `?` to display a `[?]` badge next to nodes not in any group (only takes effect when `unmatched_color` is also set).
+
+**Dim unmatched** — makes unlisted nodes visually recede without specifying a color (only applies when `unmatched_color` is null).
 
 ---
 

@@ -363,3 +363,98 @@ class TestWildcardPipeline:
         lines = ["[INFO] [nav2_controller-1]: process started with pid [1234]\n"]
         stdout, _, _ = run_pipe(prefix, self.PKG, lines)
         assert_segment_colored(stdout, '[nav2_controller-1]', nav_code)
+
+
+# ── per-group show_tag override ───────────────────────────────────────────────
+
+class TestPerGroupShowTag:
+    PKG = 'test_pkg_show_tag'
+
+    def test_badge_shown_for_group_with_tag(self, tmp_path):
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('per_group_show_tag.yaml'))
+        lines = ["[nav2_controller-1] [INFO] [1.0] [n]: planning\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        assert '[NAV]' in stdout
+
+    def test_badge_suppressed_for_show_tag_false_group(self, tmp_path):
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('per_group_show_tag.yaml'))
+        lines = ["[robot_state_publisher-1] [INFO] [1.0] [r]: publishing\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        assert '[HW]' not in stdout
+
+    def test_color_still_applied_when_show_tag_false(self, tmp_path):
+        from dendROS_pipe import _resolve_color
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('per_group_show_tag.yaml'))
+        lines = ["[robot_state_publisher-1] [INFO] [1.0] [r]: publishing\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        hw_code = _resolve_color('dark yellow')
+        assert_segment_colored(stdout, '[robot_state_publisher-1]', hw_code)
+
+
+# ── per-group color_mode override ─────────────────────────────────────────────
+
+class TestPerGroupColorMode:
+    PKG = 'test_pkg_group_mode'
+
+    def test_hardware_group_full_line_colors_whole_line(self, tmp_path):
+        from dendROS_pipe import _resolve_color
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('per_group_color_mode.yaml'))
+        hw_code = _resolve_color('dark yellow')
+        lines = ["[robot_state_publisher-1] [INFO] [1.0] [r]: publishing\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        # full_line wraps the entire line — both prefix and message share one segment
+        segs = colored_segments(stdout)
+        assert any(hw_code == code and '[robot_state_publisher-1]' in text
+                   for text, code in segs)
+        assert any(hw_code == code and 'publishing' in text
+                   for text, code in segs)
+
+    def test_nav_group_tag_only_preserves_message(self, tmp_path):
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('per_group_color_mode.yaml'))
+        lines = ["[nav2_controller-1] [INFO] [1.0] [n]: planning\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        assert_segment_uncolored(stdout, 'planning')
+
+
+# ── unmatched_tag ─────────────────────────────────────────────────────────────
+
+class TestUnmatchedTag:
+    PKG = 'test_pkg_unmatched_tag'
+
+    def test_badge_shown_for_unmatched_node(self, tmp_path):
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('unmatched_tag.yaml'))
+        lines = ["[unknown_node-1] [INFO] [1.0] [u]: hello\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        assert '[?]' in stdout
+
+    def test_unmatched_color_applied(self, tmp_path):
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('unmatched_tag.yaml'))
+        lines = ["[unknown_node-1] [INFO] [1.0] [u]: hello\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        assert '\033[' in stdout  # some color applied
+
+    def test_matched_node_no_unmatched_badge(self, tmp_path):
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('unmatched_tag.yaml'))
+        lines = ["[nav2_controller-1] [INFO] [1.0] [n]: planning\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        assert '[?]' not in stdout
+
+
+# ── dim_unmatched ─────────────────────────────────────────────────────────────
+
+class TestDimUnmatched:
+    PKG = 'test_pkg_dim'
+
+    def test_unmatched_node_dimmed(self, tmp_path):
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('dim_unmatched.yaml'))
+        lines = ["[unknown_node-1] [INFO] [1.0] [u]: hello\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        assert_segment_colored(stdout, '[unknown_node-1]', '2')
+
+    def test_matched_node_not_dimmed(self, tmp_path):
+        from dendROS_pipe import _resolve_color
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('dim_unmatched.yaml'))
+        nav_code = _resolve_color('bold green')
+        lines = ["[nav2_controller-1] [INFO] [1.0] [n]: planning\n"]
+        stdout, _, _ = run_pipe(prefix, self.PKG, lines)
+        assert_segment_colored(stdout, '[nav2_controller-1]', nav_code)

@@ -1,0 +1,11 @@
+groups:
+  nav:
+    color: "bold green"
+    nodes:
+      - nav2_controller
+
+defaults:
+  color_mode: tag_only
+  show_group_tag: true
+  unmatched_color: "dim white"
+  unmatched_tag: "?"

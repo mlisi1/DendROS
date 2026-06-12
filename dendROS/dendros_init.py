@@ -50,8 +50,13 @@ def _error(msg):
 
 def _load_global_config():
     """Load init-relevant settings from ~/.config/dendROS/defaults.yaml."""
-    defaults = {'init_modify_build': True, 'init_on_existing': 'abort', 'init_color': 'palette',
-                'init_color_bold': False}
+    defaults = {
+        'init_modify_build': True,
+        'init_on_existing':  'abort',
+        'init_color':        'palette',
+        'init_color_bold':   False,
+        'init_label':        False,
+    }
     path = os.path.expanduser(_GLOBAL_CONFIG_RELPATH)
     if not os.path.isfile(path):
         return defaults
@@ -301,21 +306,24 @@ def _bold_color(color):
     return 'bold ' + color
 
 
-def write_config(path, node_groups, use_palette=True, use_bold=False):
+def write_config(path, node_groups, use_palette=True, use_bold=False, use_label=False):
     """Write a fresh dendROS.yaml with one group per source package.
 
     use_palette=True  — assign cycling colors from _STOCK_PALETTE
     use_palette=False — set color: null (passthrough; user fills in later)
     use_bold=True     — prefix every palette color with 'bold'
-    Labels are never written; the user adds them manually if desired.
+    use_label=False   — write label: "" (entry present; user fills in manually)
+    use_label=True    — auto-generate a short label via make_label()
     """
     lines = ['groups:'] if node_groups else ['groups: {}']
     for i, (src_pkg, nodes) in enumerate(sorted(node_groups.items())):
-        raw = _STOCK_PALETTE[i % len(_STOCK_PALETTE)] if use_palette else 'null'
+        raw   = _STOCK_PALETTE[i % len(_STOCK_PALETTE)] if use_palette else 'null'
         color = _bold_color(raw) if use_bold else raw
+        label = make_label(src_pkg) if use_label else ''
         lines += [
             f'  {src_pkg}:',
             f'    color: {color}',
+            f'    label: "{label}"',
             f'    nodes:',
         ]
         for node in sorted(nodes):
@@ -326,7 +334,7 @@ def write_config(path, node_groups, use_palette=True, use_bold=False):
         f.write('\n'.join(lines))
 
 
-def merge_config(path, node_groups, use_bold=False):
+def merge_config(path, node_groups, use_bold=False, use_label=False):
     """Add nodes not already present in the existing config. Returns number of nodes added."""
     with open(path) as f:
         data = yaml.safe_load(f) or {}
@@ -356,10 +364,12 @@ def merge_config(path, node_groups, use_bold=False):
                     existing.append(n)
                     added += 1
         else:
-            raw = _STOCK_PALETTE[(palette_start + i) % len(_STOCK_PALETTE)]
+            raw   = _STOCK_PALETTE[(palette_start + i) % len(_STOCK_PALETTE)]
             color = _bold_color(raw) if use_bold else raw
+            label = make_label(src_pkg) if use_label else ''
             groups[src_pkg] = {
                 'color': color,
+                'label': label,
                 'nodes': sorted(nodes),
             }
             added += len(nodes)
@@ -479,14 +489,16 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
 
-    recursive = '--recursive' in argv
+    recursive      = '--recursive' in argv or '-r' in argv
+    use_label_flag = '--labels'    in argv or '-l' in argv
 
     cfg = _load_global_config()
     init_modify_build = cfg.get('init_modify_build', True)
-    init_on_existing = cfg.get('init_on_existing', 'abort')
-    init_color = cfg.get('init_color', 'palette')
-    use_palette = init_color == 'palette'
-    use_bold = cfg.get('init_color_bold', False)
+    init_on_existing  = cfg.get('init_on_existing',  'abort')
+    init_color        = cfg.get('init_color',         'palette')
+    use_palette       = init_color == 'palette'
+    use_bold          = cfg.get('init_color_bold', False)
+    use_label         = use_label_flag or cfg.get('init_label', False)
 
     pkg_root = find_package_root()
     if pkg_root is None:
@@ -529,10 +541,16 @@ def main(argv=None):
     existed_before = config_path.exists()
 
     if init_on_existing == 'merge' and existed_before:
-        added = merge_config(str(config_path), {k: list(v) for k, v in node_groups.items()}, use_bold=use_bold)
+        added = merge_config(
+            str(config_path), {k: list(v) for k, v in node_groups.items()},
+            use_bold=use_bold, use_label=use_label,
+        )
         _info(f'merged {added} new node(s) into {config_path}')
     else:
-        write_config(str(config_path), {k: list(v) for k, v in node_groups.items()}, use_palette=use_palette, use_bold=use_bold)
+        write_config(
+            str(config_path), {k: list(v) for k, v in node_groups.items()},
+            use_palette=use_palette, use_bold=use_bold, use_label=use_label,
+        )
         _info(f'{"updated" if existed_before else "created"} {config_path}')
 
     if init_modify_build:

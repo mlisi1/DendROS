@@ -18,32 +18,40 @@ except ImportError:
 GLOBAL_CONFIG_PATH = os.path.expanduser("~/.config/dendROS/defaults.yaml")
 
 _DEFAULTS = {
-    "color_mode":         "tag_only",
-    "show_group_tag":     True,
-    "tag_position":       "after",
-    "unmatched_color":    None,
-    "debug":              False,
-    "config_merge":       True,
-    "init_modify_build":  True,
-    "init_on_existing":   "abort",
-    "init_color":         "palette",
-    "init_color_bold":    False,
+    "color_mode":           "tag_only",
+    "show_group_tag":       True,
+    "tag_position":         "after",
+    "unmatched_color":      None,
+    "debug":                False,
+    "config_merge":         True,
+    "colorize_launch_msgs": True,
+    "unmatched_tag":        None,
+    "dim_unmatched":        False,
+    "init_modify_build":    True,
+    "init_on_existing":     "abort",
+    "init_color":           "palette",
+    "init_color_bold":      False,
+    "init_label":           False,
 }
 
 # (key, display_label, kind, cycle_options)
 # kind: "cycle" — Space/→/Enter advances through options
 #       "text"  — Enter/e opens inline text editor
 _FIELDS = [
-    ("color_mode",      "Color mode",       "cycle", ["tag_only", "full_line"]),
-    ("show_group_tag",  "Show group tag",   "cycle", [True, False]),
-    ("tag_position",    "Tag position",     "cycle", ["after", "before"]),
-    ("unmatched_color", "Unmatched color",  "text",  None),
-    ("debug",           "Debug mode",       "cycle", [False, True]),
-    ("config_merge",       "Config merge",        "cycle", [True, False]),
-    ("init_modify_build",  "Init: modify build",  "cycle", [True, False]),
-    ("init_on_existing",   "Init: on existing",   "cycle", ["abort", "merge", "overwrite"]),
-    ("init_color",         "Init: color",         "cycle", ["palette", "null"]),
-    ("init_color_bold",    "Init: bold colors",   "cycle", [False, True]),
+    ("color_mode",           "Color mode",            "cycle", ["tag_only", "full_line"]),
+    ("show_group_tag",       "Show group tag",        "cycle", [True, False]),
+    ("tag_position",         "Tag position",          "cycle", ["after", "before"]),
+    ("unmatched_color",      "Unmatched color",       "text",  None),
+    ("debug",                "Debug mode",            "cycle", [False, True]),
+    ("config_merge",         "Config merge",          "cycle", [True, False]),
+    ("colorize_launch_msgs", "Colorize launch msgs",  "cycle", [True, False]),
+    ("unmatched_tag",        "Unmatched tag",         "text",  None),
+    ("dim_unmatched",        "Dim unmatched",         "cycle", [False, True]),
+    ("init_modify_build",    "Init: modify build",    "cycle", [True, False]),
+    ("init_on_existing",     "Init: on existing",     "cycle", ["abort", "merge", "overwrite"]),
+    ("init_color",           "Init: color",           "cycle", ["palette", "null"]),
+    ("init_color_bold",      "Init: bold colors",     "cycle", [False, True]),
+    ("init_label",           "Init: auto label",      "cycle", [False, True]),
 ]
 
 _DESCS = {
@@ -74,6 +82,19 @@ _DESCS = {
         " from all referenced packages (primary package wins conflicts)",
         "off — only colorize nodes defined in the launched package's own dendROS.yaml",
     ),
+    "colorize_launch_msgs": (
+        "on  — color the [node-N] bracket in launch-framework lines"
+        " ([INFO] [node-N]: process started …)",
+        "off — leave launch-framework lifecycle lines untouched (pass through unchanged)",
+    ),
+    "unmatched_tag": (
+        "Badge shown for nodes not listed in any group when unmatched_color is set.",
+        "null = no badge.  Example: ? shows [?] next to the unmatched node prefix.",
+    ),
+    "dim_unmatched": (
+        "on  — apply ANSI dim to unmatched node lines (only when unmatched_color is null)",
+        "off — unmatched nodes pass through at full brightness",
+    ),
     "init_modify_build": (
         "on  — `dendros init` automatically adds config/ install to CMakeLists.txt,"
         " setup.py, or setup.cfg as appropriate",
@@ -91,6 +112,10 @@ _DESCS = {
     "init_color_bold": (
         "off — use palette colors as-is (some may already be bold)",
         "on  — prefix every generated palette color with bold",
+    ),
+    "init_label": (
+        "off — write label: \"\" for each group (entry is created; fill in manually)",
+        "on  — auto-generate a short label from the package name (e.g. nav2_bringup → NB)",
     ),
 }
 

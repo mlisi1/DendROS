@@ -205,35 +205,69 @@ def extract_included_packages(launch_file_path):
     return result
 
 
-def merge_color_maps(primary_color, primary_tag, secondaries):
-    """Merge secondary (color_map, tag_map) pairs into primary. Primary wins conflicts."""
+def merge_color_maps(primary_color, primary_tag, primary_mode, secondaries):
+    """Merge secondary (color_map, tag_map, mode_map) triples into primary.
+
+    Primary wins all node-name conflicts.
+    """
     merged_color = dict(primary_color)
-    merged_tag = dict(primary_tag)
-    for sec_color, sec_tag in secondaries:
+    merged_tag   = dict(primary_tag)
+    merged_mode  = dict(primary_mode)
+    for sec_color, sec_tag, sec_mode in secondaries:
         for node, code in sec_color.items():
             if node not in merged_color:
                 merged_color[node] = code
-                merged_tag[node] = sec_tag.get(node)
-    return merged_color, merged_tag
+                merged_tag[node]   = sec_tag.get(node)
+                if node in sec_mode:
+                    merged_mode[node] = sec_mode[node]
+    return merged_color, merged_tag, merged_mode
+
+
+def resolve_node_mode(node_name, mode_map):
+    """Return the per-node color_mode override from group-level color_mode:, or None."""
+    if not mode_map:
+        return None
+    if node_name in mode_map:
+        return mode_map[node_name]
+    basename = node_name.rsplit('/', 1)[-1]
+    if basename in mode_map:
+        return mode_map[basename]
+    for pattern, mode in mode_map.items():
+        if fnmatch.fnmatch(node_name, pattern):
+            return mode
+    for pattern, mode in mode_map.items():
+        if fnmatch.fnmatch(basename, pattern):
+            return mode
+    return None
 
 
 def load_config(config_path):
-    """Parse dendROS.yaml and return (color_map, tag_map, defaults)."""
+    """Parse dendROS.yaml and return (color_map, tag_map, mode_map, defaults).
+
+    mode_map holds per-node color_mode overrides set via group-level color_mode:.
+    tag_map stores None for nodes whose group has show_tag: false.
+    """
     with open(config_path, 'r') as f:
         data = yaml.safe_load(f)
 
     color_map = {}
-    tag_map = {}
+    tag_map   = {}
+    mode_map  = {}
 
     for group_name, group in (data.get('groups') or {}).items():
-        ansi_code = _resolve_color(group.get('color', ''))
-        label = group.get('label', '')
+        ansi_code   = _resolve_color(group.get('color', ''))
+        label       = group.get('label', '')
+        group_mode  = group.get('color_mode')   # None → use global/package default
+        if group.get('show_tag') is False:
+            label = None                         # suppress badge for this group
         for node in (group.get('nodes') or []):
             color_map[node] = ansi_code
-            tag_map[node] = label
+            tag_map[node]   = label
+            if group_mode is not None:
+                mode_map[node] = group_mode
 
     defaults = data.get('defaults') or {}
-    return color_map, tag_map, defaults
+    return color_map, tag_map, mode_map, defaults
 
 
 def _ansi(code):
@@ -326,8 +360,10 @@ def _load_global_defaults():
     try:
         with open(path) as f:
             data = yaml.safe_load(f) or {}
-        keys = ('color_mode', 'show_group_tag', 'unmatched_color', 'debug', 'config_merge',
-                'tag_position')
+        keys = (
+            'color_mode', 'show_group_tag', 'unmatched_color', 'debug', 'config_merge',
+            'tag_position', 'colorize_launch_msgs', 'unmatched_tag', 'dim_unmatched',
+        )
         return {k: v for k, v in data.items() if k in keys}
     except Exception:
         return {}
@@ -346,16 +382,19 @@ def main():
 
     # Start with global defaults, then let per-package config override
     base = {
-        'color_mode':      global_cfg.get('color_mode',      'tag_only'),
-        'show_group_tag':  global_cfg.get('show_group_tag',  True),
-        'unmatched_color': global_cfg.get('unmatched_color', None),
-        'tag_position':    global_cfg.get('tag_position',    'after'),
+        'color_mode':           global_cfg.get('color_mode',           'tag_only'),
+        'show_group_tag':       global_cfg.get('show_group_tag',       True),
+        'unmatched_color':      global_cfg.get('unmatched_color',      None),
+        'tag_position':         global_cfg.get('tag_position',         'after'),
+        'colorize_launch_msgs': global_cfg.get('colorize_launch_msgs', True),
+        'unmatched_tag':        global_cfg.get('unmatched_tag',        None),
+        'dim_unmatched':        global_cfg.get('dim_unmatched',        False),
     }
 
-    color_map, tag_map, defaults = {}, {}, base
+    color_map, tag_map, mode_map, defaults = {}, {}, {}, base
     if config_path:
         try:
-            color_map, tag_map, pkg_defaults = load_config(config_path)
+            color_map, tag_map, mode_map, pkg_defaults = load_config(config_path)
             defaults = {**base, **pkg_defaults}
         except Exception as e:
             print(f'\033[35;1m[dendROS]\033[0m config error ({config_path}): {e}',
@@ -374,18 +413,24 @@ def main():
                 if not inc_config_path:
                     continue
                 try:
-                    inc_color, inc_tag, _ = load_config(inc_config_path)
-                    color_map, tag_map = merge_color_maps(color_map, tag_map, [(inc_color, inc_tag)])
+                    inc_color, inc_tag, inc_mode, _ = load_config(inc_config_path)
+                    color_map, tag_map, mode_map = merge_color_maps(
+                        color_map, tag_map, mode_map, [(inc_color, inc_tag, inc_mode)]
+                    )
                     if _DEBUG:
                         _dbg(f'merged: {inc_pkg} ({inc_config_path})  +{len(inc_color)} node{"s" if len(inc_color) != 1 else ""}')
                 except Exception as e:
                     print(f'\033[35;1m[dendROS]\033[0m config error ({inc_config_path}): {e}',
                           file=sys.stderr, flush=True)
 
-    show_tag = defaults.get('show_group_tag', True)
-    color_mode = defaults.get('color_mode', 'tag_only')
-    tag_position = defaults.get('tag_position', 'after')
-    raw_unmatched = defaults.get('unmatched_color') or None
+    show_tag             = defaults.get('show_group_tag',       True)
+    color_mode           = defaults.get('color_mode',           'tag_only')
+    tag_position         = defaults.get('tag_position',         'after')
+    colorize_launch_msgs = defaults.get('colorize_launch_msgs', True)
+    unmatched_tag        = defaults.get('unmatched_tag') or None
+    raw_unmatched        = defaults.get('unmatched_color') or None
+    if not raw_unmatched and defaults.get('dim_unmatched', False):
+        raw_unmatched = '2'   # ANSI dim — only when no explicit unmatched_color is set
     unmatched_color = _resolve_color(str(raw_unmatched)) if raw_unmatched else None
 
     if _DEBUG:
@@ -417,10 +462,11 @@ def main():
                 ansi_code, label = resolve_node(node_name, color_map, tag_map)
                 if ansi_code is None and unmatched_color:
                     ansi_code = str(unmatched_color)
-                    label = None
+                    label = unmatched_tag
                 if ansi_code:
-                    line = colorize_line(line, ansi_code, label, show_tag, color_mode, tag_position)
-            else:
+                    effective_mode = resolve_node_mode(node_name, mode_map) or color_mode
+                    line = colorize_line(line, ansi_code, label, show_tag, effective_mode, tag_position)
+            elif colorize_launch_msgs:
                 # launch-framework format: [INFO] [node-N]: ...
                 lm = LAUNCH_RE.match(line)
                 if lm:
