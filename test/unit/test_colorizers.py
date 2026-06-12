@@ -345,3 +345,64 @@ class TestWarnErrorColors:
     def test_full_line_error_text_preserved(self):
         result = colorize_full_line(self.ERROR_ANSI, CODE_BLUE)
         assert 'Fatal issue' in strip_ansi(result)
+
+
+# ── tag_position ──────────────────────────────────────────────────────────────
+
+class TestTagPosition:
+    """tag_position='before' places the badge before [node-N]; 'after' is the default."""
+
+    def test_tag_only_after_is_default(self):
+        result = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=True)
+        prefix_pos = result.find('[talker-1]')
+        badge_pos  = result.find('[TALK]')
+        assert prefix_pos < badge_pos
+
+    def test_tag_only_before_places_badge_first(self):
+        result = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=True, tag_position='before')
+        prefix_pos = result.find('[talker-1]')
+        badge_pos  = result.find('[TALK]')
+        assert badge_pos < prefix_pos
+
+    def test_tag_only_before_exact_structure(self):
+        result = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=True, tag_position='before')
+        expected = (f'\033[{CODE_BLUE}m[TALK]\033[0m'
+                    f' \033[{CODE_BLUE}m[talker-1]\033[0m')
+        assert result.startswith(expected)
+
+    def test_tag_only_before_badge_colored(self):
+        result = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=True, tag_position='before')
+        assert_segment_colored(result, '[TALK]', CODE_BLUE)
+
+    def test_tag_only_before_prefix_colored(self):
+        result = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=True, tag_position='before')
+        assert_segment_colored(result, '[talker-1]', CODE_BLUE)
+
+    def test_tag_only_before_message_uncolored(self):
+        result = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=True, tag_position='before')
+        assert_segment_uncolored(result, "Publishing: 'Hello World'")
+
+    def test_tag_only_before_no_tag_when_show_tag_false(self):
+        result = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=False, tag_position='before')
+        assert '[TALK]' not in result
+
+    def test_full_line_after_is_default(self):
+        result = colorize_full_line(NODE_LINE, CODE_BLUE, label=LABEL, show_tag=True)
+        plain = strip_ansi(result)
+        prefix_pos = plain.find('[talker-1]')
+        badge_pos  = plain.find('[TALK]')
+        assert prefix_pos < badge_pos
+
+    def test_full_line_before_places_badge_first(self):
+        result = colorize_full_line(NODE_LINE, CODE_BLUE, label=LABEL, show_tag=True,
+                                    tag_position='before')
+        plain = strip_ansi(result)
+        prefix_pos = plain.find('[talker-1]')
+        badge_pos  = plain.find('[TALK]')
+        assert badge_pos < prefix_pos
+
+    def test_full_line_before_entirely_colored(self):
+        result = colorize_full_line(NODE_LINE, CODE_BLUE, label=LABEL, show_tag=True,
+                                    tag_position='before')
+        assert result.startswith(f'\033[{CODE_BLUE}m')
+        assert result.endswith(RESET + '\n')

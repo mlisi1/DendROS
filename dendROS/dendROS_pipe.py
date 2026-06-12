@@ -253,7 +253,7 @@ def colorize_tag_only(line, ansi_code, label, show_tag, tag_position='after'):
     colored_prefix = _ansi(ansi_code) + prefix + RESET
     if show_tag and label:
         if tag_position == 'before':
-            return _ansi(ansi_code) + f'[{label}] ' + RESET + colored_prefix + rest
+            return _ansi(ansi_code) + f'[{label}]' + RESET + ' ' + colored_prefix + rest
         return colored_prefix + _ansi(ansi_code) + f' [{label}]' + RESET + rest
     return colored_prefix + rest
 

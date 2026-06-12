@@ -17,8 +17,12 @@ from dendros_config import (
     _LOGO_LINES,
     _LOGO_W,
     _LOGO_ROWS,
+    _LOGO_PARSED,
     _UNCHANGED,
     _val_str,
+    _shift_rgb,
+    _render_logo_line,
+    _make_title_line,
     load_global_config,
     save_global_config,
 )
@@ -235,6 +239,84 @@ class TestLogoData:
         for i, line in enumerate(_LOGO_LINES):
             assert '◄' not in line, f"Logo line {i} contains wrong char ◄ (U+25C4)"
             assert '►' not in line, f"Logo line {i} contains wrong char ► (U+25BA)"
+
+
+# ── logo animation helpers ────────────────────────────────────────────────────
+
+class TestLogoAnimation:
+    def test_parsed_has_correct_line_count(self):
+        assert len(_LOGO_PARSED) == _LOGO_ROWS
+
+    def test_parsed_lines_are_lists(self):
+        for i, segs in enumerate(_LOGO_PARSED):
+            assert isinstance(segs, list), f"Parsed line {i} is not a list"
+
+    def test_parsed_segments_are_tuples(self):
+        for segs in _LOGO_PARSED:
+            for seg in segs:
+                assert len(seg) == 3
+
+    def test_shift_rgb_none_returns_none(self):
+        assert _shift_rgb(None, 0.5) is None
+
+    def test_shift_rgb_zero_offset_returns_same(self):
+        assert _shift_rgb((224, 127, 0), 0.0) == (224, 127, 0)
+
+    def test_shift_rgb_grey_unchanged(self):
+        # Pure grey has saturation 0 — should not be altered
+        assert _shift_rgb((100, 100, 100), 0.5) == (100, 100, 100)
+
+    def test_shift_rgb_black_unchanged(self):
+        assert _shift_rgb((0, 0, 0), 0.5) == (0, 0, 0)
+
+    def test_shift_rgb_saturated_changes(self):
+        # Orange (224, 127, 0) has high saturation — shifting by 0.5 produces a different color
+        shifted = _shift_rgb((224, 127, 0), 0.5)
+        assert shifted != (224, 127, 0)
+
+    def test_shift_rgb_full_cycle_returns_same(self):
+        # Shifting by exactly 1.0 is a full hue cycle — same color
+        rgb = (224, 127, 0)
+        shifted = _shift_rgb(rgb, 1.0)
+        # round-trip through float may differ by ±1
+        assert all(abs(shifted[i] - rgb[i]) <= 1 for i in range(3))
+
+    def test_render_logo_line_returns_string(self):
+        for segs in _LOGO_PARSED:
+            result = _render_logo_line(segs, 0.0)
+            assert isinstance(result, str)
+
+    def test_render_logo_line_zero_offset_has_ansi(self):
+        # At least some lines have colored pixels
+        colored_lines = [
+            segs for segs in _LOGO_PARSED
+            if any(fg or bg for _, fg, bg in segs)
+        ]
+        assert len(colored_lines) > 0
+        for segs in colored_lines:
+            result = _render_logo_line(segs, 0.0)
+            assert '\x1b[' in result
+
+    def test_render_logo_line_shifted_differs(self):
+        # A line with colored pixels rendered at offset 0.5 must differ from offset 0.0
+        for segs in _LOGO_PARSED:
+            if any(fg and sum(fg) > 0 for _, fg, _ in segs):
+                assert _render_logo_line(segs, 0.5) != _render_logo_line(segs, 0.0)
+                break
+
+    def test_make_title_line_returns_string(self):
+        assert isinstance(_make_title_line(0.0), str)
+
+    def test_make_title_line_contains_dend_ros(self):
+        title = _make_title_line(0.0)
+        assert 'D e n d' in title
+        assert 'R O S' in title
+
+    def test_make_title_line_shifted_differs(self):
+        assert _make_title_line(0.0) != _make_title_line(0.5)
+
+    def test_make_title_line_has_ansi(self):
+        assert '\x1b[' in _make_title_line(0.0)
 
 
 # ── _UNCHANGED sentinel ───────────────────────────────────────────────────────

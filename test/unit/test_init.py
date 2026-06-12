@@ -379,6 +379,32 @@ class TestWriteConfig:
             data = yaml.safe_load(f)
         assert data.get('groups') in (None, {})
 
+    def test_use_bold_prefixes_colors(self, tmp_path):
+        path = str(tmp_path / 'dendROS.yaml')
+        write_config(path, {'pkg_a': ['n1'], 'pkg_b': ['n2']}, use_bold=True)
+        with open(path) as f:
+            data = yaml.safe_load(f)
+        for grp in data['groups'].values():
+            assert grp['color'].startswith('bold ')
+
+    def test_use_bold_false_does_not_add_bold(self, tmp_path):
+        path = str(tmp_path / 'dendROS.yaml')
+        write_config(path, {'pkg_a': ['n1']}, use_bold=False)
+        with open(path) as f:
+            data = yaml.safe_load(f)
+        color = data['groups']['pkg_a']['color']
+        # The first palette color is 'blue' — should stay plain
+        assert color == 'blue'
+
+    def test_use_bold_skips_already_bold(self, tmp_path):
+        # A palette entry that already contains 'bold' should not be double-bolded
+        from dendros_init import _bold_color
+        assert _bold_color('bold magenta') == 'bold magenta'
+
+    def test_use_bold_null_color_unchanged(self, tmp_path):
+        from dendros_init import _bold_color
+        assert _bold_color('null') == 'null'
+
 
 # ── merge_config ──────────────────────────────────────────────────────────────
 
@@ -418,6 +444,20 @@ class TestMergeConfig:
     def test_returns_zero_when_nothing_new(self, tmp_path):
         path = self._make_config(tmp_path, {'pkg_a': ['n1', 'n2']})
         assert merge_config(path, {'pkg_a': ['n1', 'n2']}) == 0
+
+    def test_new_group_has_no_label(self, tmp_path):
+        path = self._make_config(tmp_path, {'pkg_a': ['n1']})
+        merge_config(path, {'pkg_b': ['n2']})
+        with open(path) as f:
+            data = yaml.safe_load(f)
+        assert 'label' not in data['groups']['pkg_b']
+
+    def test_new_group_use_bold(self, tmp_path):
+        path = self._make_config(tmp_path, {'pkg_a': ['n1']})
+        merge_config(path, {'pkg_b': ['n2']}, use_bold=True)
+        with open(path) as f:
+            data = yaml.safe_load(f)
+        assert data['groups']['pkg_b']['color'].startswith('bold ')
 
 
 # ── modify_cmake ──────────────────────────────────────────────────────────────

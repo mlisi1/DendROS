@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """DendROS interactive config tool — manage global defaults via a terminal UI."""
 
+import colorsys
 import curses
 import os
+import re
 import sys
 import textwrap
+import time
 
 try:
     import yaml
@@ -136,6 +139,77 @@ _LOGO_LINES = [
     '',
 ]
 
+# ── logo animation ────────────────────────────────────────────────────────────
+
+_HUE_STEP       = 0.02    # hue advance per 50 ms tick → full cycle ≈ 17 s
+_HUE_DELAY      = 15.0      # seconds of idle before animation begins
+_SAT_THRESHOLD  = 0.05     # pixels below this saturation are treated as grey and not shifted
+
+# Tokenise a logo line into ANSI escape codes and plain-text runs.
+_TOKEN_RE = re.compile(r'(\x1b\[[^m]*m)|([^\x1b]+)')
+
+
+def _parse_logo_lines(lines):
+    """Parse _LOGO_LINES into a list of per-line segment lists.
+
+    Each segment is (text, fg_rgb_or_None, bg_rgb_or_None).
+    """
+    result = []
+    for line in lines:
+        segs = []
+        cur_fg = None
+        cur_bg = None
+        for m in _TOKEN_RE.finditer(line):
+            esc, text = m.group(1), m.group(2)
+            if esc:
+                code  = esc[2:-1]            # strip \x1b[ … m
+                parts = code.split(';')
+                if parts[0] in ('0', ''):
+                    cur_fg = None
+                    cur_bg = None
+                elif len(parts) == 5 and parts[1] == '2':
+                    rgb = (int(parts[2]), int(parts[3]), int(parts[4]))
+                    if parts[0] == '38':
+                        cur_fg = rgb
+                    elif parts[0] == '48':
+                        cur_bg = rgb
+            else:
+                segs.append((text, cur_fg, cur_bg))
+        result.append(segs)
+    return result
+
+
+_LOGO_PARSED = _parse_logo_lines(_LOGO_LINES)
+
+
+def _shift_rgb(rgb, delta_hue):
+    """Return rgb with hue rotated by delta_hue (0–1).  Near-grey pixels are unchanged."""
+    if rgb is None:
+        return None
+    r, g, b = rgb[0] / 255.0, rgb[1] / 255.0, rgb[2] / 255.0
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
+    if s < _SAT_THRESHOLD:
+        return rgb
+    h = (h + delta_hue) % 1.0
+    r2, g2, b2 = colorsys.hsv_to_rgb(h, s, v)
+    return (round(r2 * 255), round(g2 * 255), round(b2 * 255))
+
+
+def _render_logo_line(segs, hue_offset):
+    """Re-encode one parsed logo line with the given hue shift applied."""
+    parts = []
+    for text, fg, bg in segs:
+        sfg = _shift_rgb(fg, hue_offset)
+        sbg = _shift_rgb(bg, hue_offset)
+        if sfg is not None:
+            parts.append(f'\x1b[38;2;{sfg[0]};{sfg[1]};{sfg[2]}m')
+        if sbg is not None:
+            parts.append(f'\x1b[48;2;{sbg[0]};{sbg[1]};{sbg[2]}m')
+        parts.append(text)
+        if sfg is not None or sbg is not None:
+            parts.append('\x1b[0m')
+    return ''.join(parts)
+
 
 # ── data helpers ─────────────────────────────────────────────────────────────
 
@@ -189,29 +263,36 @@ def _val_str(v):
 
 
 # "DendROS" title written below the logo art, in the bottom blank rows.
-# "Dend" → frog's teal blue (0, 75, 107), "ROS" → frog's orange-yellow (224, 127, 0).
-_TITLE_VISIBLE = 'D e n d   R O S'   # 15 visible chars
+# "Dend" → frog's teal blue, "ROS" → frog's orange-yellow.  Both shift with the animation.
+_TITLE_VISIBLE = 'D e n d   R O S'              # 15 visible chars
 _TITLE_PAD     = (_LOGO_W - len(_TITLE_VISIBLE)) // 2   # = 13
-_TITLE_LINE    = (
-    ' ' * _TITLE_PAD
-    + '\x1b[1m\x1b[38;2;0;75;107mD e n d\x1b[0m'
-    + '   '
-    + '\x1b[1m\x1b[38;2;224;127;0mR O S\x1b[0m'
-)
+_TITLE_BLUE    = (0, 75, 107)
+_TITLE_ORANGE  = (224, 127, 0)
 
 
-def _draw_logo_ansi(start_row):
+def _make_title_line(hue_offset):
+    """Build the colored DendROS title string with hue-shifted colors."""
+    b = _shift_rgb(_TITLE_BLUE,   hue_offset)
+    o = _shift_rgb(_TITLE_ORANGE, hue_offset)
+    return (
+        ' ' * _TITLE_PAD
+        + f'\x1b[1m\x1b[38;2;{b[0]};{b[1]};{b[2]}mD e n d\x1b[0m'
+        + '   '
+        + f'\x1b[1m\x1b[38;2;{o[0]};{o[1]};{o[2]}mR O S\x1b[0m'
+    )
+
+
+def _draw_logo_ansi(start_row, hue_offset=0.0):
     """Write the logo and DendROS title to stdout using raw 24-bit ANSI escape codes.
 
     Called after scr.refresh() each frame. Curses never writes to this region,
     so refresh() never clears it — the art persists without flicker.
     """
     out = []
-    for i, line in enumerate(_LOGO_LINES):
-        out.append(f'\033[{start_row + i + 1};1H{line}')
-    # Colored title in the second-to-last blank row of the logo area
+    for i, segs in enumerate(_LOGO_PARSED):
+        out.append(f'\033[{start_row + i + 1};1H{_render_logo_line(segs, hue_offset)}')
     title_row = start_row + _LOGO_ROWS - 1
-    out.append(f'\033[{title_row};1H{_TITLE_LINE}')
+    out.append(f'\033[{title_row};1H{_make_title_line(hue_offset)}')
     sys.stdout.write(''.join(out))
     sys.stdout.flush()
 
@@ -285,11 +366,14 @@ def _run(scr):
         _init_colors()
     curses.curs_set(0)
     scr.keypad(True)
+    scr.timeout(50)      # non-blocking: getch() returns -1 after 50 ms → ~20 fps animation
 
-    cfg    = load_global_config()
-    dirty  = False
-    sel    = 0
-    status = ("", 0)
+    cfg        = load_global_config()
+    dirty      = False
+    sel        = 0
+    status     = ("", 0)
+    hue_offset = 0.0
+    open_time  = time.monotonic()
 
     while True:
         scr.erase()
@@ -365,10 +449,16 @@ def _run(scr):
         # ── flush curses, then paint logo on top ──────────────────────────────
         scr.refresh()
         if use_logo:
-            _draw_logo_ansi(start_row=1)
+            _draw_logo_ansi(start_row=1, hue_offset=hue_offset)
 
         # ── input ─────────────────────────────────────────────────────────────
         key = scr.getch()
+        if key == -1:
+            # Timeout tick — advance hue only after the idle delay has passed
+            if use_logo and time.monotonic() - open_time >= _HUE_DELAY:
+                hue_offset = (hue_offset + _HUE_STEP) % 1.0
+            continue
+
         status = ("", 0)
         field_key, field_label, kind, opts = _FIELDS[sel]
 
@@ -415,7 +505,9 @@ def _run(scr):
                      "Save before quitting? [y/N] ",
                      curses.color_pair(_CP_WARN) | curses.A_BOLD)
                 scr.refresh()
+                scr.timeout(-1)          # block until user actually responds
                 confirm = scr.getch()
+                scr.timeout(50)          # restore animation timeout
                 if confirm in (ord('y'), ord('Y')):
                     save_global_config(cfg)
             break
