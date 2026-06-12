@@ -4,11 +4,14 @@ _DENDROS_PIPE="${_DENDROS_DIR}/dendROS_pipe.py"
 dendros() {
     case "${1:-}" in
         config) python3 "${_DENDROS_DIR}/dendros_config.py" ;;
+        init)   python3 "${_DENDROS_DIR}/dendros_init.py" "${@:2}" ;;
         *)
             echo "Usage: dendros <command>"
             echo ""
             echo "Commands:"
             echo "  config    Open the interactive config editor"
+            echo "  init      Generate a stock dendROS.yaml from the package's launch files"
+            echo "            Options: --recursive  also scan included packages"
             ;;
     esac
 }

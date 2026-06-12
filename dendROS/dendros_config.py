@@ -14,11 +14,14 @@ except ImportError:
 GLOBAL_CONFIG_PATH = os.path.expanduser("~/.config/dendROS/defaults.yaml")
 
 _DEFAULTS = {
-    "color_mode":      "tag_only",
-    "show_group_tag":  True,
-    "unmatched_color": None,
-    "debug":           False,
-    "config_merge":    True,
+    "color_mode":         "tag_only",
+    "show_group_tag":     True,
+    "unmatched_color":    None,
+    "debug":              False,
+    "config_merge":       True,
+    "init_modify_build":  True,
+    "init_on_existing":   "abort",
+    "init_color":         "palette",
 }
 
 # (key, display_label, kind, cycle_options)
@@ -29,7 +32,10 @@ _FIELDS = [
     ("show_group_tag",  "Show group tag",   "cycle", [True, False]),
     ("unmatched_color", "Unmatched color",  "text",  None),
     ("debug",           "Debug mode",       "cycle", [False, True]),
-    ("config_merge",    "Config merge",     "cycle", [True, False]),
+    ("config_merge",       "Config merge",        "cycle", [True, False]),
+    ("init_modify_build",  "Init: modify build",  "cycle", [True, False]),
+    ("init_on_existing",   "Init: on existing",   "cycle", ["abort", "merge", "overwrite"]),
+    ("init_color",         "Init: color",         "cycle", ["palette", "null"]),
 ]
 
 _DESCS = {
@@ -55,6 +61,20 @@ _DESCS = {
         "on  — parse the launched package's launch file and merge dendROS.yaml configs"
         " from all referenced packages (primary package wins conflicts)",
         "off — only colorize nodes defined in the launched package's own dendROS.yaml",
+    ),
+    "init_modify_build": (
+        "on  — `dendros init` automatically adds config/ install to CMakeLists.txt,"
+        " setup.py, or setup.cfg as appropriate",
+        "off — only create config/dendROS.yaml; leave build files untouched",
+    ),
+    "init_on_existing": (
+        "abort     — `dendros init` stops with an error if config/dendROS.yaml already exists",
+        "merge     — add newly found nodes to the existing config without removing anything",
+        "overwrite — replace the existing config/dendROS.yaml entirely",
+    ),
+    "init_color": (
+        "palette — assign distinct colors from the stock palette to each node group",
+        "null    — set color: null for all groups (passthrough); fill in colors manually",
     ),
 }
 
