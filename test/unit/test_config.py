@@ -241,7 +241,7 @@ class TestConfigEdgeCases:
         # my_node should be present (empty string color is the current behavior)
         assert 'my_node' in color_map
 
-    def test_node_missing_label_uses_group_name(self, tmp_path):
+    def test_node_missing_label_defaults_to_empty(self, tmp_path):
         cfg = tmp_path / 'no_label.yaml'
         cfg.write_text(
             'groups:\n'
@@ -251,8 +251,7 @@ class TestConfigEdgeCases:
             '      - planner\n'
         )
         _, tag_map, _ = load_config(str(cfg))
-        # Label defaults to group_name.upper()[:3] → 'NAV'
-        assert tag_map['planner'] == 'NAV'
+        assert tag_map['planner'] == ''
 
     def test_empty_nodes_list_no_crash(self, tmp_path):
         cfg = tmp_path / 'empty_nodes.yaml'

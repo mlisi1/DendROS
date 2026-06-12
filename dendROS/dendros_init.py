@@ -50,7 +50,8 @@ def _error(msg):
 
 def _load_global_config():
     """Load init-relevant settings from ~/.config/dendROS/defaults.yaml."""
-    defaults = {'init_modify_build': True, 'init_on_existing': 'abort', 'init_color': 'palette'}
+    defaults = {'init_modify_build': True, 'init_on_existing': 'abort', 'init_color': 'palette',
+                'init_color_bold': False}
     path = os.path.expanduser(_GLOBAL_CONFIG_RELPATH)
     if not os.path.isfile(path):
         return defaults
@@ -79,8 +80,6 @@ def _ast_str(node):
     """Return the string value if node is a static string constant, else None."""
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         return node.value
-    if hasattr(ast, 'Str') and isinstance(node, ast.Str):  # Python 3.7 compat
-        return node.s
     return None
 
 
@@ -295,16 +294,25 @@ def collect_nodes(local_launch_dir, pkg_name, recursive=False):
 
 # ── config writing ────────────────────────────────────────────────────────────
 
-def write_config(path, node_groups, use_palette=True):
+def _bold_color(color):
+    """Prepend 'bold ' to a palette color string if not already bold."""
+    if not color or color == 'null' or 'bold' in color:
+        return color
+    return 'bold ' + color
+
+
+def write_config(path, node_groups, use_palette=True, use_bold=False):
     """Write a fresh dendROS.yaml with one group per source package.
 
     use_palette=True  — assign cycling colors from _STOCK_PALETTE
     use_palette=False — set color: null (passthrough; user fills in later)
+    use_bold=True     — prefix every palette color with 'bold'
     Labels are never written; the user adds them manually if desired.
     """
     lines = ['groups:'] if node_groups else ['groups: {}']
     for i, (src_pkg, nodes) in enumerate(sorted(node_groups.items())):
-        color = _STOCK_PALETTE[i % len(_STOCK_PALETTE)] if use_palette else 'null'
+        raw = _STOCK_PALETTE[i % len(_STOCK_PALETTE)] if use_palette else 'null'
+        color = _bold_color(raw) if use_bold else raw
         lines += [
             f'  {src_pkg}:',
             f'    color: {color}',
@@ -318,7 +326,7 @@ def write_config(path, node_groups, use_palette=True):
         f.write('\n'.join(lines))
 
 
-def merge_config(path, node_groups):
+def merge_config(path, node_groups, use_bold=False):
     """Add nodes not already present in the existing config. Returns number of nodes added."""
     with open(path) as f:
         data = yaml.safe_load(f) or {}
@@ -348,10 +356,10 @@ def merge_config(path, node_groups):
                     existing.append(n)
                     added += 1
         else:
-            color = _STOCK_PALETTE[(palette_start + i) % len(_STOCK_PALETTE)]
+            raw = _STOCK_PALETTE[(palette_start + i) % len(_STOCK_PALETTE)]
+            color = _bold_color(raw) if use_bold else raw
             groups[src_pkg] = {
                 'color': color,
-                'label': make_label(src_pkg),
                 'nodes': sorted(nodes),
             }
             added += len(nodes)
@@ -478,6 +486,7 @@ def main(argv=None):
     init_on_existing = cfg.get('init_on_existing', 'abort')
     init_color = cfg.get('init_color', 'palette')
     use_palette = init_color == 'palette'
+    use_bold = cfg.get('init_color_bold', False)
 
     pkg_root = find_package_root()
     if pkg_root is None:
@@ -520,10 +529,10 @@ def main(argv=None):
     existed_before = config_path.exists()
 
     if init_on_existing == 'merge' and existed_before:
-        added = merge_config(str(config_path), {k: list(v) for k, v in node_groups.items()})
+        added = merge_config(str(config_path), {k: list(v) for k, v in node_groups.items()}, use_bold=use_bold)
         _info(f'merged {added} new node(s) into {config_path}')
     else:
-        write_config(str(config_path), {k: list(v) for k, v in node_groups.items()}, use_palette=use_palette)
+        write_config(str(config_path), {k: list(v) for k, v in node_groups.items()}, use_palette=use_palette, use_bold=use_bold)
         _info(f'{"updated" if existed_before else "created"} {config_path}')
 
     if init_modify_build:

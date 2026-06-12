@@ -227,7 +227,7 @@ def load_config(config_path):
 
     for group_name, group in (data.get('groups') or {}).items():
         ansi_code = _resolve_color(group.get('color', ''))
-        label = group.get('label', group_name.upper()[:3])
+        label = group.get('label', '')
         for node in (group.get('nodes') or []):
             color_map[node] = ansi_code
             tag_map[node] = label
@@ -243,7 +243,7 @@ RESET = '\033[0m'
 _ANSI_RE = re.compile(r'\033\[[0-9;]*m')
 
 
-def colorize_tag_only(line, ansi_code, label, show_tag):
+def colorize_tag_only(line, ansi_code, label, show_tag, tag_position='after'):
     """Color only the [node-N] prefix and optional [TAG] badge."""
     m = PREFIX_RE.match(line)
     if not m:
@@ -251,12 +251,15 @@ def colorize_tag_only(line, ansi_code, label, show_tag):
     prefix = line[:m.end()]
     rest = line[m.end():]
     colored_prefix = _ansi(ansi_code) + prefix + RESET
-    tag_str = (_ansi(ansi_code) + f' [{label}]' + RESET) if (show_tag and label) else ''
-    return colored_prefix + tag_str + rest
+    if show_tag and label:
+        if tag_position == 'before':
+            return _ansi(ansi_code) + f'[{label}] ' + RESET + colored_prefix + rest
+        return colored_prefix + _ansi(ansi_code) + f' [{label}]' + RESET + rest
+    return colored_prefix + rest
 
 
-def colorize_full_line(line, ansi_code, label=None, show_tag=False):
-    """Color the entire line, optionally inserting a [TAG] badge after the [node-N] prefix.
+def colorize_full_line(line, ansi_code, label=None, show_tag=False, tag_position='after'):
+    """Color the entire line, optionally inserting a [TAG] badge.
 
     Strips any embedded ANSI codes first so inner resets don't cancel our outer color.
     """
@@ -264,15 +267,18 @@ def colorize_full_line(line, ansi_code, label=None, show_tag=False):
     if show_tag and label:
         m = PREFIX_RE.match(line)
         if m:
-            line = line[:m.end()] + f' [{label}]' + line[m.end():]
+            if tag_position == 'before':
+                line = f'[{label}] ' + line
+            else:
+                line = line[:m.end()] + f' [{label}]' + line[m.end():]
     clean = _ANSI_RE.sub('', line.rstrip('\n'))
     return _ansi(ansi_code) + clean + RESET + '\n'
 
 
-def colorize_line(line, ansi_code, label, show_tag, color_mode):
+def colorize_line(line, ansi_code, label, show_tag, color_mode, tag_position='after'):
     if color_mode == 'full_line':
-        return colorize_full_line(line, ansi_code, label, show_tag)
-    return colorize_tag_only(line, ansi_code, label, show_tag)
+        return colorize_full_line(line, ansi_code, label, show_tag, tag_position)
+    return colorize_tag_only(line, ansi_code, label, show_tag, tag_position)
 
 
 def colorize_launch_msg(line, ansi_code, color_mode):
@@ -320,7 +326,8 @@ def _load_global_defaults():
     try:
         with open(path) as f:
             data = yaml.safe_load(f) or {}
-        keys = ('color_mode', 'show_group_tag', 'unmatched_color', 'debug', 'config_merge')
+        keys = ('color_mode', 'show_group_tag', 'unmatched_color', 'debug', 'config_merge',
+                'tag_position')
         return {k: v for k, v in data.items() if k in keys}
     except Exception:
         return {}
@@ -342,6 +349,7 @@ def main():
         'color_mode':      global_cfg.get('color_mode',      'tag_only'),
         'show_group_tag':  global_cfg.get('show_group_tag',  True),
         'unmatched_color': global_cfg.get('unmatched_color', None),
+        'tag_position':    global_cfg.get('tag_position',    'after'),
     }
 
     color_map, tag_map, defaults = {}, {}, base
@@ -376,6 +384,7 @@ def main():
 
     show_tag = defaults.get('show_group_tag', True)
     color_mode = defaults.get('color_mode', 'tag_only')
+    tag_position = defaults.get('tag_position', 'after')
     raw_unmatched = defaults.get('unmatched_color') or None
     unmatched_color = _resolve_color(str(raw_unmatched)) if raw_unmatched else None
 
@@ -410,7 +419,7 @@ def main():
                     ansi_code = str(unmatched_color)
                     label = None
                 if ansi_code:
-                    line = colorize_line(line, ansi_code, label, show_tag, color_mode)
+                    line = colorize_line(line, ansi_code, label, show_tag, color_mode, tag_position)
             else:
                 # launch-framework format: [INFO] [node-N]: ...
                 lm = LAUNCH_RE.match(line)

@@ -65,12 +65,14 @@ class TestLoadGlobalConfig:
         data = {
             "color_mode": "full_line",
             "show_group_tag": False,
+            "tag_position": "before",
             "unmatched_color": "bold blue",
             "debug": True,
             "config_merge": False,
             "init_modify_build": False,
             "init_on_existing": "overwrite",
             "init_color": "null",
+            "init_color_bold": True,
         }
         with open(tmp_config, "w") as f:
             yaml.dump(data, f)
@@ -132,12 +134,14 @@ class TestSaveGlobalConfig:
         custom = {
             "color_mode": "full_line",
             "show_group_tag": False,
+            "tag_position": "before",
             "unmatched_color": "#FF6600",
             "debug": True,
             "config_merge": False,
             "init_modify_build": False,
             "init_on_existing": "overwrite",
             "init_color": "null",
+            "init_color_bold": True,
         }
         save_global_config(custom)
         result = load_global_config()

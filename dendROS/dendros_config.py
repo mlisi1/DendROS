@@ -17,12 +17,14 @@ GLOBAL_CONFIG_PATH = os.path.expanduser("~/.config/dendROS/defaults.yaml")
 _DEFAULTS = {
     "color_mode":         "tag_only",
     "show_group_tag":     True,
+    "tag_position":       "after",
     "unmatched_color":    None,
     "debug":              False,
     "config_merge":       True,
     "init_modify_build":  True,
     "init_on_existing":   "abort",
     "init_color":         "palette",
+    "init_color_bold":    False,
 }
 
 # (key, display_label, kind, cycle_options)
@@ -31,12 +33,14 @@ _DEFAULTS = {
 _FIELDS = [
     ("color_mode",      "Color mode",       "cycle", ["tag_only", "full_line"]),
     ("show_group_tag",  "Show group tag",   "cycle", [True, False]),
+    ("tag_position",    "Tag position",     "cycle", ["after", "before"]),
     ("unmatched_color", "Unmatched color",  "text",  None),
     ("debug",           "Debug mode",       "cycle", [False, True]),
     ("config_merge",       "Config merge",        "cycle", [True, False]),
     ("init_modify_build",  "Init: modify build",  "cycle", [True, False]),
     ("init_on_existing",   "Init: on existing",   "cycle", ["abort", "merge", "overwrite"]),
     ("init_color",         "Init: color",         "cycle", ["palette", "null"]),
+    ("init_color_bold",    "Init: bold colors",   "cycle", [False, True]),
 ]
 
 _DESCS = {
@@ -47,8 +51,12 @@ _DESCS = {
         " overrides severity colors",
     ),
     "show_group_tag": (
-        "on  — show colored [LOC] / [NAV] badges after the [node-N] prefix",
+        "on  — show colored [LOC] / [NAV] badges next to the [node-N] prefix",
         "off — no badges; only the prefix itself is colored",
+    ),
+    "tag_position": (
+        "after  — badge appears after the prefix: [node-N] [TAG] [INFO] …",
+        "before — badge appears before the prefix: [TAG] [node-N] [INFO] …",
     ),
     "unmatched_color": (
         "Tint for nodes not listed in any group.",
@@ -76,6 +84,10 @@ _DESCS = {
     "init_color": (
         "palette — assign distinct colors from the stock palette to each node group",
         "null    — set color: null for all groups (passthrough); fill in colors manually",
+    ),
+    "init_color_bold": (
+        "off — use palette colors as-is (some may already be bold)",
+        "on  — prefix every generated palette color with bold",
     ),
 }
 
