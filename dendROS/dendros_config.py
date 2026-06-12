@@ -4,6 +4,7 @@
 import curses
 import os
 import sys
+import textwrap
 
 try:
     import yaml
@@ -175,8 +176,20 @@ def _val_str(v):
 
 
 
+# "DendROS" title written below the logo art, in the bottom blank rows.
+# "Dend" → frog's teal blue (0, 75, 107), "ROS" → frog's orange-yellow (224, 127, 0).
+_TITLE_VISIBLE = 'D e n d   R O S'   # 15 visible chars
+_TITLE_PAD     = (_LOGO_W - len(_TITLE_VISIBLE)) // 2   # = 13
+_TITLE_LINE    = (
+    ' ' * _TITLE_PAD
+    + '\x1b[1m\x1b[38;2;0;75;107mD e n d\x1b[0m'
+    + '   '
+    + '\x1b[1m\x1b[38;2;224;127;0mR O S\x1b[0m'
+)
+
+
 def _draw_logo_ansi(start_row):
-    """Write the logo to stdout using raw 24-bit ANSI escape codes.
+    """Write the logo and DendROS title to stdout using raw 24-bit ANSI escape codes.
 
     Called after scr.refresh() each frame. Curses never writes to this region,
     so refresh() never clears it — the art persists without flicker.
@@ -184,6 +197,9 @@ def _draw_logo_ansi(start_row):
     out = []
     for i, line in enumerate(_LOGO_LINES):
         out.append(f'\033[{start_row + i + 1};1H{line}')
+    # Colored title in the second-to-last blank row of the logo area
+    title_row = start_row + _LOGO_ROWS - 1
+    out.append(f'\033[{title_row};1H{_TITLE_LINE}')
     sys.stdout.write(''.join(out))
     sys.stdout.flush()
 
@@ -316,12 +332,16 @@ def _run(scr):
         except curses.error:
             pass
         key_sel = _FIELDS[sel][0]
-        for j, line in enumerate(_DESCS.get(key_sel, ())):
-            _put(scr, desc_row + j, fc + 2, line[:w - fc - 3],
-                 curses.color_pair(_CP_DIM) | curses.A_DIM)
+        max_desc_w = max(10, w - fc - 4)
+        desc_end_row = desc_row
+        for line in _DESCS.get(key_sel, ()):
+            for wline in textwrap.wrap(line, max_desc_w) or [line[:max_desc_w]]:
+                _put(scr, desc_end_row, fc + 2, wline,
+                     curses.color_pair(_CP_DIM) | curses.A_DIM)
+                desc_end_row += 1
 
         # ── status ────────────────────────────────────────────────────────────
-        st_row = desc_row + len(_DESCS.get(key_sel, ())) + 1
+        st_row = desc_end_row + 1
         if status[0]:
             _put(scr, st_row, fc + 2, status[0],
                  curses.color_pair(status[1]) | curses.A_BOLD)
