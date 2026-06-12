@@ -97,15 +97,17 @@ def assert_no_ansi_after(s: str, marker: str) -> None:
 # ── Subprocess runner ─────────────────────────────────────────────────────────
 
 def run_pipe(ament_prefix: str, pkg_name: str, lines: list,
-             env_extra: dict = None, timeout: int = 10) -> tuple:
+             env_extra: dict = None, timeout: int = 10,
+             launch_file: str = None) -> tuple:
     """Run dendROS_pipe.py as subprocess and return (stdout, stderr, returncode).
 
     Args:
-        ament_prefix: value for AMENT_PREFIX_PATH.
-        pkg_name:     package name passed as the first positional arg (after 'launch').
-        lines:        list of input line strings (newlines included).
-        env_extra:    additional env vars to set (or override).
-        timeout:      subprocess timeout in seconds.
+        ament_prefix:  value for AMENT_PREFIX_PATH.
+        pkg_name:      package name passed as the first positional arg (after 'launch').
+        lines:         list of input line strings (newlines included).
+        env_extra:     additional env vars to set (or override).
+        timeout:       subprocess timeout in seconds.
+        launch_file:   optional launch file name passed as second positional arg.
     """
     env = os.environ.copy()
     env['AMENT_PREFIX_PATH'] = ament_prefix
@@ -117,9 +119,13 @@ def run_pipe(ament_prefix: str, pkg_name: str, lines: list,
     if env_extra:
         env.update(env_extra)
 
+    cmd = [sys.executable, PIPE_PATH, 'launch', pkg_name]
+    if launch_file:
+        cmd.append(launch_file)
+
     stdin_data = ''.join(lines).encode()
     result = subprocess.run(
-        [sys.executable, PIPE_PATH, 'launch', pkg_name],
+        cmd,
         input=stdin_data,
         capture_output=True,
         env=env,

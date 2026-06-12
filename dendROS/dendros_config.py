@@ -18,6 +18,7 @@ _DEFAULTS = {
     "show_group_tag":  True,
     "unmatched_color": None,
     "debug":           False,
+    "config_merge":    True,
 }
 
 # (key, display_label, kind, cycle_options)
@@ -28,6 +29,7 @@ _FIELDS = [
     ("show_group_tag",  "Show group tag",   "cycle", [True, False]),
     ("unmatched_color", "Unmatched color",  "text",  None),
     ("debug",           "Debug mode",       "cycle", [False, True]),
+    ("config_merge",    "Config merge",     "cycle", [True, False]),
 ]
 
 _DESCS = {
@@ -48,6 +50,11 @@ _DESCS = {
     "debug": (
         "on  — print config summary and node→color map to stderr on startup",
         "off — silent.  DENDROS_DEBUG env var always overrides this setting.",
+    ),
+    "config_merge": (
+        "on  — parse the launched package's launch file and merge dendROS.yaml configs"
+        " from all referenced packages (primary package wins conflicts)",
+        "off — only colorize nodes defined in the launched package's own dendROS.yaml",
     ),
 }
 

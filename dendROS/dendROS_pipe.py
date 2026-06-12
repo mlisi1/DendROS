@@ -21,6 +21,12 @@ PREFIX_RE = re.compile(r"^\[([a-zA-Z0-9_./-]+?)(?:-\d+)?\]")
 # Launch-framework output: [INFO] [node-N]: message  (level bracket comes first)
 LAUNCH_RE = re.compile(r"^(\[(?:INFO|WARN(?:ING)?|ERROR|DEBUG|FATAL)\] )(\[([a-zA-Z0-9_./-]+?)(?:-\d+)?\])")
 
+# Launch file include patterns
+_PY_INCLUDE_RE = re.compile(
+    r'''(?:get_package_share_directory|FindPackageShare)\s*\(\s*['"]([a-zA-Z0-9_.-]+)['"]\s*\)'''
+)
+_XML_INCLUDE_RE = re.compile(r'\$\(find-pkg-share\s+([a-zA-Z0-9_.-]+)\)')
+
 _LOG_LEVELS = frozenset({'INFO', 'WARN', 'WARNING', 'ERROR', 'DEBUG', 'FATAL'})
 
 _DEBUG = os.environ.get('DENDROS_DEBUG', '') not in ('', '0')
@@ -108,6 +114,14 @@ def extract_package_name(argv):
     return None
 
 
+def extract_launch_file(argv):
+    """Return the launch file name (second non-flag positional) from ros2 launch argv."""
+    if not argv or argv[0] != 'launch':
+        return None
+    positionals = [a for a in argv[1:] if not a.startswith('-')]
+    return positionals[1] if len(positionals) >= 2 else None
+
+
 def find_config(pkg_name):
     """Return path to dendROS.yaml for pkg_name, or None if not found."""
     if not pkg_name:
@@ -134,6 +148,73 @@ def find_config(pkg_name):
             return candidate
 
     return None
+
+
+def find_launch_file(pkg_name, launch_file_name):
+    """Return path to the launch file for pkg_name, or None if not found."""
+    if not pkg_name or not launch_file_name:
+        return None
+
+    try:
+        result = subprocess.run(
+            ['ros2', 'pkg', 'prefix', pkg_name],
+            capture_output=True, text=True, timeout=3
+        )
+        if result.returncode == 0:
+            prefix = result.stdout.strip()
+            candidate = os.path.join(prefix, 'share', pkg_name, 'launch', launch_file_name)
+            if os.path.isfile(candidate):
+                return candidate
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        pass
+
+    for prefix in os.environ.get('AMENT_PREFIX_PATH', '').split(':'):
+        if not prefix:
+            continue
+        candidate = os.path.join(prefix, 'share', pkg_name, 'launch', launch_file_name)
+        if os.path.isfile(candidate):
+            return candidate
+
+    return None
+
+
+def extract_included_packages(launch_file_path):
+    """Return package names referenced in a launch file (Python or XML), deduplicated."""
+    if not launch_file_path or not os.path.isfile(launch_file_path):
+        return []
+    try:
+        with open(launch_file_path, 'r', errors='replace') as f:
+            content = f.read()
+    except OSError:
+        return []
+
+    ext = os.path.splitext(launch_file_path)[1].lower()
+    if ext == '.xml':
+        raw = _XML_INCLUDE_RE.findall(content)
+    elif ext == '.py':
+        raw = _PY_INCLUDE_RE.findall(content)
+    else:
+        raw = _PY_INCLUDE_RE.findall(content) + _XML_INCLUDE_RE.findall(content)
+
+    seen = set()
+    result = []
+    for pkg in raw:
+        if pkg not in seen:
+            seen.add(pkg)
+            result.append(pkg)
+    return result
+
+
+def merge_color_maps(primary_color, primary_tag, secondaries):
+    """Merge secondary (color_map, tag_map) pairs into primary. Primary wins conflicts."""
+    merged_color = dict(primary_color)
+    merged_tag = dict(primary_tag)
+    for sec_color, sec_tag in secondaries:
+        for node, code in sec_color.items():
+            if node not in merged_color:
+                merged_color[node] = code
+                merged_tag[node] = sec_tag.get(node)
+    return merged_color, merged_tag
 
 
 def load_config(config_path):
@@ -239,7 +320,7 @@ def _load_global_defaults():
     try:
         with open(path) as f:
             data = yaml.safe_load(f) or {}
-        keys = ('color_mode', 'show_group_tag', 'unmatched_color', 'debug')
+        keys = ('color_mode', 'show_group_tag', 'unmatched_color', 'debug', 'config_merge')
         return {k: v for k, v in data.items() if k in keys}
     except Exception:
         return {}
@@ -271,6 +352,27 @@ def main():
         except Exception as e:
             print(f'\033[35;1m[dendROS]\033[0m config error ({config_path}): {e}',
                   file=sys.stderr, flush=True)
+
+    config_merge = global_cfg.get('config_merge', True)
+    if config_merge and argv and argv[0] == 'launch':
+        launch_file_name = extract_launch_file(argv)
+        launch_file_path = find_launch_file(pkg_name, launch_file_name) if launch_file_name else None
+        if launch_file_path:
+            included_pkgs = extract_included_packages(launch_file_path)
+            for inc_pkg in included_pkgs:
+                if inc_pkg == pkg_name:
+                    continue
+                inc_config_path = find_config(inc_pkg)
+                if not inc_config_path:
+                    continue
+                try:
+                    inc_color, inc_tag, _ = load_config(inc_config_path)
+                    color_map, tag_map = merge_color_maps(color_map, tag_map, [(inc_color, inc_tag)])
+                    if _DEBUG:
+                        _dbg(f'merged: {inc_pkg} ({inc_config_path})  +{len(inc_color)} node{"s" if len(inc_color) != 1 else ""}')
+                except Exception as e:
+                    print(f'\033[35;1m[dendROS]\033[0m config error ({inc_config_path}): {e}',
+                          file=sys.stderr, flush=True)
 
     show_tag = defaults.get('show_group_tag', True)
     color_mode = defaults.get('color_mode', 'tag_only')

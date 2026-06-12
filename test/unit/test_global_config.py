@@ -67,6 +67,7 @@ class TestLoadGlobalConfig:
             "show_group_tag": False,
             "unmatched_color": "bold blue",
             "debug": True,
+            "config_merge": False,
         }
         with open(tmp_config, "w") as f:
             yaml.dump(data, f)
@@ -130,6 +131,7 @@ class TestSaveGlobalConfig:
             "show_group_tag": False,
             "unmatched_color": "#FF6600",
             "debug": True,
+            "config_merge": False,
         }
         save_global_config(custom)
         result = load_global_config()
