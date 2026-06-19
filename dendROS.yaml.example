@@ -1,0 +1,127 @@
+# dendROS.yaml — color configuration for DendROS
+#
+# Place this file at: <your_package>/config/dendROS.yaml
+# (e.g. my_robot_bringup/config/dendROS.yaml)
+#
+# DendROS reads this file from the package named in your ros2 launch command.
+# All nodes in your launch graph — including those from included packages —
+# can be listed here under the appropriate group.
+
+groups:
+
+  # Each group gets a color and an optional short label badge.
+  #
+  # color: accepts color names OR raw ANSI SGR codes.
+  #
+  #   Color names:
+  #     black, red, green, yellow, blue, magenta, cyan, white
+  #
+  #   Modifiers (can be combined):
+  #     light / bright  →  bright variant  (light yellow, bright blue)
+  #     dark  / dim     →  dim variant     (dark red, dim cyan)
+  #     bold            →  bold            (bold green, bold light magenta)
+  #
+  #   Examples:
+  #     "yellow"             standard yellow
+  #     "light yellow"       bright yellow
+  #     "dark yellow"        dim yellow
+  #     "bold blue"          bold blue
+  #     "bold light cyan"    bold bright cyan
+  #
+  #   Hex truecolor (24-bit, requires a modern terminal):
+  #     "#FF6600"            orange, normal
+  #     "@#FF6600"           orange, bold  (@-prefix = bold)
+  #     "bold #FF6600"       same as above
+  #
+  #   Raw ANSI SGR codes still work:
+  #     "34;1"               bold blue (same as "bold blue")
+  #     "92"                 bright green (same as "light green")
+  #
+  # label: short tag shown as [LOC], [NAV], etc. in tag_only mode.
+  #        Leave as "" (empty string) to show no badge for this group.
+  # nodes: list of ROS 2 node names matched against the launch output prefix [node-N].
+  #        Use bare name (slam_toolbox) or full namespace (/my_ns/slam_toolbox).
+  #
+  #   Wildcard patterns (fnmatch syntax) are supported:
+  #     nav2_*          — any node whose basename starts with nav2_
+  #     */amcl          — any node named amcl under any namespace
+  #     *controller*    — any node whose basename contains "controller"
+  #     node_?          — node_a, node_b, … (? matches one character)
+  #
+  #   Lookup order: exact full-path → exact basename → wildcard full-path → wildcard basename.
+  #   First matching pattern wins.
+  #
+  # Per-group optional keys:
+  #
+  #   show_tag: false
+  #     Suppress the [TAG] badge for this group only, even when show_group_tag is true
+  #     globally.  Useful when a group needs color but no badge clutter.
+  #
+  #   color_mode: full_line
+  #     Override the package/global color_mode for this group's nodes only.
+  #     "full_line" colors the entire line; "tag_only" colors just the prefix+badge.
+  #     Other groups in the same config are unaffected.
+
+  localization:
+    color: "bold blue"
+    label: "LOC"
+    nodes:
+      - slam_toolbox
+      - robot_localization
+      - "*/amcl"             # matches /any_ns/amcl
+
+  navigation:
+    color: "bold green"
+    label: "NAV"
+    nodes:
+      - nav2_*              # covers bt_navigator, controller_server, planner_server, …
+
+  perception:
+    color: "light cyan"
+    label: "PERC"
+    nodes:
+      - obstacle_detector
+      - costmap_filter_info_server
+
+  hardware:
+    color: "#CC8800"        # hex truecolor
+    label: "HW"
+    show_tag: false         # suppress badge for this group only
+    color_mode: full_line   # color the entire line for hardware nodes
+    nodes:
+      - robot_state_publisher
+      - joint_state_publisher
+      - base_controller
+
+defaults:
+  # null = unlisted nodes are passed through unchanged (recommended).
+  # Accepts a color name or raw ANSI code to tint all unmatched nodes.
+  unmatched_color: null
+
+  # Short badge to display next to unmatched nodes, e.g. "?" → [?].
+  # Only takes effect when unmatched_color is also set.
+  unmatched_tag: null
+
+  # Apply ANSI dim to nodes not listed in any group.
+  # Only applies when unmatched_color is null.  Visually de-emphasizes
+  # unknown nodes without specifying a color.
+  dim_unmatched: false
+
+  # Show colored [LOC] / [NAV] badges after the [node-N] prefix.
+  show_group_tag: true
+
+  # "tag_only"  — color only the [node-N] prefix and [TAG] badge.
+  #               Preserves ROS 2 severity colors (WARN=yellow, ERROR=red).
+  #               Recommended for mixed-severity output.
+  # "full_line" — color the entire line. Good for at-a-glance group separation
+  #               but overrides severity colors.
+  color_mode: "tag_only"
+
+  # Where to insert the [TAG] badge relative to the [node-N] prefix.
+  # "after"  (default): [node-N] [TAG] [INFO] …
+  # "before":           [TAG] [node-N] [INFO] …
+  tag_position: "after"
+
+  # Set false to pass [INFO] [node-N]: process started … lifecycle lines through
+  # unchanged.  Node output lines are still colorized when this is off.
+  colorize_launch_msgs: true
