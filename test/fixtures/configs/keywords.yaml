@@ -1,0 +1,23 @@
+groups:
+  talkers:
+    color: "blue"
+    label: "TALK"
+    highlight:
+      - word: "important"
+        bold: true
+      - word: "danger"
+        color: "bold red"
+        inverted: true
+      - word: "pos: \\d+"
+        regex: true
+        color: "bold cyan"
+      - word: "CaseSensitive"
+        case_sensitive: true
+    nodes:
+      - talker
+
+defaults:
+  show_group_tag: true
+  highlight:
+    - word: "WARN"
+      color: "bold yellow"

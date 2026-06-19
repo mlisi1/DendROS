@@ -68,6 +68,14 @@ It also features some quality of life improvements for ROS outputs.
 <img src="docs/assets/images/screenshots/highlighted_traceback.png" width="600" alt="Colored Terminal Output"/>
 </p>
 
+- ### **Keyword highlighting**
+  Mark specific words or patterns in bold or in a custom color — per group, or package-wide. 
+
+<p align="center">
+<img src="docs/assets/images/screenshots/highlight.png" width="600" alt="Colored Terminal Output"/>
+</p>
+  
+
 - ### **Truly non-invasive** 
   Shell-level pipe; you won't loose autocompletion or aliases for launch files
 

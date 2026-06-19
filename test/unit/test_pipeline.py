@@ -773,3 +773,124 @@ defaults:
         prefix = self._make_config(tmp_path, 'tag_style: inverted')
         out, _, _ = run_pipe(prefix, 'test_pkg', [self.NODE_LINE])
         assert 'hello' in strip_ansi(out)
+
+
+# ── keyword highlighting ──────────────────────────────────────────────────────
+
+class TestKeywordHighlightPipeline:
+    PKG = 'kw_pkg'
+    NODE_LINE = '[talker-1] [INFO] [1.0] [t]: important update here\n'
+    WARN_LINE  = '[talker-1] [INFO] [1.0] [t]: WARN: something happened\n'
+    PLAIN_LINE = 'not a node line at all\n'
+
+    def _make_prefix(self, tmp_path, extra_group='', extra_defaults=''):
+        config_dir = tmp_path / 'share' / self.PKG / 'config'
+        config_dir.mkdir(parents=True)
+        yaml_text = (
+            'groups:\n'
+            '  talkers:\n'
+            '    color: "blue"\n'
+            '    label: "TALK"\n'
+            + extra_group +
+            '    nodes:\n'
+            '      - talker\n'
+            'defaults:\n'
+            '  show_group_tag: true\n'
+            + extra_defaults
+        )
+        (config_dir / 'dendROS.yaml').write_text(yaml_text)
+        return str(tmp_path)
+
+    def test_group_keyword_highlighted_in_node_output(self, tmp_path):
+        prefix = self._make_prefix(tmp_path, extra_group=(
+            '    highlight:\n'
+            '      - word: "important"\n'
+            '        color: "bold red"\n'
+        ))
+        out, _, _ = run_pipe(prefix, self.PKG, [self.NODE_LINE])
+        assert '\033[31;1m' in out          # bold red applied
+        assert 'important' in strip_ansi(out)
+
+    def test_keyword_color_restored_after_match_in_tag_only(self, tmp_path):
+        prefix = self._make_prefix(tmp_path, extra_group=(
+            '    highlight:\n'
+            '      - word: "important"\n'
+            '        color: "bold red"\n'
+        ))
+        out, _, _ = run_pipe(prefix, self.PKG, [self.NODE_LINE])
+        # After the keyword the rest of the text should not be red
+        # (it's not in a full_line color block so restore is RESET)
+        assert '\033[0m' in out
+
+    def test_keyword_color_restored_to_node_color_in_full_line(self, tmp_path):
+        prefix = self._make_prefix(
+            tmp_path,
+            extra_group=(
+                '    color_mode: "full_line"\n'
+                '    highlight:\n'
+                '      - word: "important"\n'
+                '        color: "bold red"\n'
+            ),
+        )
+        out, _, _ = run_pipe(prefix, self.PKG, [self.NODE_LINE])
+        from lib.colors import _resolve_color
+        blue = _resolve_color('blue')
+        # After the keyword (bold red), we restore to the node's blue
+        assert f'\033[31;1mimportant\033[{blue}m' in out
+
+    def test_defaults_keyword_applied_to_all_matched_nodes(self, tmp_path):
+        prefix = self._make_prefix(tmp_path, extra_defaults=(
+            '  highlight:\n'
+            '    - word: "WARN"\n'
+            '      color: "bold yellow"\n'
+        ))
+        out, _, _ = run_pipe(prefix, self.PKG, [self.WARN_LINE])
+        assert '\033[33;1m' in out          # bold yellow applied
+        assert 'WARN' in strip_ansi(out)
+
+    def test_keyword_not_applied_to_passthrough_lines(self, tmp_path):
+        prefix = self._make_prefix(tmp_path, extra_defaults=(
+            '  highlight:\n'
+            '    - word: "at all"\n'
+            '      color: "bold red"\n'
+        ))
+        out, _, _ = run_pipe(prefix, self.PKG, [self.PLAIN_LINE])
+        # Passthrough line — no ANSI codes added
+        assert '\033[31;1m' not in out
+        assert strip_ansi(out) == self.PLAIN_LINE
+
+    def test_group_keyword_uses_node_color_when_no_explicit_color(self, tmp_path):
+        prefix = self._make_prefix(tmp_path, extra_group=(
+            '    highlight:\n'
+            '      - word: "important"\n'
+            '        bold: true\n'
+        ))
+        out, _, _ = run_pipe(prefix, self.PKG, [self.NODE_LINE])
+        from lib.colors import _resolve_color
+        blue = _resolve_color('blue')
+        # bold applied to group color (blue=34)
+        assert f'\033[{blue};1m' in out
+
+    def test_regex_keyword_matches_pattern(self, tmp_path):
+        line = '[talker-1] [INFO] [1.0] [t]: pos: 123 reported\n'
+        prefix = self._make_prefix(tmp_path, extra_group=(
+            '    highlight:\n'
+            '      - word: "pos: \\\\d+"\n'
+            '        regex: true\n'
+            '        color: "bold cyan"\n'
+        ))
+        out, _, _ = run_pipe(prefix, self.PKG, [line])
+        assert '\033[36;1m' in out          # bold cyan
+        assert 'pos: 123' in strip_ansi(out)
+
+    def test_text_content_preserved_after_highlighting(self, tmp_path):
+        prefix = self._make_prefix(tmp_path, extra_group=(
+            '    highlight:\n'
+            '      - word: "important"\n'
+            '        color: "bold red"\n'
+        ))
+        out, _, _ = run_pipe(prefix, self.PKG, [self.NODE_LINE])
+        # keyword highlighting must not drop any words
+        plain = strip_ansi(out)
+        assert 'important' in plain
+        assert 'update here' in plain

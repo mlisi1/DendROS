@@ -5,28 +5,34 @@ import fnmatch
 import yaml
 
 from lib.colors import _resolve_color
+from lib.keywords import build_keyword_highlights
 
 
 def load_config(config_path):
-    """Parse dendROS.yaml and return (color_map, tag_map, mode_map, style_map, defaults).
+    """Parse dendROS.yaml and return (color_map, tag_map, mode_map, style_map, keyword_map, defaults).
 
-    mode_map  holds per-node color_mode overrides set via group-level color_mode:.
-    style_map holds per-node tag_style overrides set via group-level tag_style:.
+    mode_map    holds per-node color_mode overrides set via group-level color_mode:.
+    style_map   holds per-node tag_style overrides set via group-level tag_style:.
+    keyword_map holds pre-compiled keyword highlights set via group-level highlight:.
     tag_map stores None for nodes whose group has show_tag: false.
     """
     with open(config_path, 'r') as f:
         data = yaml.safe_load(f)
 
-    color_map = {}
-    tag_map   = {}
-    mode_map  = {}
-    style_map = {}
+    color_map   = {}
+    tag_map     = {}
+    mode_map    = {}
+    style_map   = {}
+    keyword_map = {}
 
     for group_name, group in (data.get('groups') or {}).items():
         ansi_code   = _resolve_color(group.get('color', ''))
         label       = group.get('label', '')
         group_mode  = group.get('color_mode')
         group_style = group.get('tag_style')
+        group_kws   = build_keyword_highlights(
+            group.get('highlight') or group.get('highlights') or [], ansi_code
+        )
         if group.get('show_tag') is False:
             label = None
         for node in (group.get('nodes') or []):
@@ -36,21 +42,25 @@ def load_config(config_path):
                 mode_map[node] = group_mode
             if group_style is not None:
                 style_map[node] = group_style
+            if group_kws:
+                keyword_map[node] = group_kws
 
     defaults = data.get('defaults') or {}
-    return color_map, tag_map, mode_map, style_map, defaults
+    return color_map, tag_map, mode_map, style_map, keyword_map, defaults
 
 
-def merge_color_maps(primary_color, primary_tag, primary_mode, primary_style, secondaries):
-    """Merge secondary (color_map, tag_map, mode_map, style_map) 4-tuples into primary.
+def merge_color_maps(primary_color, primary_tag, primary_mode, primary_style,
+                     primary_keywords, secondaries):
+    """Merge secondary (color, tag, mode, style, keywords) 5-tuples into primary.
 
     Primary wins all node-name conflicts.
     """
-    merged_color = dict(primary_color)
-    merged_tag   = dict(primary_tag)
-    merged_mode  = dict(primary_mode)
-    merged_style = dict(primary_style)
-    for sec_color, sec_tag, sec_mode, sec_style in secondaries:
+    merged_color    = dict(primary_color)
+    merged_tag      = dict(primary_tag)
+    merged_mode     = dict(primary_mode)
+    merged_style    = dict(primary_style)
+    merged_keywords = dict(primary_keywords)
+    for sec_color, sec_tag, sec_mode, sec_style, sec_kw in secondaries:
         for node, code in sec_color.items():
             if node not in merged_color:
                 merged_color[node] = code
@@ -59,7 +69,9 @@ def merge_color_maps(primary_color, primary_tag, primary_mode, primary_style, se
                     merged_mode[node] = sec_mode[node]
                 if node in sec_style:
                     merged_style[node] = sec_style[node]
-    return merged_color, merged_tag, merged_mode, merged_style
+                if node in sec_kw:
+                    merged_keywords[node] = sec_kw[node]
+    return merged_color, merged_tag, merged_mode, merged_style, merged_keywords
 
 
 def resolve_node(node_name, color_map, tag_map):

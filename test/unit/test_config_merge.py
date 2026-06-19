@@ -15,6 +15,7 @@ from lib.discovery import (
     extract_included_packages,
 )
 from lib.config_loader import merge_color_maps, resolve_node_mode, resolve_node_style
+from lib.keywords import build_keyword_highlights, resolve_node_keywords
 from conftest import (
     run_pipe,
     assert_segment_colored,
@@ -168,35 +169,35 @@ class TestFindLaunchFile:
 
 class TestMergeColorMaps:
     def test_secondary_adds_new_nodes(self):
-        merged_c, merged_t, _, _ = merge_color_maps(
-            {'talker': '34'}, {'talker': 'TALK'}, {}, {},
-            [({'listener': '32'}, {'listener': 'LIST'}, {}, {})]
+        merged_c, merged_t, _, _, _ = merge_color_maps(
+            {'talker': '34'}, {'talker': 'TALK'}, {}, {}, {},
+            [({'listener': '32'}, {'listener': 'LIST'}, {}, {}, {})]
         )
         assert merged_c == {'talker': '34', 'listener': '32'}
         assert merged_t == {'talker': 'TALK', 'listener': 'LIST'}
 
     def test_primary_wins_conflict(self):
-        merged_c, merged_t, _, _ = merge_color_maps(
-            {'talker': '34'}, {'talker': 'PRIMARY'}, {}, {},
-            [({'talker': '31'}, {'talker': 'SECONDARY'}, {}, {})]
+        merged_c, merged_t, _, _, _ = merge_color_maps(
+            {'talker': '34'}, {'talker': 'PRIMARY'}, {}, {}, {},
+            [({'talker': '31'}, {'talker': 'SECONDARY'}, {}, {}, {})]
         )
         assert merged_c['talker'] == '34'
         assert merged_t['talker'] == 'PRIMARY'
 
     def test_empty_primary_uses_secondary(self):
-        merged_c, merged_t, _, _ = merge_color_maps(
-            {}, {}, {}, {},
-            [({'node1': '31'}, {'node1': 'N1'}, {}, {})]
+        merged_c, merged_t, _, _, _ = merge_color_maps(
+            {}, {}, {}, {}, {},
+            [({'node1': '31'}, {'node1': 'N1'}, {}, {}, {})]
         )
         assert merged_c == {'node1': '31'}
         assert merged_t == {'node1': 'N1'}
 
     def test_multiple_secondaries_first_wins(self):
-        merged_c, _, _, _ = merge_color_maps(
-            {}, {}, {}, {},
+        merged_c, _, _, _, _ = merge_color_maps(
+            {}, {}, {}, {}, {},
             [
-                ({'shared': '32'}, {'shared': 'A'}, {}, {}),
-                ({'shared': '31'}, {'shared': 'B'}, {}, {}),
+                ({'shared': '32'}, {'shared': 'A'}, {}, {}, {}),
+                ({'shared': '31'}, {'shared': 'B'}, {}, {}, {}),
             ]
         )
         assert merged_c['shared'] == '32'
@@ -204,52 +205,55 @@ class TestMergeColorMaps:
     def test_no_secondaries_returns_copy_of_primary(self):
         primary_c = {'talker': '34'}
         primary_t = {'talker': 'T'}
-        merged_c, merged_t, merged_m, merged_s = merge_color_maps(primary_c, primary_t, {}, {}, [])
+        merged_c, merged_t, merged_m, merged_s, merged_kw = merge_color_maps(
+            primary_c, primary_t, {}, {}, {}, []
+        )
         assert merged_c == primary_c
         assert merged_c is not primary_c  # it's a copy
         assert merged_m == {}
         assert merged_s == {}
+        assert merged_kw == {}
 
     def test_secondary_mode_map_merged_for_new_nodes(self):
-        merged_c, _, merged_m, _ = merge_color_maps(
-            {'talker': '34'}, {'talker': 'T'}, {}, {},
-            [({'listener': '32'}, {'listener': 'L'}, {'listener': 'full_line'}, {})]
+        merged_c, _, merged_m, _, _ = merge_color_maps(
+            {'talker': '34'}, {'talker': 'T'}, {}, {}, {},
+            [({'listener': '32'}, {'listener': 'L'}, {'listener': 'full_line'}, {}, {})]
         )
         assert merged_m.get('listener') == 'full_line'
 
     def test_primary_mode_not_overridden_by_secondary(self):
-        merged_c, _, merged_m, _ = merge_color_maps(
-            {'shared': '34'}, {'shared': 'T'}, {'shared': 'tag_only'}, {},
-            [({'shared': '32'}, {'shared': 'S'}, {'shared': 'full_line'}, {})]
+        merged_c, _, merged_m, _, _ = merge_color_maps(
+            {'shared': '34'}, {'shared': 'T'}, {'shared': 'tag_only'}, {}, {},
+            [({'shared': '32'}, {'shared': 'S'}, {'shared': 'full_line'}, {}, {})]
         )
         assert merged_m.get('shared') == 'tag_only'
 
     def test_secondary_mode_not_added_for_conflicting_node(self):
         # shared node exists in primary; its mode_map entry from secondary is ignored
-        merged_c, _, merged_m, _ = merge_color_maps(
-            {'shared': '34'}, {'shared': 'T'}, {}, {},
-            [({'shared': '32'}, {'shared': 'S'}, {'shared': 'full_line'}, {})]
+        merged_c, _, merged_m, _, _ = merge_color_maps(
+            {'shared': '34'}, {'shared': 'T'}, {}, {}, {},
+            [({'shared': '32'}, {'shared': 'S'}, {'shared': 'full_line'}, {}, {})]
         )
         assert 'shared' not in merged_m
 
     def test_secondary_style_map_merged_for_new_nodes(self):
-        merged_c, _, _, merged_s = merge_color_maps(
-            {'talker': '34'}, {'talker': 'T'}, {}, {},
-            [({'listener': '32'}, {'listener': 'L'}, {}, {'listener': 'inverted'})]
+        merged_c, _, _, merged_s, _ = merge_color_maps(
+            {'talker': '34'}, {'talker': 'T'}, {}, {}, {},
+            [({'listener': '32'}, {'listener': 'L'}, {}, {'listener': 'inverted'}, {})]
         )
         assert merged_s.get('listener') == 'inverted'
 
     def test_primary_style_not_overridden_by_secondary(self):
-        merged_c, _, _, merged_s = merge_color_maps(
-            {'shared': '34'}, {'shared': 'T'}, {}, {'shared': 'normal'},
-            [({'shared': '32'}, {'shared': 'S'}, {}, {'shared': 'inverted'})]
+        merged_c, _, _, merged_s, _ = merge_color_maps(
+            {'shared': '34'}, {'shared': 'T'}, {}, {'shared': 'normal'}, {},
+            [({'shared': '32'}, {'shared': 'S'}, {}, {'shared': 'inverted'}, {})]
         )
         assert merged_s.get('shared') == 'normal'
 
     def test_secondary_style_not_added_for_conflicting_node(self):
-        merged_c, _, _, merged_s = merge_color_maps(
-            {'shared': '34'}, {'shared': 'T'}, {}, {},
-            [({'shared': '32'}, {'shared': 'S'}, {}, {'shared': 'inverted'})]
+        merged_c, _, _, merged_s, _ = merge_color_maps(
+            {'shared': '34'}, {'shared': 'T'}, {}, {}, {},
+            [({'shared': '32'}, {'shared': 'S'}, {}, {'shared': 'inverted'}, {})]
         )
         assert 'shared' not in merged_s
 
@@ -528,3 +532,73 @@ class TestColorizeLaunchMsgsPipeline:
             ['[talker-1] [INFO] hello world\n'],
         )
         assert_segment_colored(out, '[talker-1]', '34')
+
+
+# ── merge keyword_map ─────────────────────────────────────────────────────────
+
+class TestMergeKeywordMaps:
+    def _kw(self, word, code='34'):
+        return build_keyword_highlights([{'word': word}], code)
+
+    def test_secondary_keywords_added_for_new_node(self):
+        kws = self._kw('important')
+        _, _, _, _, merged_kw = merge_color_maps(
+            {'talker': '34'}, {'talker': 'T'}, {}, {}, {},
+            [({'listener': '32'}, {'listener': 'L'}, {}, {}, {'listener': kws})]
+        )
+        assert 'listener' in merged_kw
+
+    def test_primary_keywords_win_for_existing_node(self):
+        import re
+        primary_kws = self._kw('primary_word')
+        secondary_kws = self._kw('secondary_word')
+        _, _, _, _, merged_kw = merge_color_maps(
+            {'talker': '34'}, {'talker': 'T'}, {}, {}, {'talker': primary_kws},
+            [({'talker': '32'}, {'talker': 'S'}, {}, {}, {'talker': secondary_kws})]
+        )
+        patterns = [p.pattern for p, _ in merged_kw['talker']]
+        assert re.escape('primary_word') in patterns
+        assert re.escape('secondary_word') not in patterns
+
+    def test_keyword_not_added_for_conflicting_node(self):
+        kws = self._kw('word')
+        _, _, _, _, merged_kw = merge_color_maps(
+            {'shared': '34'}, {'shared': 'T'}, {}, {}, {},
+            [({'shared': '32'}, {'shared': 'S'}, {}, {}, {'shared': kws})]
+        )
+        assert 'shared' not in merged_kw
+
+
+# ── resolve_node_keywords ─────────────────────────────────────────────────────
+
+class TestResolveNodeKeywords:
+    def _kws(self, word='test'):
+        return build_keyword_highlights([{'word': word}], '34')
+
+    def test_exact_match(self):
+        kws = self._kws()
+        assert resolve_node_keywords('talker', {'talker': kws}) is kws
+
+    def test_basename_match(self):
+        kws = self._kws()
+        assert resolve_node_keywords('/ns/talker', {'talker': kws}) is kws
+
+    def test_wildcard_full_path(self):
+        kws = self._kws()
+        assert resolve_node_keywords('/ns/talker', {'*/talker': kws}) is kws
+
+    def test_wildcard_basename(self):
+        kws = self._kws()
+        assert resolve_node_keywords('nav2_controller', {'nav2_*': kws}) is kws
+
+    def test_no_match_returns_empty_list(self):
+        assert resolve_node_keywords('unknown', {'talker': self._kws()}) == []
+
+    def test_empty_map_returns_empty_list(self):
+        assert resolve_node_keywords('talker', {}) == []
+
+    def test_exact_beats_wildcard(self):
+        exact_kws = self._kws('exact')
+        wild_kws = self._kws('wild')
+        result = resolve_node_keywords('talker', {'talker': exact_kws, 'talk*': wild_kws})
+        assert result is exact_kws

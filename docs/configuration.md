@@ -70,6 +70,7 @@ defaults:
 | `show_tag` | no | `false` suppresses the badge for this group only. |
 | `color_mode` | no | Per-group override: `tag_only` or `full_line`. |
 | `tag_style` | no | Per-group override: `normal` (colored text) or `inverted` (colored background). |
+| `highlight` | no | List of keyword entries to highlight within this group's lines. See [Keyword highlighting](#keyword-highlighting). |
 
 ---
 
@@ -98,6 +99,7 @@ The numeric suffix (`-1`, `-2`) is stripped before matching.
 | `show_group_tag` | `true` | Show `[TAG]` badges for this package. |
 | `tag_position` | `after` | `after` → `[node-N] [TAG] …` · `before` → `[TAG] [node-N] …`. |
 | `tag_style` | `normal` | `normal` (colored text) or `inverted` (colored background, empty letters). |
+| `highlight` | `[]` | List of keyword entries applied to all matched nodes in this package. See [Keyword highlighting](#keyword-highlighting). |
 | `unmatched_color` | `null` | Color for unmatched nodes. `null` = pass through. |
 | `unmatched_tag` | `null` | Badge for unmatched nodes (e.g. `"?"` → `[?]`). Requires `unmatched_color`. |
 | `dim_unmatched` | `false` | Dim unmatched nodes. Only when `unmatched_color: null`. |
@@ -121,3 +123,67 @@ The numeric suffix (`-1`, `-2`) is stripped before matching.
     <div class="term"><div class="term-bar"><div class="term-dots"><div class="term-dot term-dot-red"></div><div class="term-dot term-dot-yellow"></div><div class="term-dot term-dot-green"></div></div><div class="term-title">color_mode: full_line</div></div><div class="term-body"><span class="t-blue">[slam_toolbox-1] [LOC] [INFO] [1234.1]: map loaded</span><br><span class="t-green">[controller_server-1] [NAV] [WARN] [1234.2]: Costmap is empty</span></div></div>
 
 Priority order (most specific wins): per-group `color_mode:` → per-package `defaults.color_mode:` → global `dendros config`.
+
+---
+
+## Keyword highlighting
+
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">Keyword Highlighting</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/highlight.png" width="900" alt="Keyword Highlighting"/>
+</p>
+</div>
+</div>
+
+The `highlight:` (or also `highlights:`) key can appear under a **group** (applies only to that group's nodes) or under **`defaults:`** (applies to all matched nodes in the package). Keyword highlighting is the final colorization step — it runs after node-prefix coloring, badge insertion, and full-line coloring, so it never disrupts existing ANSI codes.
+
+### Keyword entry fields
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `word` | string | required | Text to match. Treated as a literal string unless `regex: true`. |
+| `color` | string | null | Highlight color. Accepts the same formats as `color:` on a group. `null` = use the node/group color. |
+| `bold` | bool | false | Apply bold to the highlight (appends `;1` to the resolved code). |
+| `inverted` | bool | false | Apply reverse-video to the highlight (colored background, empty letters). |
+| `case_sensitive` | bool | false | Match case-sensitively. |
+| `regex` | bool | false | Treat `word` as a regex pattern. |
+
+Keyword priority: **group-level** keywords take precedence over **defaults-level** keywords. When multiple keywords match the same text, the first entry in the list wins.
+
+### Example
+
+```yaml
+groups:
+  localization:
+    color: "bold blue"
+    label: "LOC"
+    highlight:
+      - word: "map loaded"      # use group color (bold blue), case-insensitive
+        bold: true
+      - word: "CRITICAL"
+        color: "bold red"
+        inverted: true          # colored background, empty letters
+      - word: "pos: \\d+\\.\\d+"
+        regex: true             # regex pattern
+        color: "#FF8800"
+    nodes:
+      - slam_toolbox
+
+defaults:
+  highlight:
+    - word: "WARN"              # applies to all matched nodes in this package
+      color: "bold yellow"
+    - word: "timeout"
+      color: "bold red"
+```
+
+

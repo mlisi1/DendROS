@@ -29,6 +29,8 @@ DENDROS_DISABLE=1 ros2 launch my_pkg my_launch.py
 | `nodes` | yes | list | Node name patterns to match (supports `fnmatch` wildcards). |
 | `show_tag` | no | bool | `false` suppresses the badge for this group only. |
 | `color_mode` | no | string | `tag_only` or `full_line`. Overrides the package/global setting for this group. |
+| `tag_style` | no | string | `normal` or `inverted`. Overrides badge style for this group. |
+| `highlight` / `highlights` | no | list | Keyword entries to highlight within this group's output lines. See [Keyword highlighting](configuration.md#keyword-highlighting). |
 
 ---
 
@@ -39,10 +41,12 @@ DENDROS_DISABLE=1 ros2 launch my_pkg my_launch.py
 | `color_mode` | `tag_only` | string | `tag_only` or `full_line`. |
 | `show_group_tag` | `true` | bool | Show badges for all groups in this package. |
 | `tag_position` | `after` | string | `after` or `before` — badge position relative to `[node-N]`. |
+| `tag_style` | `normal` | string | `normal` or `inverted` — badge appearance. |
 | `unmatched_color` | `null` | string\|null | Color for nodes not in any group. |
 | `unmatched_tag` | `null` | string\|null | Badge for unmatched nodes. Only shown when `unmatched_color` is set. |
 | `dim_unmatched` | `false` | bool | Dim unmatched nodes. Only when `unmatched_color: null`. |
 | `colorize_launch_msgs` | `true` | bool | Colorize `[INFO] [node-N]: …` lifecycle lines. |
+| `highlight` / `highlights` | `[]` | list | Keyword entries applied to all matched nodes in this package. See [Keyword highlighting](configuration.md#keyword-highlighting). |
 
 ---
 
@@ -55,13 +59,14 @@ Stored in `~/.config/dendROS/defaults.yaml`, managed via `dendros config`:
 | `color_mode` | `tag_only` | Global default output mode. |
 | `show_group_tag` | `true` | Show badges globally. |
 | `tag_position` | `after` | Badge position relative to `[node-N]`. |
+| `tag_style` | `normal` | `normal` or `inverted` — badge appearance globally. |
 | `unmatched_color` | `null` | Global fallback color for unmatched nodes. |
 | `unmatched_tag` | `null` | Global badge for unmatched nodes. |
 | `dim_unmatched` | `false` | Dim unmatched nodes globally. |
 | `debug` | `false` | Print debug output on startup. |
 | `config_merge` | `true` | Merge configs from included packages. |
 | `colorize_launch_msgs` | `true` | Colorize lifecycle lines globally. |
-| `crash_alert` | `false` | Print an inline banner when a node dies unexpectedly. |
+| `crash_alert` | `true` | Print an inline banner when a node dies unexpectedly. |
 | `crash_alert_color` | `node` | `node` = use group color; `red` = always bold red. |
 | `crash_alert_interval` | `30` | Seconds between periodic banner reprints. `0` = only on new crashes. |
 | `traceback_color` | `fancy` | `fancy` = bold red header + dim red frames; `red` = all bold red; `off` = passthrough. |
