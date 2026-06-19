@@ -5,13 +5,24 @@ dendros() {
     case "${1:-}" in
         config)  python3 "${_DENDROS_DIR}/dendros_config.py" ;;
         init)    python3 "${_DENDROS_DIR}/dendros_init.py" "${@:2}" ;;
+        disable)
+            export DENDROS_DISABLE=1
+            echo "[dendROS] colorization disabled (DENDROS_DISABLE=1)"
+            ;;
+        enable)
+            unset DENDROS_DISABLE
+            echo "[dendROS] colorization enabled"
+            ;;
         *)
             echo "Usage: dendros <command>"
             echo ""
             echo "Commands:"
             echo "  config    Open the interactive config editor"
             echo "  init      Generate a stock dendROS.yaml from the package's launch files"
-            echo "            Options: --recursive  also scan included packages"
+            echo "            Options: --recursive/-r  also scan included packages"
+            echo "                     --labels/-l     auto-generate group labels"
+            echo "  disable   Disable colorization in this shell (sets DENDROS_DISABLE=1)"
+            echo "  enable    Re-enable colorization in this shell (unsets DENDROS_DISABLE)"
             ;;
     esac
 }
@@ -20,7 +31,7 @@ _dendros_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
 
     if [[ $COMP_CWORD -eq 1 ]]; then
-        COMPREPLY=($(compgen -W "config init" -- "$cur"))
+        COMPREPLY=($(compgen -W "config init disable enable" -- "$cur"))
         return
     fi
 

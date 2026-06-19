@@ -11,8 +11,12 @@
 # Confirm DendROS found your config and matched your node names
 DENDROS_DEBUG=1 ros2 launch my_pkg my_launch.py
 
-# Temporarily disable without un-sourcing
+# Disable for a single invocation (env prefix, not persistent)
 DENDROS_DISABLE=1 ros2 launch my_pkg my_launch.py
+
+# Toggle for the entire shell session
+dendros disable    # sets DENDROS_DISABLE=1 in the current shell
+dendros enable     # unsets DENDROS_DISABLE
 ```
 
 !!! note
@@ -75,6 +79,19 @@ Stored in `~/.config/dendROS/defaults.yaml`, managed via `dendros config`:
 | `init_color` | `palette` | `dendros init`: `palette` or `null`. |
 | `init_color_bold` | `false` | `dendros init`: prefix palette colors with `bold`. |
 | `init_label` | `false` | `dendros init`: auto-generate labels. |
+
+---
+
+## dendros — subcommands
+
+| Subcommand | Description |
+|---|---|
+| `dendros config` | Open the interactive global-settings TUI. |
+| `dendros init` | Scaffold `config/dendROS.yaml` from launch files. See flags below. |
+| `dendros disable` | Set `DENDROS_DISABLE=1` in the current shell — colorization off until re-enabled. |
+| `dendros enable` | Unset `DENDROS_DISABLE` — restore colorization in the current shell. |
+
+Tab completion is available for all subcommands and `dendros init` flags after sourcing `dendROS.sh`.
 
 ---
 

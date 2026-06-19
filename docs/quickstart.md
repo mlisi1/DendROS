@@ -119,7 +119,12 @@ ros2 launch my_bringup main.launch.py
     Node names are matched after stripping the `-N` suffix. Use wildcards (`nav2_*`) for nodes you don't know in advance.
 
 ??? note "Temporarily disable"
+    For a single invocation, prefix the command:
     ```bash
     DENDROS_DISABLE=1 ros2 launch my_bringup main.launch.py
     ```
-    Calls the real `ros2` directly without un-sourcing or modifying anything.
+    To toggle colorization for the whole shell session:
+    ```bash
+    dendros disable   # off until you run dendros enable
+    dendros enable
+    ```
