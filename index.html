@@ -287,6 +287,26 @@
     
     
       <li class="md-tabs__item">
+        <a href="crash-alert/" class="md-tabs__link">
+          
+  
+  
+  Features
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="dendros-init/" class="md-tabs__link">
           
   
@@ -746,7 +766,7 @@
   <span class="md-ellipsis">
     
   
-    Tools
+    Features
   
 
     
@@ -759,6 +779,121 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Features
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="crash-alert/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Crash Alert
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="traceback-highlighting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Traceback Highlighting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -939,7 +1074,22 @@
 <p align="center"><strong>Colorized ROS 2 terminal output.</strong></p>
 
 <hr />
-<p><img alt="Terminal output demo" src="assets/images/screenshots/terminal_output.png" /></p>
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">Colored Terminal Output</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="./assets/images/screenshots/terminal_output.png" width="900" alt="Colored terminal output"/>
+</p>
+</div>
+</div>
+
 <p>DendROS shadows the <code>ros2</code> command with a shell function. When you run <code>ros2 launch</code> or <code>ros2 run</code>, the output is piped through a lightweight Python colorizer that reads a small YAML config from your package, matches the <code>[node-N]</code> prefix on each line, and applies group colors. Every other <code>ros2</code> subcommand passes through unchanged. Packages without a config are completely unaffected — no changes to launch files, no exit-code clobbering, no buffering.</p>
 <hr />
 <h2 id="features">Features</h2>
@@ -968,6 +1118,16 @@
 <div class="fc-icon">⚙️</div>
 <p><strong>Interactive config TUI</strong></p>
 <p><code>dendros config</code> opens a curses TUI for managing global defaults — no YAML editing required.</p>
+</div>
+<div class="feature-card">
+<div class="fc-icon">🚨</div>
+<p><strong>Crash alert</strong></p>
+<p>Inline banner flags crashed nodes the moment they die, lists exit codes, and reprints periodically so you never miss it.</p>
+</div>
+<div class="feature-card">
+<div class="fc-icon">🔴</div>
+<p><strong>Traceback highlighting</strong></p>
+<p>Python tracebacks colored automatically — bold red header, dim red frames, even when prefixed with a node name.</p>
 </div>
 <div class="feature-card">
 <div class="fc-icon">🚫</div>

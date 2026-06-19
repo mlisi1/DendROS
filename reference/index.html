@@ -285,6 +285,26 @@
     
     
       <li class="md-tabs__item">
+        <a href="../crash-alert/" class="md-tabs__link">
+          
+  
+  
+  Features
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="../dendros-init/" class="md-tabs__link">
           
   
@@ -677,7 +697,7 @@
   <span class="md-ellipsis">
     
   
-    Tools
+    Features
   
 
     
@@ -690,6 +710,121 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Features
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../crash-alert/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Crash Alert
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../traceback-highlighting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Traceback Highlighting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -873,6 +1008,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#dendros-dismiss" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dendros dismiss
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#dendros-init-cli-flags" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -966,6 +1112,17 @@
     <span class="md-ellipsis">
       
         Global config — all keys
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dendros-dismiss" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dendros dismiss
       
     </span>
   </a>
@@ -1207,6 +1364,26 @@
 <td>Colorize lifecycle lines globally.</td>
 </tr>
 <tr>
+<td><code>crash_alert</code></td>
+<td><code>false</code></td>
+<td>Print an inline banner when a node dies unexpectedly.</td>
+</tr>
+<tr>
+<td><code>crash_alert_color</code></td>
+<td><code>node</code></td>
+<td><code>node</code> = use group color; <code>red</code> = always bold red.</td>
+</tr>
+<tr>
+<td><code>crash_alert_interval</code></td>
+<td><code>30</code></td>
+<td>Seconds between periodic banner reprints. <code>0</code> = only on new crashes.</td>
+</tr>
+<tr>
+<td><code>traceback_color</code></td>
+<td><code>fancy</code></td>
+<td><code>fancy</code> = bold red header + dim red frames; <code>red</code> = all bold red; <code>off</code> = passthrough.</td>
+</tr>
+<tr>
 <td><code>init_modify_build</code></td>
 <td><code>true</code></td>
 <td><code>dendros init</code>: patch build files.</td>
@@ -1233,6 +1410,13 @@
 </tr>
 </tbody>
 </table>
+<hr />
+<h2 id="dendros-dismiss">dendros dismiss</h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>dendros<span class="w"> </span>dismiss
+</span></code></pre></div>
+<p>Toggles the crash alert banner. First call silences future periodic reprints; second call un-silences and immediately reprints the current banner.</p>
+<p>Works by sending <code>SIGUSR1</code> to the active pipe process. Safe to call at any time during <code>ros2 launch</code>.</p>
+<p>See <a href="../crash-alert/">Crash Alert</a> for full details.</p>
 <hr />
 <h2 id="dendros-init-cli-flags">dendros init — CLI flags</h2>
 <table>

@@ -41,6 +41,16 @@
   margin-right: 36px; /* optical centering relative to dots */
 }
 
+.term-body-image {
+  padding: 0.0rem 1.1rem;
+  color: #cdd6f4;
+  font-family: var(--md-code-font-family);
+  line-height: 0.0;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+
 .term-body {
   padding: 1rem 1.1rem;
   color: #cdd6f4;
