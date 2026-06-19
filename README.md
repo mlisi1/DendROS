@@ -1,340 +1,85 @@
 <p align="center">
-  <img src="res/logo.png" width="320" alt="DendROS logo"/>
+  <img src="docs/assets/images/logo_no_bg.png" width="300" alt="DendROS"/>
 </p>
 
 <h1 align="center">DendROS</h1>
-<p align="center">Colorized ROS 2 terminal output — assign colors to node groups without touching your launch files.</p>
+<p align="center"><em>Color-coded ROS 2 output — because a wall of white text from 32 nodes is nobody's debugging tool.</em></p>
+
+<p align="center">
+  <a href="https://github.com/mlisi1/DendROS/actions/workflows/ci.yml"><img src="https://github.com/mlisi1/DendROS/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
+  &nbsp;
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/mlisi1/DendROS" alt="License"/></a>
+  &nbsp;
+  <img src="https://img.shields.io/badge/ROS%202-compatible-22314E" alt="ROS 2 compatible"/>
+</p>
+
+<p align="center">
+  <a href="https://mlisi1.github.io/DendROS"><strong>📖 Documentation</strong></a>
+</p>
+
+<br>
 
 
 
-```
-[slam_toolbox-1]  [LOC]  [INFO] [...]: Serialization format: cdr
-[bt_navigator-1]  [NAV]  [INFO] [...]: Creating BT navigator
-[controller_server-1]  [NAV]  [WARN] [...]: Costmap is empty
-[robot_state_publisher-1]  [HW]  [INFO] [...]: Robot description loaded
-```
 
-DendROS shadows the `ros2` command with a shell function. When you run `ros2 launch` or `ros2 run`, the output is piped through a colorizer that matches the `[node_name-N]` prefix ROS 2 always emits and applies your configured group colors. Every other `ros2` subcommand passes through unchanged.
+You launched your stack. Nav2, SLAM, hardware drivers, your own nodes — all printing to the same terminal,
+all the same color. By the time you find the line you were looking for, it has scrolled past.
 
-The name comes from *Dendrobates* — the poison dart frog, famous for its vivid colors.
+**DendROS assigns each group of nodes its own color.** You could have localization in blue, navigation in green,
+hardware in orange — defined once in a small YAML file that lives inside your package.
+No launch file edits. No new ROS 2 dependencies. Packages without a config pass through completely unchanged.
 
 
+<p align="center">
+  <img src="docs/assets/images/screenshots/terminal_output.png" width="650" alt="Colored Terminal Output"/>
+</p>
 
-## Installation
+<br clear="right"/>
 
-### Host
+
+
+## Features
+<img
+  align="right"
+  src="docs/assets/images/dendrobate.png"
+  width="140"
+  style="transform: scaleX(-1);">
+
+- **Color by group** — one config file per package maps node groups to colors, badges, and display rules
+- **One command to get started** — Too lazy to look up how DendROS config works? We got you covered: `dendros init` scans your launch files and generates the config for you
+- **Truly non-invasive** — shell-level pipe; you won't loose autocompletion or aliases for launch files
+- **Works everywhere** — host install, Docker, any ROS 2 distribution
+
+## Install
 
 ```bash
 git clone https://github.com/mlisi1/DendROS
-cd DendROS
-bash install.sh
-source ~/.bashrc
+cd DendROS && bash install.sh && source ~/.bashrc
 ```
 
-### Docker
-
-Add this snippet to your `Dockerfile` after your ROS 2 base setup:
-
-```dockerfile
-COPY dendROS/ /usr/local/dendROS/
-RUN pip3 install --no-cache-dir pyyaml \
- && chmod +x /usr/local/dendROS/dendROS_pipe.py \
- && printf '\n# dendROS\nsource /usr/local/dendROS/dendROS.sh\n' >> /root/.bashrc
-```
-
-Or use the non-interactive installer:
-
-```dockerfile
-COPY . /tmp/dendROS/
-RUN bash /tmp/dendROS/install.sh -y
-```
-
-Add to your `docker-compose.yml` service:
-
-```yaml
-services:
-  my_robot:
-    tty: true
-    stdin_open: true
-    environment:
-      - RCUTILS_COLORIZED_OUTPUT=1
-```
-
-> `docker compose exec my_robot bash` sources `~/.bashrc` and activates the `ros2` function immediately. `docker compose up` log streaming has no TTY — `tty: true` is required for colors to render there.
-
-
-
-
-## Configuration
-
-Place a `dendROS.yaml` in your package's `config/` directory:
-
-```
-my_bringup/
-└── config/
-    └── dendROS.yaml
-```
-
-```yaml
-groups:
-
-  localization:
-    color: "bold blue"
-    label: "LOC"            # shows [LOC] badge after the node prefix; "" = no badge
-    nodes:
-      - slam_toolbox
-      - "*/amcl"            # wildcard: matches /any_ns/amcl
-
-  navigation:
-    color: "bold green"
-    label: "NAV"
-    nodes:
-      - nav2_*              # wildcard: covers all nav2_* nodes at once
-
-  hardware:
-    color: "#CC8800"        # hex truecolor
-    show_tag: false         # suppress badge for this group only
-    color_mode: full_line   # per-group override: color the entire line
-    nodes:
-      - robot_state_publisher
-
-defaults:
-  color_mode: "tag_only"
-  show_group_tag: true
-  colorize_launch_msgs: true  # false = pass [INFO] [node-N]: lifecycle lines through
-  unmatched_color: null
-  unmatched_tag: null         # badge for unlisted nodes, e.g. "?" → [?]
-  dim_unmatched: false        # true = dim unlisted nodes (when unmatched_color: null)
-```
-
-See [`docs/dendROS.yaml.example`](docs/dendROS.yaml.example) for the full annotated reference.
-
-### Wildcard node matching
-
-Node names support `fnmatch` shell-glob patterns. This is handy for stacks like Nav2 that spawn many nodes with a common prefix:
-
-| Pattern | Matches |
-|---|---|
-| `nav2_*` | `nav2_controller`, `nav2_planner`, `nav2_bt_navigator`, … |
-| `*/amcl` | `/robot/amcl`, `/my_ns/amcl`, … |
-| `*controller*` | any node whose basename contains "controller" |
-| `node_?` | `node_a`, `node_b`, … (one character) |
-
-Lookup order: exact full-path → exact basename → wildcard full-path → wildcard basename. The first match wins.
-
----
-### Colors
-
-The `color` field accepts three formats:
-
-**Named colors** with optional modifiers:
-
-| Modifier | Example | Effect |
-|---|---|---|
-| *(none)* | `"yellow"` | standard |
-| `light` / `bright` | `"light yellow"` | bright variant |
-| `dark` / `dim` | `"dark yellow"` | dim variant |
-| `bold` | `"bold yellow"` | bold |
-| combined | `"bold light cyan"` | bold + bright |
-
-Available names: `black` `red` `green` `yellow` `blue` `magenta` `cyan` `white`
-
-**Hex truecolor** (requires a modern terminal):
-
-| Syntax | Effect |
-|---|---|
-| `"#FF6600"` | 24-bit RGB color |
-| `"@#FF6600"` | bold + 24-bit RGB |
-| `"bold #FF6600"` | same as above |
-
-**Raw ANSI SGR codes** — legacy format, still supported: `"34;1"`, `"92"`, etc.
-
-### color_mode
-
-| Value | Effect |
-|---|---|
-| `tag_only` *(default)* | Colors the `[node-N]` prefix and `[TAG]` badge only. ROS 2 severity colors (WARN=yellow, ERROR=red) are preserved. |
-| `full_line` | Colors the entire line. At-a-glance group separation; severity colors are overridden. |
-
-Set `color_mode:` in the `defaults:` section to apply it to the whole package, or add `color_mode: full_line` directly under a single group to override just that group.
-
----
-
-## Config merging
-
-When a launch file includes other packages, DendROS automatically merges their configs in at runtime — no extra steps needed.
-
-```
-ros2 launch my_bringup main.launch.py
-             │
-             ├── my_bringup/config/dendROS.yaml   ← primary (wins conflicts)
-             ├── nav2_bringup/config/dendROS.yaml  ← merged in
-             └── slam_toolbox/config/dendROS.yaml  ← merged in
-```
-
-DendROS parses the launch file for `get_package_share_directory(…)` / `FindPackageShare(…)` (Python) and `$(find-pkg-share …)` (XML) references, then loads each referenced package's config. The primary package wins any node-name conflicts. One level of includes only.
-
-Config merging is on by default. Toggle it with `dendros config` → **Config merge**.
-
----
-
-## `dendros init`
-
-Scaffold a `dendROS.yaml` automatically from a package's launch files:
-
+## Quick start
+Go to your bringup launch file package (or any package containing launch files) and run ```dendros init``` to generate an initial config file listing the nodes called in the launch file. You can use ```--recursive``` (or ```-r```) to include nodes called by nested launch files. 
 ```bash
 cd ~/ros2_ws/src/my_bringup
-dendros init
+dendros init          # scan your launch files → write config/dendROS.yaml
 ```
 
-DendROS scans every `.py` and `.xml` file in `launch/`, extracts all `Node()` / `ComposableNode()` / `<node/>` calls, groups them by source package, and writes `config/dendROS.yaml`. It also patches `CMakeLists.txt` / `setup.py` / `setup.cfg` so the config is installed with the package.
-
-```yaml
-# generated config/dendROS.yaml (label: "" written for every group — fill in manually)
-groups:
-  nav2_bringup:
-    color: blue
-    label: ""
-    nodes:
-      - bt_navigator
-      - controller_server
-      - planner_server
-  slam_toolbox:
-    color: green
-    label: ""
-    nodes:
-      - slam_toolbox
-
-defaults:
-  color_mode: tag_only
-  show_group_tag: true
-  unmatched_color: null
-```
-
-Pass `--labels` (or `-l`) to auto-generate short labels from package names (`nav2_bringup` → `NB`, `slam_toolbox` → `ST`):
+Edit the colors in the generated config, then build and launch as usual:
 
 ```bash
-dendros init --labels
+colcon build --packages-select my_bringup
+source install/setup.bash
+ros2 launch my_bringup main.launch.py
 ```
 
-### Recursive mode
+## Global settings
 
-```bash
-dendros init --recursive   # or: dendros init -r
-```
+If you want to customize the global configs, `dendros config` opens an interactive TUI to tune defaults across all your packages. Use the arrow keys to navigate or to change the selected option. 
 
-Follows `IncludeLaunchDescription` / `<include>` references into external packages (BFS, cycle-safe). Packages are found via `ros2 pkg prefix`, `AMENT_PREFIX_PATH`, or as sibling directories in the same workspace `src/` folder. Packages that cannot be located produce a warning but do not abort.
-
-```
-[dendROS] package: my_bringup  root: /ws/src/my_bringup
-[dendROS] scanning (recursive) launch files…
-[dendROS]   main.launch.py: 2 node(s)
-[dendROS] recursive: found references to: nav2_bringup, slam_toolbox, xsens_mti_ros2_driver
-[dendROS]   nav2_bringup/bringup_launch.py [install]: 8 node(s)
-[dendROS]   slam_toolbox/online_async_launch.py [source]: 1 node(s)
-[dendROS]   xsens_mti_ros2_driver: not found (not in install tree or source siblings)
-[dendROS] found 11 node(s) in 3 group(s)
-[dendROS] created /ws/src/my_bringup/config/dendROS.yaml
-```
-
-### Init behavior options
-
-All behaviors are configurable via `dendros config`:
-
-| Setting | Values | Effect |
-|---|---|---|
-| `init_on_existing` | `abort` *(default)* / `merge` / `overwrite` | What to do if `config/dendROS.yaml` already exists |
-| `init_modify_build` | `on` *(default)* / `off` | Auto-patch `CMakeLists.txt` / `setup.py` / `setup.cfg` |
-| `init_color` | `palette` *(default)* / `null` | Assign cycling colors or leave all groups as `color: null` for manual editing |
-| `init_color_bold` | `off` *(default)* / `on` | Prefix every generated palette color with `bold` |
-| `init_label` | `off` *(default)* / `on` | Auto-generate labels (same as `--labels` flag); `off` writes `label: ""` |
-
----
-
-## Global config
-
-Run `dendros config` to open an interactive TUI for setting global defaults that apply across all packages:
-
-```
-  DendROS Config  ~/.config/dendROS/defaults.yaml
-
-   ► Color mode             [tag_only]  full_line
-     Show group tag         [on]  off
-     Tag position           [after]  before
-     Unmatched color        null
-     Debug mode             [off]  on
-     Config merge           [on]  off
-     Colorize launch msgs   [on]  off
-     Unmatched tag          null
-     Dim unmatched          [off]  on
-     Init: modify build     [on]  off
-     Init: on existing      [abort]  merge  overwrite
-     Init: color            [palette]  null
-     Init: bold colors      [off]  on
-     Init: auto label       [off]  on
-
-  ──────────────────────────────────────────────────
-  tag_only — color [node-N] prefix and [TAG] badge only;
-  preserves ROS 2 severity colors (WARN=yellow, ERROR=red)
-
-  ↑↓ navigate   Space/→ cycle   e edit text   s save   q quit
-```
-
-| Key | Action |
-|---|---|
-| `↑` / `↓` | Move between fields |
-| `→` / `←` / `Space` | Cycle option forward / backward |
-| `e` / `Enter` | Edit text field |
-| `s` | Save |
-| `q` | Quit |
-
-Settings are written to `~/.config/dendROS/defaults.yaml` and used as a baseline whenever `ros2 launch` or `ros2 run` is invoked. Per-package `dendROS.yaml` `defaults:` sections override them.
-
-**Colorize launch msgs** — when off, `[INFO] [node-N]: process started …` lifecycle lines pass through unchanged; node output lines are still colorized.
-
-**Unmatched tag** — set to a short string like `?` to display a `[?]` badge next to nodes not in any group (only takes effect when `unmatched_color` is also set).
-
-**Dim unmatched** — makes unlisted nodes visually recede without specifying a color (only applies when `unmatched_color` is null).
-
----
-
-## Environment variables
-
-| Variable | Effect |
-|---|---|
-| `DENDROS_DEBUG=1` | Print config summary and color map to stderr on startup |
-| `DENDROS_DISABLE=1` | Bypass dendROS entirely, call `ros2` directly |
-
-```bash
-# Debug: verify dendROS found your config and node names
-DENDROS_DEBUG=1 ros2 launch my_pkg my_launch.py
-
-# Temporarily disable without un-sourcing
-DENDROS_DISABLE=1 ros2 launch my_pkg my_launch.py
-```
+<p align="center">
+  <img src="docs/assets/images/screenshots/dendros_config.png" width="780" alt="dendros config TUI"/>
+</p>
 
 
-## Uninstall
 
-```bash
-bash uninstall.sh
-```
-
-
-## Tests
-
-Unit tests run without ROS or Docker:
-
-```bash
-python3 -m pytest test/unit/ -v
-```
-
-Automated pipeline (generates a timestamped report):
-
-```bash
-bash test/run_tests.sh           # unit only
-bash test/run_tests.sh --host    # unit + host integration
-bash test/run_tests.sh --docker  # unit + docker integration
-```
-
-CI runs on every push to `main` via GitHub Actions.
+MIT — see [LICENSE](LICENSE).

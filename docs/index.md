@@ -8,7 +8,7 @@
 
 ---
 
-![Terminal output demo](assets/images/screenshots/terminal_output.svg)
+![Terminal output demo](assets/images/screenshots/terminal_output.png)
 
 DendROS shadows the `ros2` command with a shell function. When you run `ros2 launch` or `ros2 run`, the output is piped through a lightweight Python colorizer that reads a small YAML config from your package, matches the `[node-N]` prefix on each line, and applies group colors. Every other `ros2` subcommand passes through unchanged. Packages without a config are completely unaffected — no changes to launch files, no exit-code clobbering, no buffering.
 

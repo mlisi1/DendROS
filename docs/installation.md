@@ -101,7 +101,7 @@ DENDROS_DEBUG=1 ros2 launch my_pkg my_launch.py
 <span class="t-blue">[slam_toolbox-1]</span> <span class="t-blue t-badge">[LOC]</span> <span class="t-info">[INFO]</span> <span class="t-dim">[1234.1] [slam_toolbox]:</span> map loaded</div>
 </div>
 
-![Verify debug output](assets/images/screenshots/terminal_output.svg)
+![Verify debug output](assets/images/screenshots/terminal_output.png)
 
 If you see `passthrough mode` instead, the config was not found. Check that:
 
