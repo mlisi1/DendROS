@@ -22,7 +22,7 @@
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../assets/images/dendros_small.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
@@ -53,6 +53,8 @@
       
     
     
+      <link rel="stylesheet" href="../assets/css/extra.css">
+    
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -69,7 +71,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="deep-orange">
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="yellow">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -94,8 +96,7 @@
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href=".." title="DendROS" class="md-header__button md-logo" aria-label="DendROS" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../assets/images/dendrobate.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -125,7 +126,7 @@
     
     
     
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="deep-orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="yellow"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
     
       <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
@@ -135,7 +136,7 @@
     
     
     
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="deep-orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="yellow"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
     
       <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
@@ -174,6 +175,8 @@
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
         </button>
       </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
       
     </form>
     <div class="md-search__output">
@@ -341,8 +344,7 @@
   <label class="md-nav__title" for="__drawer">
     <a href=".." title="DendROS" class="md-nav__button md-logo" aria-label="DendROS" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../assets/images/dendrobate.png" alt="logo">
 
     </a>
     DendROS
@@ -779,34 +781,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Basic usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-output" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example output
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#generated-config" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Generated config
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -817,23 +791,6 @@
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Recursive mode">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-output_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example output
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -856,23 +813,6 @@
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Behavior options">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#using-merge-mode" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Using merge mode
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -982,34 +922,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Basic usage">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-output" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example output
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#generated-config" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Generated config
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
@@ -1020,23 +932,6 @@
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Recursive mode">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-output_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example output
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1059,23 +954,6 @@
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Behavior options">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#using-merge-mode" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Using merge mode
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1108,62 +986,78 @@
 <p><code>dendros init</code> scaffolds a <code>config/dendROS.yaml</code> from a package's launch files automatically.</p>
 <hr />
 <h2 id="basic-usage">Basic usage</h2>
-<p>Run from the root of a ROS 2 package:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">cd</span><span class="w"> </span>~/ros2_ws/src/my_bringup
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>dendros<span class="w"> </span>init
-</code></pre></div>
-<p>DendROS scans every <code>.py</code> and <code>.xml</code> file in <code>launch/</code>, extracts all <code>Node()</code> / <code>ComposableNode()</code> / <code>&lt;node/&gt;</code> calls, groups them by source package, and writes <code>config/dendROS.yaml</code>. It also patches <code>CMakeLists.txt</code> / <code>setup.py</code> / <code>setup.cfg</code> so the config is installed with the package.</p>
-<h3 id="example-output">Example output</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>[dendROS] package: my_bringup  root: /ws/src/my_bringup
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>[dendROS] scanning launch files…
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>[dendROS]   main.launch.py: 2 node(s)
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>[dendROS] found 2 node(s) in 1 group(s)
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>[dendROS] created /ws/src/my_bringup/config/dendROS.yaml
-</code></pre></div>
-<h3 id="generated-config">Generated config</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">groups</span><span class="p">:</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">my_bringup</span><span class="p">:</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">blue</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">nodes</span><span class="p">:</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_node</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">another_node</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nt">defaults</span><span class="p">:</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="nt">color_mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tag_only</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">  </span><span class="nt">show_group_tag</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">  </span><span class="nt">unmatched_color</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
-</code></pre></div>
-<p><code>label: ""</code> is written for every group as a placeholder — fill it in manually.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">cd</span><span class="w"> </span>~/ros2_ws/src/my_bringup
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>dendros<span class="w"> </span>init
+</span></code></pre></div>
+<p>DendROS scans every <code>.py</code> and <code>.xml</code> file in <code>launch/</code>, extracts all <code>Node()</code> / <code>ComposableNode()</code> / <code>&lt;node/&gt;</code> declarations, groups them by source package, and writes <code>config/dendROS.yaml</code>. It also patches <code>CMakeLists.txt</code> / <code>setup.py</code> / <code>setup.cfg</code> to install the config.</p>
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">dendros init</div>
+  </div>
+  <div class="term-body"><span class="t-dim">[dendROS] package: my_bringup</span>
+<span class="t-dim">[dendROS] scanning launch files…</span>
+<span class="t-dim">[dendROS]   main.launch.py: 3 node(s)</span>
+<span class="t-dim">[dendROS] found 3 node(s) in 1 group(s)</span>
+<span class="t-green">[dendROS] created config/dendROS.yaml</span>
+<span class="t-dim">[dendROS] patched CMakeLists.txt</span></div>
+</div>
+
+<p><strong>Generated config:</strong></p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">groups</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">my_bringup</span><span class="p">:</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">blue</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w">          </span><span class="c1"># ← fill in manually (or use --labels)</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">nodes</span><span class="p">:</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">my_node</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">another_node</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">third_node</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nt">defaults</span><span class="p">:</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="nt">color_mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tag_only</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="nt">show_group_tag</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span><span class="nt">unmatched_color</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+</span></code></pre></div>
 <hr />
 <h2 id="recursive-mode">Recursive mode</h2>
-<p>Follow <code>IncludeLaunchDescription</code> / <code>&lt;include&gt;</code> references into external packages:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>dendros<span class="w"> </span>init<span class="w"> </span>--recursive<span class="w">   </span><span class="c1"># or: dendros init -r</span>
-</code></pre></div>
-<p>Packages are found via (in order):</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>dendros<span class="w"> </span>init<span class="w"> </span>--recursive<span class="w">   </span><span class="c1"># or: dendros init -r</span>
+</span></code></pre></div>
+<p>Follows <code>IncludeLaunchDescription</code> / <code>&lt;include&gt;</code> references into external packages (BFS, cycle-safe).</p>
+<p><strong>Package lookup order:</strong></p>
 <ol>
-<li><code>ros2 pkg prefix</code> → installed packages</li>
-<li><code>AMENT_PREFIX_PATH</code> entries</li>
-<li>Sibling directory in the same workspace <code>src/</code> folder (for packages not yet installed)</li>
+<li><code>ros2 pkg prefix &lt;pkg&gt;</code> → installed packages</li>
+<li>Scan <code>AMENT_PREFIX_PATH</code> entries</li>
+<li>Sibling directory in the same <code>src/</code> folder (packages in source but not yet built)</li>
 </ol>
-<p>Packages that cannot be located produce a warning but do not abort the scan.</p>
-<h3 id="example-output_1">Example output</h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>[dendROS] package: my_bringup  root: /ws/src/my_bringup
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>[dendROS] scanning (recursive) launch files…
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>[dendROS]   main.launch.py: 2 node(s)
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>[dendROS] recursive: found references to: nav2_bringup, slam_toolbox, xsens_mti_ros2_driver
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>[dendROS]   nav2_bringup/bringup_launch.py [install]: 8 node(s)
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>[dendROS]   slam_toolbox/online_async_launch.py [source]: 1 node(s)
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>[dendROS]   xsens_mti_ros2_driver: not found (not in install tree or source siblings)
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>[dendROS] found 11 node(s) in 3 group(s)
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>[dendROS] created /ws/src/my_bringup/config/dendROS.yaml
-</code></pre></div>
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">dendros init --recursive</div>
+  </div>
+  <div class="term-body"><span class="t-dim">[dendROS] package: my_bringup</span>
+<span class="t-dim">[dendROS] scanning (recursive) launch files…</span>
+<span class="t-dim">[dendROS]   main.launch.py: 2 node(s)</span>
+<span class="t-dim">[dendROS] found references: nav2_bringup, slam_toolbox, xsens_driver</span>
+<span class="t-dim">[dendROS]   nav2_bringup [install]: 8 node(s)</span>
+<span class="t-dim">[dendROS]   slam_toolbox [source]: 1 node(s)</span>
+<span class="t-warn">[dendROS]   xsens_driver: not found</span>
+<span class="t-dim">[dendROS] found 11 node(s) in 3 group(s)</span>
+<span class="t-green">[dendROS] created config/dendROS.yaml</span></div>
+</div>
+
 <hr />
 <h2 id="auto-generate-labels">Auto-generate labels</h2>
-<p>Pass <code>--labels</code> (or <code>-l</code>) to auto-generate short uppercase labels from package names:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>dendros<span class="w"> </span>init<span class="w"> </span>--labels
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>dendros<span class="w"> </span>init<span class="w"> </span>-r<span class="w"> </span>-l<span class="w">        </span><span class="c1"># recursive + labels</span>
-</code></pre></div>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>dendros<span class="w"> </span>init<span class="w"> </span>--labels<span class="w">   </span><span class="c1"># or: dendros init -l</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>dendros<span class="w"> </span>init<span class="w"> </span>-r<span class="w"> </span>-l<span class="w">      </span><span class="c1"># recursive + labels</span>
+</span></code></pre></div>
 <table>
 <thead>
 <tr>
@@ -1184,60 +1078,52 @@
 <td><code>robot_state_publisher</code></td>
 <td><code>RSP</code></td>
 </tr>
-<tr>
-<td><code>my_pkg</code></td>
-<td><code>MY</code></td>
-</tr>
 </tbody>
 </table>
-<p>Without <code>--labels</code>, <code>label: ""</code> is written for every group so you can fill it in manually.</p>
+<p>Without <code>--labels</code>, every group gets <code>label: ""</code> as a placeholder.</p>
 <hr />
 <h2 id="behavior-options">Behavior options</h2>
-<p>All options are configurable via <code>dendros config</code> → Init settings:</p>
+<p>All options are configurable via <code>dendros config</code> → <em>Init settings</em>:</p>
 <table>
 <thead>
 <tr>
 <th>Setting</th>
 <th>Values</th>
-<th>Effect</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>init_on_existing</code></td>
 <td><code>abort</code> <em>(default)</em> / <code>merge</code> / <code>overwrite</code></td>
-<td>What to do if <code>config/dendROS.yaml</code> already exists. <code>merge</code> adds new nodes only.</td>
+<td>What to do if the config already exists. <code>merge</code> adds new nodes only.</td>
 </tr>
 <tr>
 <td><code>init_modify_build</code></td>
 <td><code>on</code> <em>(default)</em> / <code>off</code></td>
-<td>Auto-patch <code>CMakeLists.txt</code> / <code>setup.py</code> / <code>setup.cfg</code> to install the config.</td>
+<td>Auto-patch <code>CMakeLists.txt</code> / <code>setup.py</code> / <code>setup.cfg</code>.</td>
 </tr>
 <tr>
 <td><code>init_color</code></td>
 <td><code>palette</code> <em>(default)</em> / <code>null</code></td>
-<td>Assign cycling colors to groups, or leave all as <code>color: null</code> for manual editing.</td>
+<td>Assign cycling colors or leave as <code>color: null</code>.</td>
 </tr>
 <tr>
 <td><code>init_color_bold</code></td>
 <td><code>off</code> <em>(default)</em> / <code>on</code></td>
-<td>Prefix every palette color with <code>bold</code> (e.g. <code>bold blue</code>).</td>
+<td>Prefix every palette color with <code>bold</code>.</td>
 </tr>
 <tr>
 <td><code>init_label</code></td>
 <td><code>off</code> <em>(default)</em> / <code>on</code></td>
-<td>Auto-generate labels (same as <code>--labels</code>). <code>off</code> writes <code>label: ""</code>.</td>
+<td>Auto-generate labels (same as <code>--labels</code>).</td>
 </tr>
 </tbody>
 </table>
-<h3 id="using-merge-mode">Using merge mode</h3>
-<p>If a <code>dendROS.yaml</code> already exists, <code>merge</code> adds nodes found in launch files that aren't already listed, without touching existing entries:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Set merge mode permanently:</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>dendros<span class="w"> </span>config<span class="w">   </span><span class="c1"># → Init: on existing → merge</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Or override once by editing defaults.yaml directly:</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># ~/.config/dendROS/defaults.yaml: init_on_existing: merge</span>
-</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Iterative development</p>
+<p>Set <code>init_on_existing: merge</code> to safely re-run <code>dendros init</code> as your launch files evolve — new nodes are appended without touching existing groups.</p>
+</div>
 
 
 
@@ -1268,9 +1154,53 @@
       
         <footer class="md-footer">
   
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../config-merging/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Config Merging">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Config Merging
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../global-config/" class="md-footer__link md-footer__link--next" aria-label="Next: dendros config">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                dendros config
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
       <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2024 mlisi1
+    </div>
   
   
     Made with
@@ -1293,11 +1223,26 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.highlight", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate", "content.action.edit", "content.tooltips"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
+
       <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var source = document.querySelector('.md-sidebar--primary .md-nav__source');
+    if (!source) return;
+    var brand = document.createElement('div');
+    brand.className = 'dendros-nav-brand';
+    var img = document.createElement('img');
+    img.src = '../assets/images/DendROS.png';
+    img.alt = 'DendROS';
+    brand.appendChild(img);
+    source.parentNode.insertBefore(brand, source.nextSibling);
+  });
+</script>
+
   </body>
 </html>
