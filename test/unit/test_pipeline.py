@@ -584,6 +584,144 @@ class TestCrashAlertDetection:
         assert rc == 0
 
 
+class TestCrashAlertRestartAndCounts:
+    """detect_restart, handle_restart, record_death, and death count in banner."""
+
+    def setup_method(self):
+        import lib.crash_alert as ca
+        ca._dead_nodes = []
+        ca._death_counts = {}
+        ca._crash_alert_color = 'node'
+
+    # ── detect_restart ────────────────────────────────────────────────────────
+
+    def test_detect_restart_returns_node_name(self):
+        from lib.crash_alert import detect_restart
+        line = "[INFO] [my_node-1]: process started with pid [5678]\n"
+        assert detect_restart(line) == 'my_node'
+
+    def test_detect_restart_strips_numeric_suffix(self):
+        from lib.crash_alert import detect_restart
+        line = "[INFO] [controller_server-3]: process started with pid [9999]\n"
+        assert detect_restart(line) == 'controller_server'
+
+    def test_detect_restart_no_suffix(self):
+        from lib.crash_alert import detect_restart
+        line = "[INFO] [slam_toolbox]: process started with pid [42]\n"
+        assert detect_restart(line) == 'slam_toolbox'
+
+    def test_death_line_not_detected_as_restart(self):
+        from lib.crash_alert import detect_restart
+        line = "[ERROR] [my_node-1]: process has died [pid 1234, exit code -11]\n"
+        assert detect_restart(line) is None
+
+    def test_normal_log_line_not_detected_as_restart(self):
+        from lib.crash_alert import detect_restart
+        line = "[my_node-1] [INFO] [1.0] [/logger]: hello\n"
+        assert detect_restart(line) is None
+
+    def test_warn_level_start_not_detected(self):
+        from lib.crash_alert import detect_restart
+        # Only [INFO] level is valid for "process started"
+        line = "[WARN] [my_node-1]: process started with pid [1]\n"
+        assert detect_restart(line) is None
+
+    # ── record_death and handle_restart ───────────────────────────────────────
+
+    def test_record_death_adds_to_dead_nodes(self):
+        import lib.crash_alert as ca
+        ca.record_death('my_node', '-11', '34')
+        assert len(ca._dead_nodes) == 1
+        assert ca._dead_nodes[0][0] == 'my_node'
+
+    def test_record_death_increments_count(self):
+        import lib.crash_alert as ca
+        ca.record_death('my_node', '-11', None)
+        ca.record_death('my_node', '1', None)
+        assert ca._death_counts['my_node'] == 2
+
+    def test_record_death_independent_counts_per_node(self):
+        import lib.crash_alert as ca
+        ca.record_death('talker', '-11', None)
+        ca.record_death('listener', '1', None)
+        ca.record_death('talker', '1', None)
+        assert ca._death_counts['talker'] == 2
+        assert ca._death_counts['listener'] == 1
+
+    def test_handle_restart_removes_from_dead_nodes(self):
+        import lib.crash_alert as ca
+        ca.record_death('my_node', '-11', None)
+        assert len(ca._dead_nodes) == 1
+        ca.handle_restart('my_node')
+        assert ca._dead_nodes == []
+
+    def test_handle_restart_preserves_death_count(self):
+        import lib.crash_alert as ca
+        ca.record_death('my_node', '-11', None)
+        ca.handle_restart('my_node')
+        assert ca._death_counts['my_node'] == 1
+
+    def test_handle_restart_only_removes_named_node(self):
+        import lib.crash_alert as ca
+        ca.record_death('talker', '-11', None)
+        ca.record_death('listener', '1', None)
+        ca.handle_restart('talker')
+        assert len(ca._dead_nodes) == 1
+        assert ca._dead_nodes[0][0] == 'listener'
+
+    def test_handle_restart_noop_when_not_dead(self):
+        import lib.crash_alert as ca
+        ca.record_death('talker', '-11', None)
+        ca.handle_restart('listener')   # listener was never dead
+        assert len(ca._dead_nodes) == 1
+
+    # ── death count in banner ─────────────────────────────────────────────────
+
+    def test_banner_no_count_on_first_death(self, tmp_path):
+        """First death shows no ×N marker."""
+        prefix = make_prefix(tmp_path, 'test_pkg', fixture_config('basic.yaml'))
+        _write_global_cfg(prefix, crash_alert=True)
+        lines = ["[talker-1]: process has died [pid 1, exit code -11]\n"]
+        stdout, _, _ = run_pipe(prefix, 'test_pkg', lines)
+        plain = strip_ansi(stdout)
+        assert '×' not in plain
+
+    def test_banner_shows_count_after_restart_and_redeath(self, tmp_path):
+        """Node dies, restarts, dies again → banner shows ×2."""
+        prefix = make_prefix(tmp_path, 'test_pkg', fixture_config('basic.yaml'))
+        _write_global_cfg(prefix, crash_alert=True)
+        lines = [
+            "[talker-1]: process has died [pid 1, exit code -11]\n",
+            "[INFO] [talker-1]: process started with pid [2]\n",
+            "[talker-1]: process has died [pid 2, exit code -11]\n",
+        ]
+        stdout, _, _ = run_pipe(prefix, 'test_pkg', lines)
+        plain = strip_ansi(stdout)
+        assert '×2' in plain
+
+    def test_restart_clears_node_from_banner(self, tmp_path):
+        """After restart the node is no longer listed in the alert."""
+        prefix = make_prefix(tmp_path, 'test_pkg', fixture_config('basic.yaml'))
+        _write_global_cfg(prefix, crash_alert=True)
+        lines = [
+            "[talker-1]: process has died [pid 1, exit code -11]\n",
+            "[INFO] [talker-1]: process started with pid [2]\n",
+        ]
+        stdout, _, _ = run_pipe(prefix, 'test_pkg', lines)
+        plain = strip_ansi(stdout)
+        # Banner appears after the death, but not after the restart
+        assert 'CRASH ALERT' in plain
+        # The last occurrence of CRASH ALERT must not be followed by another one
+        # Simply: after the restart line there should be no new CRASH ALERT banner
+        lines_out = plain.splitlines()
+        restart_idx = next(
+            (i for i, l in enumerate(lines_out) if 'process started' in l), None
+        )
+        assert restart_idx is not None
+        after_restart = lines_out[restart_idx + 1:]
+        assert not any('CRASH ALERT' in l for l in after_restart)
+
+
 class TestTracebackColorization:
     """The pipe should colorize Python traceback blocks in dim red."""
 

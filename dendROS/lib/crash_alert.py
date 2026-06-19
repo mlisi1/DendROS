@@ -17,11 +17,15 @@ _EXIT_CODE_RE = re.compile(r'\bexit code:?\s+(-?\d+)')
 _EXIT_NONZERO_RE = re.compile(
     r'^\[([a-zA-Z0-9_./-]+?)(?:-\d+)?\].*?\bprocess exited with return code:\s*(-?\d+)'
 )
+_STARTED_RE = re.compile(
+    r'^\[INFO\]\s+\[([a-zA-Z0-9_./-]+?)(?:-\d+)?\].*?\bprocess started\b'
+)
 
 _crash_alert_enabled  = False
 _crash_alert_color    = 'node'
 _crash_alert_interval = 30.0
-_dead_nodes           = []   # each entry: (node_name, exit_code_str_or_None, ansi_code_or_None)
+_dead_nodes           = []   # currently-dead: (node_name, exit_code_or_None, ansi_code_or_None)
+_death_counts         = {}   # {node_name: int} — cumulative crashes, never reset
 _last_alert_time      = 0.0
 
 
@@ -56,6 +60,28 @@ def detect_death(line):
     return None, None
 
 
+def detect_restart(line):
+    """Return node_name if line signals a node restarting, else None.
+
+    Matches launch-framework lines of the form:
+      [INFO] [node-N]: process started with pid [1234]
+    """
+    m = _STARTED_RE.match(line)
+    return m.group(1) if m else None
+
+
+def record_death(node_name, exit_code, ansi_code):
+    """Add node to the currently-dead list and increment its cumulative death counter."""
+    _dead_nodes.append((node_name, exit_code, ansi_code))
+    _death_counts[node_name] = _death_counts.get(node_name, 0) + 1
+
+
+def handle_restart(node_name):
+    """Remove node from the currently-dead list (it restarted). Death count is preserved."""
+    global _dead_nodes
+    _dead_nodes = [(n, ec, ac) for n, ec, ac in _dead_nodes if n != node_name]
+
+
 def print_alert_banner():
     """Print a prominent inline alert banner."""
     global _last_alert_time
@@ -70,8 +96,10 @@ def print_alert_banner():
     for node_name, exit_code, node_color in _dead_nodes:
         nc = (f'\033[{node_color}m'
               if _crash_alert_color == 'node' and node_color else RED)
+        count = _death_counts.get(node_name, 1)
+        count_str = f' ×{count}' if count > 1 else ''
         ec = f' exit {exit_code}' if exit_code is not None else ' (died)'
-        parts.append(f'{nc}{node_name}{RST}{DIM}{ec}{RST}')
+        parts.append(f'{nc}{node_name}{RST}{DIM}{count_str}{ec}{RST}')
 
     nodes = f'{DIM}  ·  {RST}'.join(parts)
     sys.stdout.write(f'{HDR} !! CRASH ALERT {RST}  {nodes}\n')

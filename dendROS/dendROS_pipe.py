@@ -183,8 +183,12 @@ def main():
                 dead_node, exit_code = ca.detect_death(line)
                 if dead_node:
                     code, _ = resolve_node(dead_node, color_map, tag_map)
-                    ca._dead_nodes.append((dead_node, exit_code, code))
+                    ca.record_death(dead_node, exit_code, code)
                     new_death = True
+                else:
+                    restarted = ca.detect_restart(line)
+                    if restarted:
+                        ca.handle_restart(restarted)
 
             sys.stdout.write(_colorize(line))
             sys.stdout.flush()
