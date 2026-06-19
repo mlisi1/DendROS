@@ -1,9 +1,6 @@
-"""Crash alert: node death detection, PID file, SIGUSR1, periodic banner."""
+"""Crash alert: node death detection and periodic inline banner."""
 
-import atexit
-import os
 import re
-import signal
 import sys
 import time
 
@@ -25,9 +22,7 @@ _crash_alert_enabled  = False
 _crash_alert_color    = 'node'
 _crash_alert_interval = 30.0
 _dead_nodes           = []   # each entry: (node_name, exit_code_str_or_None, ansi_code_or_None)
-_alert_dismissed      = False
 _last_alert_time      = 0.0
-_pid_file_path        = None
 
 
 def setup(enabled, color, interval):
@@ -36,10 +31,6 @@ def setup(enabled, color, interval):
     _crash_alert_enabled  = enabled
     _crash_alert_color    = color
     _crash_alert_interval = interval
-    if enabled:
-        _write_pid_file()
-        atexit.register(_cleanup)
-        signal.signal(signal.SIGUSR1, _toggle_alert)
 
 
 def detect_death(line):
@@ -66,9 +57,9 @@ def detect_death(line):
 
 
 def print_alert_banner():
-    """Print a prominent inline alert banner. No-op when dismissed."""
+    """Print a prominent inline alert banner."""
     global _last_alert_time
-    if _alert_dismissed or not _dead_nodes:
+    if not _dead_nodes:
         return
     HDR = '\033[31;1;7m'
     RED = '\033[31;1m'
@@ -86,28 +77,3 @@ def print_alert_banner():
     sys.stdout.write(f'{HDR} !! CRASH ALERT {RST}  {nodes}\n')
     sys.stdout.flush()
     _last_alert_time = time.monotonic()
-
-
-def _toggle_alert(_sig, _frame):
-    global _alert_dismissed
-    _alert_dismissed = not _alert_dismissed
-    if not _alert_dismissed and _dead_nodes:
-        print_alert_banner()
-
-
-def _write_pid_file():
-    global _pid_file_path
-    try:
-        _pid_file_path = f'/tmp/dendros_alert_{os.getppid()}'
-        with open(_pid_file_path, 'w') as f:
-            f.write(str(os.getpid()))
-    except OSError:
-        _pid_file_path = None
-
-
-def _cleanup():
-    if _pid_file_path:
-        try:
-            os.unlink(_pid_file_path)
-        except OSError:
-            pass

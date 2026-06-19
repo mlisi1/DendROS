@@ -192,7 +192,7 @@ def main():
             if ca._crash_alert_enabled:
                 if new_death:
                     ca.print_alert_banner()
-                elif (ca._dead_nodes and not ca._alert_dismissed
+                elif (ca._dead_nodes
                       and ca._crash_alert_interval > 0
                       and time.monotonic() - ca._last_alert_time >= ca._crash_alert_interval):
                     ca.print_alert_banner()

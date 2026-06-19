@@ -5,26 +5,6 @@ dendros() {
     case "${1:-}" in
         config)  python3 "${_DENDROS_DIR}/dendros_config.py" ;;
         init)    python3 "${_DENDROS_DIR}/dendros_init.py" "${@:2}" ;;
-        dismiss)
-            local _pid_file="/tmp/dendros_alert_$$"
-            if [[ ! -f "$_pid_file" ]]; then
-                echo "[dendROS] no active crash alert session"
-                return 1
-            fi
-            local _alert_pid
-            _alert_pid="$(cat "$_pid_file" 2>/dev/null)"
-            if [[ -z "$_alert_pid" ]]; then
-                echo "[dendROS] alert pid file is empty"
-                return 1
-            fi
-            if kill -SIGUSR1 "$_alert_pid" 2>/dev/null; then
-                : # success — pipe toggles the overlay
-            else
-                echo "[dendROS] alert process not running (pid ${_alert_pid})"
-                rm -f "$_pid_file"
-                return 1
-            fi
-            ;;
         *)
             echo "Usage: dendros <command>"
             echo ""
@@ -32,7 +12,6 @@ dendros() {
             echo "  config    Open the interactive config editor"
             echo "  init      Generate a stock dendROS.yaml from the package's launch files"
             echo "            Options: --recursive  also scan included packages"
-            echo "  dismiss   Toggle the crash alert overlay (requires crash_alert: on)"
             ;;
     esac
 }

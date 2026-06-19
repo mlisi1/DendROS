@@ -115,8 +115,7 @@ _DESCS = {
         "on  — auto-generate a short label from the package name (e.g. nav2_bringup → NB)",
     ),
     "crash_alert": (
-        "on  — print an inline alert banner when a ROS 2 node dies unexpectedly;"
-        " run 'dendros dismiss' to silence future reprints",
+        "on  — print an inline alert banner when a ROS 2 node dies unexpectedly",
         "off — no banner; node death appears only in the normal log stream",
     ),
     "crash_alert_color": (
