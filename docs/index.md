@@ -1,41 +1,53 @@
 # DendROS
 
-**Colorized ROS 2 terminal output — assign colors to node groups without touching your launch files.**
+<p align="center">
+  <img src="assets/images/logo_no_bg.png" width="460" alt="DendROS logo"/>
+</p>
 
-```
-[slam_toolbox-1]  [LOC]  [INFO] [...]: Serialization format: cdr
-[bt_navigator-1]  [NAV]  [INFO] [...]: Creating BT navigator
-[controller_server-1]  [NAV]  [WARN] [...]: Costmap is empty
-[robot_state_publisher-1]  [HW]  [INFO] [...]: Robot description loaded
-```
-
-DendROS shadows the `ros2` command with a shell function. When you run `ros2 launch` or `ros2 run`, the output is piped through a colorizer that reads a small YAML config from your package. Every other `ros2` subcommand passes through unchanged.
-
-The name comes from *Dendrobates* — the poison dart frog, famous for its vivid colors.
+<p align="center"><strong>Colorized ROS 2 terminal output.</strong></p>
 
 ---
 
-## How it works
+![Terminal output demo](assets/images/screenshots/terminal_output.svg)
 
-1. `ros2 launch my_pkg my_launch.py` is intercepted by a shell function.
-2. The real `ros2` binary runs normally — its combined stdout+stderr is piped through `dendROS_pipe.py`.
-3. The pipe reads `config/dendROS.yaml` from the launched package, matches the `[node-N]` prefix on each line, and applies group colors.
-4. If no config is found, output passes through unchanged. Nothing breaks.
-
-Exit codes are preserved via `${PIPESTATUS[0]}`. Packages without a `dendROS.yaml` are completely unaffected.
+DendROS shadows the `ros2` command with a shell function. When you run `ros2 launch` or `ros2 run`, the output is piped through a lightweight Python colorizer that reads a small YAML config from your package, matches the `[node-N]` prefix on each line, and applies group colors. Every other `ros2` subcommand passes through unchanged. Packages without a config are completely unaffected — no changes to launch files, no exit-code clobbering, no buffering.
 
 ---
 
-## Key features
+## Features
 
-- **Zero-invasive** — no changes to launch files or ROS 2 packages
-- **Group-based coloring** — assign colors to logical groups (localization, navigation, hardware…)
-- **Badge labels** — optional `[LOC]` / `[NAV]` tags after each node prefix
-- **Wildcard matching** — `nav2_*`, `*/amcl`, `*controller*`
-- **Config merging** — automatically merges configs from packages referenced in your launch file
-- **`dendros init`** — scaffold a config from your launch files in one command
-- **`dendros config`** — interactive TUI for global settings
-- **Hex truecolor** — `#FF6600`, named colors, raw ANSI codes
+<div class="feature-grid" markdown>
+<div class="feature-card" markdown>
+<div class="fc-icon">🎨</div>
+<strong>Group-based coloring</strong>
+<p>Assign colors to logical groups — localization, navigation, hardware. Every node in a group shares its color and badge label.</p>
+</div>
+<div class="feature-card" markdown>
+<div class="fc-icon">🔍</div>
+<strong>Smart node matching</strong>
+<p>Exact names, namespaced paths, and <code>fnmatch</code> wildcards. <code>nav2_*</code> covers every Nav2 node in one pattern.</p>
+</div>
+<div class="feature-card" markdown>
+<div class="fc-icon">🔗</div>
+<strong>Automatic config merging</strong>
+<p>DendROS parses your launch file and merges configs from included packages at runtime. No extra steps.</p>
+</div>
+<div class="feature-card" markdown>
+<div class="fc-icon">🛠️</div>
+<strong>Scaffold in one command</strong>
+<p><code>dendros init</code> scans your launch files and writes a ready-to-edit <code>dendROS.yaml</code> automatically.</p>
+</div>
+<div class="feature-card" markdown>
+<div class="fc-icon">⚙️</div>
+<strong>Interactive config TUI</strong>
+<p><code>dendros config</code> opens a curses TUI for managing global defaults — no YAML editing required.</p>
+</div>
+<div class="feature-card" markdown>
+<div class="fc-icon">🚫</div>
+<strong>Truly non-invasive</strong>
+<p>No launch file changes. Exit codes preserved. <code>DENDROS_DISABLE=1</code> bypasses everything instantly.</p>
+</div>
+</div>
 
 ---
 
@@ -43,33 +55,18 @@ Exit codes are preserved via `${PIPESTATUS[0]}`. Packages without a `dendROS.yam
 
 ```bash
 git clone https://github.com/mlisi1/DendROS
-cd DendROS
-bash install.sh
-source ~/.bashrc
+cd DendROS && bash install.sh && source ~/.bashrc
 ```
-
-Create `config/dendROS.yaml` in your bringup package:
-
-```yaml
-groups:
-  localization:
-    color: "bold blue"
-    label: "LOC"
-    nodes:
-      - slam_toolbox
-      - "*/amcl"
-
-  navigation:
-    color: "bold green"
-    label: "NAV"
-    nodes:
-      - nav2_*
-```
-
-Then launch as usual:
 
 ```bash
+cd ~/ros2_ws/src/my_bringup
+dendros init --recursive --labels
+```
+
+```bash
+colcon build --packages-select my_bringup
+source install/setup.bash
 ros2 launch my_bringup main.launch.py
 ```
 
-See [Installation](installation.md) for the full setup, or [Quick Start](quickstart.md) for a step-by-step walkthrough.
+See [Installation](installation.md) for the full setup or [Quick Start](quickstart.md) for a step-by-step walkthrough.

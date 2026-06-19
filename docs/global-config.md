@@ -1,57 +1,34 @@
 # dendros config
 
-`dendros config` opens an interactive TUI for managing global defaults. Settings are written to `~/.config/dendROS/defaults.yaml` and apply across all packages as a baseline. Per-package `dendROS.yaml` `defaults:` sections override them.
-
----
-
-## Opening the TUI
+`dendros config` opens a full-screen interactive TUI for managing global defaults.
 
 ```bash
 dendros config
 ```
 
-The TUI shows a colorized frog logo on the left when the terminal is at least 96 columns wide.
+Settings are written to `~/.config/dendROS/defaults.yaml` and apply across all packages as a baseline. Per-package `dendROS.yaml` `defaults:` sections override them.
 
 ---
 
 ## Interface
 
-```
-  DendROS Config  ~/.config/dendROS/defaults.yaml
 
-   ► Color mode             [tag_only]  full_line
-     Show group tag         [on]  off
-     Tag position           [after]  before
-     Unmatched color        null
-     Debug mode             [off]  on
-     Config merge           [on]  off
-     Colorize launch msgs   [on]  off
-     Unmatched tag          null
-     Dim unmatched          [off]  on
-     Init: modify build     [on]  off
-     Init: on existing      [abort]  merge  overwrite
-     Init: color            [palette]  null
-     Init: bold colors      [off]  on
-     Init: auto label       [off]  on
+![dendros config TUI](assets/images/screenshots/dendros_config.png)
 
-  ──────────────────────────────────────────────────
-  tag_only — color [node-N] prefix and [TAG] badge only;
-  preserves ROS 2 severity colors (WARN=yellow, ERROR=red)
 
-  ↑↓ navigate   Space/→ cycle   e edit text   s save   q quit
-```
+---
 
-### Keys
+## Keyboard reference
 
 | Key | Action |
 |---|---|
-| `↑` / `k` | Previous field |
-| `↓` / `j` | Next field |
-| `→` / `Space` / `Enter` | Cycle option forward |
-| `←` | Cycle option backward |
-| `e` | Open inline text editor for the current field |
-| `s` | Save to `~/.config/dendROS/defaults.yaml` |
-| `q` / `Esc` | Quit (prompts if there are unsaved changes) |
+| ++up++ / ++k++ | Move to previous field |
+| ++down++ / ++j++ | Move to next field |
+| ++right++ / ++space++ / ++enter++ | Cycle option forward |
+| ++left++ | Cycle option backward |
+| ++e++ | Open inline text editor for the current field |
+| ++s++ | Save to `~/.config/dendROS/defaults.yaml` |
+| ++q++ / ++escape++ | Quit (prompts if there are unsaved changes) |
 
 ---
 
@@ -61,43 +38,39 @@ The TUI shows a colorized frog logo on the left when the terminal is at least 96
 
 | Setting | Values | Description |
 |---|---|---|
-| **Color mode** | `tag_only` / `full_line` | `tag_only` colors prefix + badge only, preserving ROS 2 severity colors. `full_line` colors the entire line. |
-| **Show group tag** | `on` / `off` | Show `[TAG]` badges globally. Can be overridden per-group with `show_tag: false`. |
-| **Tag position** | `after` / `before` | Place the badge after (`[node-N] [TAG] …`) or before (`[TAG] [node-N] …`) the node prefix. |
-| **Colorize launch msgs** | `on` / `off` | When off, `[INFO] [node-N]: process started …` lifecycle lines pass through unchanged. Node output is still colorized. |
+| **Color mode** | `tag_only` / `full_line` | `tag_only` colors prefix + badge, preserving severity colors. `full_line` colors the entire line. |
+| **Show group tag** | `on` / `off` | Show `[TAG]` badges globally. Overridable per-group with `show_tag: false`. |
+| **Tag position** | `after` / `before` | Badge position: `after` → `[node-N] [TAG] …` · `before` → `[TAG] [node-N] …`. |
+| **Colorize launch msgs** | `on` / `off` | When off, `[INFO] [node-N]: process started …` lines pass through unchanged. |
 
 ### Unmatched nodes
 
 | Setting | Values | Description |
 |---|---|---|
-| **Unmatched color** | color / `null` | Color applied to nodes not in any group. `null` = pass through unchanged. |
-| **Unmatched tag** | string / `null` | Badge shown next to unmatched nodes (e.g. `?` → `[?]`). Only shown when `unmatched_color` is set. |
-| **Dim unmatched** | `on` / `off` | Apply ANSI dim to unmatched nodes. Only applies when `unmatched_color` is `null`. |
+| **Unmatched color** | color / `null` | Color for nodes not in any group. `null` = pass through. |
+| **Unmatched tag** | string / `null` | Badge for unmatched nodes (e.g. `?` → `[?]`). Requires `unmatched_color`. |
+| **Dim unmatched** | `on` / `off` | Dim unmatched nodes. Only when `unmatched_color` is `null`. |
 
-### Other
+### System
 
 | Setting | Values | Description |
 |---|---|---|
 | **Debug mode** | `on` / `off` | Print config summary to stderr on startup. Equivalent to `DENDROS_DEBUG=1`. |
 | **Config merge** | `on` / `off` | Parse launch files for referenced packages and merge their configs. |
 
-### Init settings
-
-These control the behavior of `dendros init`:
+### Init defaults
 
 | Setting | Values | Description |
 |---|---|---|
-| **Init: modify build** | `on` / `off` | Auto-patch `CMakeLists.txt` / `setup.py` / `setup.cfg`. |
-| **Init: on existing** | `abort` / `merge` / `overwrite` | What to do if `config/dendROS.yaml` already exists. |
-| **Init: color** | `palette` / `null` | Assign cycling colors to groups, or leave all as `color: null`. |
+| **Init: modify build** | `on` / `off` | Auto-patch build files when running `dendros init`. |
+| **Init: on existing** | `abort` / `merge` / `overwrite` | What to do when a config already exists. |
+| **Init: color** | `palette` / `null` | Assign cycling palette colors or leave as `null`. |
 | **Init: bold colors** | `on` / `off` | Prefix every palette color with `bold`. |
-| **Init: auto label** | `on` / `off` | Auto-generate short labels from package names (same as `--labels` flag). |
+| **Init: auto label** | `on` / `off` | Auto-generate labels (same as `--labels` flag). |
 
 ---
 
 ## Config file
-
-Settings are stored in plain YAML:
 
 ```yaml
 # ~/.config/dendROS/defaults.yaml
@@ -116,5 +89,3 @@ init_color: palette
 init_color_bold: false
 init_label: false
 ```
-
-You can edit this file directly — `dendros config` reads and writes it on every save.

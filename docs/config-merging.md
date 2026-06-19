@@ -1,77 +1,74 @@
 # Config Merging
 
-When a launch file includes other packages, DendROS automatically merges their `dendROS.yaml` configs at runtime — no extra steps needed.
+When a launch file includes other packages, DendROS automatically merges their `dendROS.yaml` configs at runtime.
 
 ---
 
 ## How it works
 
-```
-ros2 launch my_bringup main.launch.py
-             │
-             ├── my_bringup/config/dendROS.yaml   ← primary (wins conflicts)
-             ├── nav2_bringup/config/dendROS.yaml  ← merged in
-             └── slam_toolbox/config/dendROS.yaml  ← merged in
-```
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">ros2 launch my_bringup main.launch.py</div>
+  </div>
+  <div class="term-body">ros2 launch my_bringup main.launch.py
+         │
+         ├── <span class="t-green">my_bringup/config/dendROS.yaml</span>  <span class="t-dim">← primary (wins conflicts)</span>
+         ├── <span class="t-blue">nav2_bringup/config/dendROS.yaml</span> <span class="t-dim">← merged in</span>
+         └── <span class="t-cyan">slam_toolbox/config/dendROS.yaml</span> <span class="t-dim">← merged in</span></div>
+</div>
 
 When `ros2 launch` is intercepted, DendROS:
 
 1. Parses the launch file for package references.
-2. Finds each referenced package's `dendROS.yaml`.
-3. Merges all configs — the primary package wins any node-name conflicts; first secondary wins among secondaries.
+2. Locates each referenced package's `dendROS.yaml` via `ros2 pkg prefix` or `AMENT_PREFIX_PATH`.
+3. Merges all configs — the **primary package wins** any node-name conflicts.
 4. Processes output with the merged config.
 
-Merge depth is one level — packages included by *included* packages are not recursively scanned.
+!!! info "Merge depth"
+    Config merging is **one level deep only** — packages included by included packages are not recursively scanned (for the time being).
 
 ---
 
-## Supported launch file formats
+## Supported formats
 
-**Python (`.py`)**
+=== "Python (.py)"
 
-```python
-# These patterns are recognized:
-get_package_share_directory('nav2_bringup')
-FindPackageShare('slam_toolbox')
-```
+    ```python
+    get_package_share_directory('nav2_bringup')
+    FindPackageShare('slam_toolbox')
+    ```
 
-**XML (`.xml` / `.launch`)**
+=== "XML (.xml / .launch)"
 
-```xml
-<!-- This pattern is recognized: -->
-<include file="$(find-pkg-share nav2_bringup)/launch/bringup.launch.py"/>
-```
+    ```xml
+    <include file="$(find-pkg-share nav2_bringup)/launch/bringup.launch.py"/>
+    ```
 
 ---
 
 ## Conflict resolution
 
-When two configs define the same node name, the primary package's definition wins:
-
-```
-my_bringup/dendROS.yaml     →  bt_navigator: bold blue   ← wins
-nav2_bringup/dendROS.yaml   →  bt_navigator: bold green  ← ignored
-```
-
-Among secondary packages, the first one listed (in parse order) wins.
+When the same node name appears in multiple configs, the primary package's definition wins.
+Among secondaries, the first one found in parse order wins.
 
 ---
 
-## Toggling config merge
+## Toggling
 
-Config merging is on by default. To disable it:
+Config merging is **on** by default. To disable:
 
 ```bash
-dendros config
-# navigate to "Config merge" → set to off
+dendros config   # navigate to "Config merge" → off
 ```
 
-Or add to your package's `dendROS.yaml`:
+Or per-package:
 
 ```yaml
 defaults:
   config_merge: false
 ```
-
-!!! tip
-    If you have all nodes defined in your primary bringup package's config, merging has no effect. It's most useful when each package maintains its own `dendROS.yaml` independently.

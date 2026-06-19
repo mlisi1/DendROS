@@ -1,0 +1,14 @@
+<svg width="780" height="260" xmlns="http://www.w3.org/2000/svg">
+  <rect width="780" height="260" fill="#1e1e2e" rx="4"/>
+  <rect width="780" height="32" fill="#181825" rx="4"/>
+  <rect x="0" y="16" width="780" height="16" fill="#181825"/>
+  <rect x="0" y="31" width="780" height="1" fill="#313244"/>
+  <text x="12" y="21" font-family="monospace" font-size="13" fill="#a6e3a1" font-weight="bold">$</text>
+  <text x="25" y="21" font-family="monospace" font-size="13" fill="#cdd6f4"> ros2 launch my_bringup main.launch.py</text>
+  <text x="12" y="74" font-family="monospace" font-size="13" fill="#6c7086">📸  Screenshot coming soon</text>
+  <text x="12" y="100" font-family="monospace" font-size="13" fill="#45475a">     Colorized ros2 launch output will appear here.</text>
+  <text x="12" y="126" font-family="monospace" font-size="13" fill="#45475a">     Each node group gets its own color and badge.</text>
+  <text x="12" y="178" font-family="monospace" font-size="11" fill="#313244">     [slam_toolbox-1]  [LOC]  [INFO] [...]: ...</text>
+  <text x="12" y="198" font-family="monospace" font-size="11" fill="#313244">     [bt_navigator-1]  [NAV]  [INFO] [...]: ...</text>
+  <text x="12" y="218" font-family="monospace" font-size="11" fill="#313244">     [controller_server-1]  [NAV]  [WARN] [...]: ...</text>
+</svg>

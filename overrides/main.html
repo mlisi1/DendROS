@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var source = document.querySelector('.md-sidebar--primary .md-nav__source');
+    if (!source) return;
+    var brand = document.createElement('div');
+    brand.className = 'dendros-nav-brand';
+    var img = document.createElement('img');
+    img.src = '{{ "assets/images/DendROS.png" | url }}';
+    img.alt = 'DendROS';
+    brand.appendChild(img);
+    source.parentNode.insertBefore(brand, source.nextSibling);
+  });
+</script>
+{% endblock %}

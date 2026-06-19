@@ -1,0 +1,206 @@
+/* ─────────────────────────────────────────────────────────────────
+   Terminal window — macOS style
+   ───────────────────────────────────────────────────────────────── */
+
+.term {
+  background: #1e1e2e;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 1.25rem 0;
+  font-size: 0.82rem;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+}
+
+.term-bar {
+  background: #313244;
+  padding: 0.55rem 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.term-dots {
+  display: flex;
+  gap: 6px;
+}
+.term-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.term-dot-red    { background: #f38ba8; }
+.term-dot-yellow { background: #f9e2af; }
+.term-dot-green  { background: #a6e3a1; }
+
+.term-title {
+  color: #a6adc8;
+  font-family: var(--md-code-font-family);
+  font-size: 0.78rem;
+  flex: 1;
+  text-align: center;
+  margin-right: 36px; /* optical centering relative to dots */
+}
+
+.term-body {
+  padding: 1rem 1.1rem;
+  color: #cdd6f4;
+  font-family: var(--md-code-font-family);
+  line-height: 1.7;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Terminal color classes (Catppuccin Mocha)
+   ───────────────────────────────────────────────────────────────── */
+
+.t-blue   { color: #89b4fa; font-weight: bold; }
+.t-green  { color: #a6e3a1; font-weight: bold; }
+.t-orange { color: #fab387; font-weight: bold; }
+.t-cyan   { color: #89dceb; font-weight: bold; }
+.t-red    { color: #f38ba8; font-weight: bold; }
+.t-yellow { color: #f9e2af; }
+.t-badge  { font-weight: bold; }
+.t-info   { color: #a6e3a1; }
+.t-warn   { color: #f9e2af; font-weight: bold; }
+.t-error  { color: #f38ba8; font-weight: bold; }
+.t-dim    { color: #6c7086; }
+
+/* ─────────────────────────────────────────────────────────────────
+   TUI mockup (curses-style layout)
+   ───────────────────────────────────────────────────────────────── */
+
+.tui-body {
+  padding: 0.9rem 1.1rem;
+  color: #cdd6f4;
+  font-family: var(--md-code-font-family);
+  line-height: 1.65;
+  white-space: pre;
+  overflow-x: auto;
+  background: #1e1e2e;
+}
+
+.tui-header    { color: #89b4fa; font-weight: bold; }
+.tui-path      { color: #a6adc8; }
+.tui-active    { background: #313244; color: #cdd6f4; font-weight: bold; }
+.tui-cursor    { color: #cba6f7; font-weight: bold; }
+.tui-option-on { color: #a6e3a1; font-weight: bold; }
+.tui-option-off{ color: #6c7086; }
+.tui-divider   { color: #313244; }
+.tui-desc      { color: #a6adc8; font-style: italic; }
+.tui-hint      { color: #585b70; }
+
+/* ─────────────────────────────────────────────────────────────────
+   Custom primary color — DendROS blue
+   ───────────────────────────────────────────────────────────────── */
+
+[data-md-color-primary="custom"] {
+  --md-primary-fg-color:        #1a47b0;
+  --md-primary-fg-color--light: rgba(26, 71, 176, 0.54);
+  --md-primary-fg-color--dark:  rgba(26, 71, 176, 0.12);
+  --md-primary-bg-color:        #ffffff;
+  --md-primary-bg-color--light: rgba(255, 255, 255, 0.7);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   DendROS wordmark in nav sidebar (injected via JS after GitHub link)
+   ───────────────────────────────────────────────────────────────── */
+
+.dendros-nav-brand {
+  display: flex;
+  justify-content: center;
+  padding: 0.55rem 0.4rem 0.65rem;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+  margin-bottom: 0.15rem;
+}
+
+.dendros-nav-brand img {
+  height: 30px;
+  padding: 3px 9px;
+  background: #ffffff00;
+  border-radius: 4px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Screenshot placeholder
+   ───────────────────────────────────────────────────────────────── */
+
+.screenshot-placeholder {
+  border: 2px dashed var(--md-default-fg-color--lighter);
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  color: var(--md-default-fg-color--light);
+  margin: 1.25rem 0;
+  background: var(--md-code-bg-color);
+}
+.screenshot-placeholder .sp-icon  { font-size: 2rem; opacity: 0.45; }
+.screenshot-placeholder .sp-label { font-weight: bold; font-size: 0.95rem; color: var(--md-default-fg-color); margin: 0.4rem 0 0.2rem; }
+.screenshot-placeholder .sp-hint  { font-size: 0.8rem; margin: 0; }
+
+/* ─────────────────────────────────────────────────────────────────
+   Feature cards grid on the home page
+   ───────────────────────────────────────────────────────────────── */
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.feature-card {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 8px;
+  padding: 1rem 1.1rem;
+  background: var(--md-code-bg-color);
+}
+
+.feature-card .fc-icon { font-size: 1.5rem; margin-bottom: 0.35rem; }
+.feature-card strong   { display: block; margin-bottom: 0.25rem; }
+.feature-card p        { font-size: 0.84rem; color: var(--md-default-fg-color--light); margin: 0; }
+
+/* ─────────────────────────────────────────────────────────────────
+   Left navigation sidebar — distinct panel look
+   ───────────────────────────────────────────────────────────────── */
+
+/* Light mode: subtle background tint so the nav reads as a separate panel */
+[data-md-color-scheme="default"] .md-sidebar--primary {
+  background: #eef2f700;
+}
+
+/* Right-border separator between nav and content */
+[data-md-color-scheme="default"] .md-sidebar--primary .md-sidebar__inner {
+  border-right: 100px solid rgba(0, 0, 0, 0);
+}
+[data-md-color-scheme="slate"] .md-sidebar--primary .md-sidebar__inner {
+  border-right: 100px solid rgba(255, 255, 255, 0);
+}
+
+/* Active page link — accent color + bold, left accent bar, no background box */
+.md-nav__link--active {
+  font-weight: 700 !important;
+  color: var(--md-accent-fg-color) !important;
+  box-shadow: inset 3px 0 0 var(--md-accent-fg-color);
+  padding-left: 0.45rem;
+}
+
+/* Navbar + mobile drawer logo size */
+.md-header__button.md-logo img,
+.md-nav__button.md-logo img {
+  height: 36px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Admonition bottom-padding fix
+   ───────────────────────────────────────────────────────────────── */
+
+.md-typeset .admonition > *:last-child,
+.md-typeset details > *:last-child {
+  margin-bottom: 0.75rem;
+}
+
+.md-typeset .admonition p:last-child,
+.md-typeset details p:last-child {
+  margin-bottom: 0.75rem;
+}

@@ -4,15 +4,21 @@ Place `dendROS.yaml` inside your package's `config/` directory:
 
 ```
 my_bringup/
-└── config/
-    └── dendROS.yaml
+├── config/
+│   └── dendROS.yaml
+├── launch/
+│   └── main.launch.py
+└── CMakeLists.txt
 ```
 
-DendROS finds the file automatically using `ros2 pkg prefix` or by scanning `AMENT_PREFIX_PATH`. No path configuration needed.
+DendROS discovers the file automatically via `ros2 pkg prefix` or `AMENT_PREFIX_PATH`. No path configuration required.
+
+!!! tip "Let `dendros init` do the scaffolding"
+    Running `dendros init` generates this file from your launch files and patches your build system to install it. See [dendros init](dendros-init.md).
 
 ---
 
-## Structure
+## Full example
 
 ```yaml
 groups:
@@ -22,20 +28,23 @@ groups:
     label: "LOC"
     nodes:
       - slam_toolbox
-      - "*/amcl"
+      - robot_localization
+      - "*/amcl"           # matches amcl under any namespace
 
   navigation:
     color: "bold green"
     label: "NAV"
     nodes:
-      - nav2_*
+      - nav2_*             # covers all nav2_* nodes
 
   hardware:
     color: "#CC8800"
-    show_tag: false
-    color_mode: full_line
+    label: "HW"
+    show_tag: false        # suppress badge for this group only
+    color_mode: full_line  # per-group: color entire line
     nodes:
       - robot_state_publisher
+      - joint_state_publisher
 
 defaults:
   color_mode: "tag_only"
@@ -51,70 +60,60 @@ defaults:
 
 ## Groups
 
-Each entry under `groups:` defines a set of nodes that share a color and optional badge label.
-
 | Key | Required | Description |
 |---|---|---|
 | `color` | yes | Color for this group. See [Colors](colors.md). |
-| `label` | no | Short badge shown as `[LOC]` after the node prefix. Empty string = no badge. |
-| `nodes` | yes | List of node name patterns to match. |
-| `show_tag` | no | Set `false` to suppress the badge for this group only (even when `show_group_tag: true` globally). |
-| `color_mode` | no | Per-group override: `tag_only` or `full_line`. Overrides `defaults.color_mode` for these nodes only. |
+| `label` | no | Short badge text shown as `[LOC]`. Empty string = no badge. |
+| `nodes` | yes | List of node name patterns. |
+| `show_tag` | no | `false` suppresses the badge for this group only. |
+| `color_mode` | no | Per-group override: `tag_only` or `full_line`. |
 
 ---
 
 ## Node matching
 
-Node names support `fnmatch` shell-glob patterns:
+The numeric suffix (`-1`, `-2`) is stripped before matching.
 
 | Pattern | Matches |
 |---|---|
 | `slam_toolbox` | `[slam_toolbox-1]`, `[slam_toolbox-2]`, … |
-| `/my_ns/talker` | only `[talker-1]` under `/my_ns` |
-| `nav2_*` | `nav2_controller`, `nav2_planner`, `nav2_bt_navigator`, … |
-| `*/amcl` | `/robot/amcl`, `/my_ns/amcl`, any namespaced `amcl` |
+| `/my_ns/talker` | only nodes at that exact namespace path |
+| `nav2_*` | `nav2_controller`, `nav2_planner`, … |
+| `*/amcl` | `/robot/amcl`, `/my_ns/amcl`, … |
 | `*controller*` | any node whose basename contains `controller` |
-| `node_?` | `node_a`, `node_b`, … (one character wildcard) |
+| `node_?` | `node_a`, `node_b`, … |
 
-**Lookup order** — exact full-path → exact basename → wildcard full-path → wildcard basename. First match wins.
-
-The numeric instance suffix is stripped before matching: `[talker-3]` is matched as `talker`.
+**Lookup order** (first match wins): exact full-path → exact basename → wildcard full-path → wildcard basename.
 
 ---
 
 ## Defaults section
 
-The `defaults:` section sets package-level defaults that override the global config for this package only.
-
 | Key | Default | Description |
 |---|---|---|
-| `color_mode` | `tag_only` | `tag_only` or `full_line`. See [color_mode](#color_mode). |
-| `show_group_tag` | `true` | Show `[TAG]` badges globally for this package. |
-| `tag_position` | `after` | Badge position: `after` (`[node-N] [TAG] …`) or `before` (`[TAG] [node-N] …`). |
-| `unmatched_color` | `null` | Color for nodes not in any group. `null` = pass through unchanged. |
-| `unmatched_tag` | `null` | Badge for unmatched nodes (e.g. `"?"` → `[?]`). Only shown when `unmatched_color` is set. |
-| `dim_unmatched` | `false` | Apply ANSI dim to unmatched nodes. Only applies when `unmatched_color: null`. |
-| `colorize_launch_msgs` | `true` | Colorize `[INFO] [node-N]: process started …` lifecycle lines. `false` passes them through unchanged. |
+| `color_mode` | `tag_only` | `tag_only` or `full_line`. |
+| `show_group_tag` | `true` | Show `[TAG]` badges for this package. |
+| `tag_position` | `after` | `after` → `[node-N] [TAG] …` · `before` → `[TAG] [node-N] …`. |
+| `unmatched_color` | `null` | Color for unmatched nodes. `null` = pass through. |
+| `unmatched_tag` | `null` | Badge for unmatched nodes (e.g. `"?"` → `[?]`). Requires `unmatched_color`. |
+| `dim_unmatched` | `false` | Dim unmatched nodes. Only when `unmatched_color: null`. |
+| `colorize_launch_msgs` | `true` | Colorize `[INFO] [node-N]: process started …` lifecycle lines. |
 
 ---
 
 ## color_mode
 
-Controls how much of each line is colored.
+=== "tag_only (default)"
 
-| Value | Behavior |
-|---|---|
-| `tag_only` *(default)* | Colors the `[node-N]` prefix and `[TAG]` badge only. ROS 2 severity colors (`[WARN]` = yellow, `[ERROR]` = red) are preserved. |
-| `full_line` | Colors the entire line in the group's color. Severity colors are overridden. |
+    Colors only the `[node-N]` prefix and `[TAG]` badge.
+    ROS 2 severity colors are **preserved** — `[WARN]` stays yellow, `[ERROR]` stays red.
 
-`color_mode` can be set at three levels, applied in this order (most specific wins):
+    <div class="term"><div class="term-bar"><div class="term-dots"><div class="term-dot term-dot-red"></div><div class="term-dot term-dot-yellow"></div><div class="term-dot term-dot-green"></div></div><div class="term-title">color_mode: tag_only</div></div><div class="term-body"><span class="t-blue">[slam_toolbox-1]</span> <span class="t-blue t-badge">[LOC]</span> <span class="t-info">[INFO]</span> <span class="t-dim">[1234.1]:</span> map loaded<br><span class="t-green">[controller_server-1]</span> <span class="t-green t-badge">[NAV]</span> <span class="t-warn">[WARN]</span> <span class="t-dim">[1234.2]:</span> Costmap is empty</div></div>
 
-1. **Per-group** — `color_mode: full_line` under a single group
-2. **Per-package** — `color_mode:` in the `defaults:` section
-3. **Global** — set via `dendros config`
+=== "full_line"
 
----
+    Colors the **entire line** in the group's color. Severity colors are overridden.
 
-## Full annotated example
+    <div class="term"><div class="term-bar"><div class="term-dots"><div class="term-dot term-dot-red"></div><div class="term-dot term-dot-yellow"></div><div class="term-dot term-dot-green"></div></div><div class="term-title">color_mode: full_line</div></div><div class="term-body"><span class="t-blue">[slam_toolbox-1] [LOC] [INFO] [1234.1]: map loaded</span><br><span class="t-green">[controller_server-1] [NAV] [WARN] [1234.2]: Costmap is empty</span></div></div>
 
-See [`docs/dendROS.yaml.example`](https://github.com/mlisi1/DendROS/blob/main/docs/dendROS.yaml.example) in the repository for a complete annotated reference file.
+Priority order (most specific wins): per-group `color_mode:` → per-package `defaults.color_mode:` → global `dendros config`.
