@@ -1238,9 +1238,13 @@ Node names are matched after stripping the <code>-N</code> suffix. Use wildcards
 </details>
 <details class="note">
 <summary>Temporarily disable</summary>
-<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nv">DENDROS_DISABLE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>ros2<span class="w"> </span>launch<span class="w"> </span>my_bringup<span class="w"> </span>main.launch.py
+<p>For a single invocation, prefix the command:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nv">DENDROS_DISABLE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>ros2<span class="w"> </span>launch<span class="w"> </span>my_bringup<span class="w"> </span>main.launch.py
 </span></code></pre></div>
-Calls the real <code>ros2</code> directly without un-sourcing or modifying anything.</p>
+To toggle colorization for the whole shell session:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>dendros<span class="w"> </span>disable<span class="w">   </span><span class="c1"># off until you run dendros enable</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>dendros<span class="w"> </span><span class="nb">enable</span>
+</span></code></pre></div></p>
 </details>
 
 
