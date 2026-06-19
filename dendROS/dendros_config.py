@@ -29,6 +29,7 @@ _FIELDS = [
     ("color_mode",           "Color mode",            "cycle", ["tag_only", "full_line"]),
     ("show_group_tag",       "Show group tag",        "cycle", [True, False]),
     ("tag_position",         "Tag position",          "cycle", ["after", "before"]),
+    ("tag_style",            "Tag style",             "cycle", ["normal", "inverted"]),
     ("unmatched_color",      "Unmatched color",       "text",  None),
     ("debug",                "Debug mode",            "cycle", [False, True]),
     ("config_merge",         "Config merge",          "cycle", [True, False]),
@@ -60,6 +61,10 @@ _DESCS = {
     "tag_position": (
         "after  — badge appears after the prefix: [node-N] [TAG] [INFO] …",
         "before — badge appears before the prefix: [TAG] [node-N] [INFO] …",
+    ),
+    "tag_style": (
+        "normal   — [TAG] badge uses colored text on the default terminal background",
+        "inverted — [TAG] badge uses colored background with empty letters (like crash alerts)",
     ),
     "unmatched_color": (
         "Tint for nodes not listed in any group.",

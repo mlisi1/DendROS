@@ -29,6 +29,14 @@ def make_prefix(tmp_path, pkg_name, config_name):
     return str(tmp_path)
 
 
+def write_global_cfg(prefix, **kwargs):
+    import yaml as _yaml
+    cfg_dir = os.path.join(prefix, '.config', 'dendROS')
+    os.makedirs(cfg_dir, exist_ok=True)
+    with open(os.path.join(cfg_dir, 'defaults.yaml'), 'w') as fh:
+        _yaml.dump(kwargs, fh)
+
+
 def no_config_prefix(tmp_path):
     """Return a prefix pointing at an empty dir so no config is found."""
     return str(tmp_path)
@@ -253,6 +261,7 @@ class TestInterleavedErrorsWithConfig:
 
     def test_error_output_fixture_line_count(self, tmp_path):
         prefix = make_prefix(tmp_path, self.PKG, 'basic.yaml')
+        write_global_cfg(prefix, crash_alert=False)  # banner would add extra line
         with open(os.path.join(LINES_DIR, 'error_output.txt')) as f:
             lines = f.readlines()
         stdout, _, _ = run_pipe(prefix, self.PKG, lines)

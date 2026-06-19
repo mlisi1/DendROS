@@ -87,6 +87,7 @@ class TestLoadGlobalConfig:
             "crash_alert_color": "red",
             "crash_alert_interval": 60,
             "traceback_color": "red",
+            "tag_style": "inverted",
         }
         with open(tmp_config, "w") as f:
             yaml.dump(data, f)
@@ -164,6 +165,7 @@ class TestSaveGlobalConfig:
             "crash_alert_color": "red",
             "crash_alert_interval": 60,
             "traceback_color": "off",
+            "tag_style": "inverted",
         }
         save_global_config(custom)
         result = load_global_config()
@@ -354,8 +356,8 @@ class TestUnchangedSentinel:
 # ── crash alert config keys ───────────────────────────────────────────────────
 
 class TestCrashAlertConfig:
-    def test_defaults_have_crash_alert_off(self):
-        assert _DEFAULTS["crash_alert"] is False
+    def test_defaults_have_crash_alert_on(self):
+        assert _DEFAULTS["crash_alert"] is True
 
     def test_defaults_have_node_color(self):
         assert _DEFAULTS["crash_alert_color"] == "node"
@@ -448,3 +450,37 @@ class TestTracebackColorConfig:
         cfg["traceback_color"] = "red"
         save_global_config(cfg)
         assert load_global_config()["traceback_color"] == "red"
+
+
+# ── tag_style config keys ─────────────────────────────────────────────────────
+
+class TestTagStyleConfig:
+    def test_default_is_normal(self):
+        assert _DEFAULTS["tag_style"] == "normal"
+
+    def test_field_is_cycle(self):
+        field = next(f for f in _FIELDS if f[0] == "tag_style")
+        assert field[2] == "cycle"
+        assert "normal" in field[3]
+        assert "inverted" in field[3]
+
+    def test_desc_present(self):
+        assert "tag_style" in _DESCS
+
+    def test_load_tag_style_inverted(self, tmp_config):
+        with open(tmp_config, "w") as f:
+            yaml.dump({"tag_style": "inverted"}, f)
+        result = load_global_config()
+        assert result["tag_style"] == "inverted"
+
+    def test_load_tag_style_normal(self, tmp_config):
+        with open(tmp_config, "w") as f:
+            yaml.dump({"tag_style": "normal"}, f)
+        result = load_global_config()
+        assert result["tag_style"] == "normal"
+
+    def test_roundtrip_tag_style(self, tmp_config):
+        cfg = dict(_DEFAULTS)
+        cfg["tag_style"] = "inverted"
+        save_global_config(cfg)
+        assert load_global_config()["tag_style"] == "inverted"

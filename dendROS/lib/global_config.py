@@ -14,7 +14,7 @@ GLOBAL_CONFIG_PATH = None
 DEFAULTS = {
     "color_mode":           "tag_only",
     "show_group_tag":       True,
-    "tag_position":         "after",
+    "tag_position":         "before",
     "unmatched_color":      None,
     "debug":                False,
     "config_merge":         True,
@@ -26,10 +26,11 @@ DEFAULTS = {
     "init_color":           "palette",
     "init_color_bold":      False,
     "init_label":           False,
-    "crash_alert":          False,
+    "crash_alert":          True,
     "crash_alert_color":    "node",
     "crash_alert_interval": 30,
     "traceback_color":      "fancy",
+    "tag_style":            "normal",
 }
 
 

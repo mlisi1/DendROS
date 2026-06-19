@@ -8,9 +8,10 @@ from lib.colors import _resolve_color
 
 
 def load_config(config_path):
-    """Parse dendROS.yaml and return (color_map, tag_map, mode_map, defaults).
+    """Parse dendROS.yaml and return (color_map, tag_map, mode_map, style_map, defaults).
 
-    mode_map holds per-node color_mode overrides set via group-level color_mode:.
+    mode_map  holds per-node color_mode overrides set via group-level color_mode:.
+    style_map holds per-node tag_style overrides set via group-level tag_style:.
     tag_map stores None for nodes whose group has show_tag: false.
     """
     with open(config_path, 'r') as f:
@@ -19,11 +20,13 @@ def load_config(config_path):
     color_map = {}
     tag_map   = {}
     mode_map  = {}
+    style_map = {}
 
     for group_name, group in (data.get('groups') or {}).items():
-        ansi_code  = _resolve_color(group.get('color', ''))
-        label      = group.get('label', '')
-        group_mode = group.get('color_mode')
+        ansi_code   = _resolve_color(group.get('color', ''))
+        label       = group.get('label', '')
+        group_mode  = group.get('color_mode')
+        group_style = group.get('tag_style')
         if group.get('show_tag') is False:
             label = None
         for node in (group.get('nodes') or []):
@@ -31,27 +34,32 @@ def load_config(config_path):
             tag_map[node]   = label
             if group_mode is not None:
                 mode_map[node] = group_mode
+            if group_style is not None:
+                style_map[node] = group_style
 
     defaults = data.get('defaults') or {}
-    return color_map, tag_map, mode_map, defaults
+    return color_map, tag_map, mode_map, style_map, defaults
 
 
-def merge_color_maps(primary_color, primary_tag, primary_mode, secondaries):
-    """Merge secondary (color_map, tag_map, mode_map) triples into primary.
+def merge_color_maps(primary_color, primary_tag, primary_mode, primary_style, secondaries):
+    """Merge secondary (color_map, tag_map, mode_map, style_map) 4-tuples into primary.
 
     Primary wins all node-name conflicts.
     """
     merged_color = dict(primary_color)
     merged_tag   = dict(primary_tag)
     merged_mode  = dict(primary_mode)
-    for sec_color, sec_tag, sec_mode in secondaries:
+    merged_style = dict(primary_style)
+    for sec_color, sec_tag, sec_mode, sec_style in secondaries:
         for node, code in sec_color.items():
             if node not in merged_color:
                 merged_color[node] = code
                 merged_tag[node]   = sec_tag.get(node)
                 if node in sec_mode:
                     merged_mode[node] = sec_mode[node]
-    return merged_color, merged_tag, merged_mode
+                if node in sec_style:
+                    merged_style[node] = sec_style[node]
+    return merged_color, merged_tag, merged_mode, merged_style
 
 
 def resolve_node(node_name, color_map, tag_map):
@@ -93,4 +101,22 @@ def resolve_node_mode(node_name, mode_map):
     for pattern, mode in mode_map.items():
         if fnmatch.fnmatch(basename, pattern):
             return mode
+    return None
+
+
+def resolve_node_style(node_name, style_map):
+    """Return the per-node tag_style override from group-level tag_style:, or None."""
+    if not style_map:
+        return None
+    if node_name in style_map:
+        return style_map[node_name]
+    basename = node_name.rsplit('/', 1)[-1]
+    if basename in style_map:
+        return style_map[basename]
+    for pattern, style in style_map.items():
+        if fnmatch.fnmatch(node_name, pattern):
+            return style
+    for pattern, style in style_map.items():
+        if fnmatch.fnmatch(basename, pattern):
+            return style
     return None

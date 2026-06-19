@@ -13,8 +13,21 @@ Settings are written to `~/.config/dendROS/defaults.yaml` and apply across all p
 ## Interface
 
 
-![dendros config TUI](assets/images/screenshots/dendros_config.png)
-
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">dendros config</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/dendros_config.png" width="900" alt="dendros config"/>
+</p>
+</div>
+</div>
 
 ---
 
@@ -41,6 +54,7 @@ Settings are written to `~/.config/dendROS/defaults.yaml` and apply across all p
 | **Color mode** | `tag_only` / `full_line` | `tag_only` colors prefix + badge, preserving severity colors. `full_line` colors the entire line. |
 | **Show group tag** | `on` / `off` | Show `[TAG]` badges globally. Overridable per-group with `show_tag: false`. |
 | **Tag position** | `after` / `before` | Badge position: `after` → `[node-N] [TAG] …` · `before` → `[TAG] [node-N] …`. |
+| **Tag style** | `normal` / `inverted` | `normal` = colored text on default background. `inverted` = colored background with empty letters (like crash alert banners). Overridable per-group with `tag_style:`. |
 | **Colorize launch msgs** | `on` / `off` | When off, `[INFO] [node-N]: process started …` lines pass through unchanged. |
 
 ### Unmatched nodes
@@ -91,6 +105,7 @@ Settings are written to `~/.config/dendROS/defaults.yaml` and apply across all p
 color_mode: tag_only
 show_group_tag: true
 tag_position: after
+tag_style: normal
 unmatched_color: null
 unmatched_tag: null
 dim_unmatched: false

@@ -15,7 +15,7 @@ LAUNCH_RE = re.compile(
 _LOG_LEVELS = frozenset({'INFO', 'WARN', 'WARNING', 'ERROR', 'DEBUG', 'FATAL'})
 
 
-def colorize_tag_only(line, ansi_code, label, show_tag, tag_position='after'):
+def colorize_tag_only(line, ansi_code, label, show_tag, tag_position='after', tag_style='normal'):
     """Color only the [node-N] prefix and optional [TAG] badge."""
     m = PREFIX_RE.match(line)
     if not m:
@@ -24,32 +24,43 @@ def colorize_tag_only(line, ansi_code, label, show_tag, tag_position='after'):
     rest = line[m.end():]
     colored_prefix = _ansi(ansi_code) + prefix + RESET
     if show_tag and label:
+        tag_ansi = _ansi(ansi_code + ';7') if tag_style == 'inverted' else _ansi(ansi_code)
         if tag_position == 'before':
-            return _ansi(ansi_code) + f'[{label}]' + RESET + ' ' + colored_prefix + rest
-        return colored_prefix + _ansi(ansi_code) + f' [{label}]' + RESET + rest
+            return tag_ansi + f'[{label}]' + RESET + ' ' + colored_prefix + rest
+        return colored_prefix + tag_ansi + f' [{label}]' + RESET + rest
     return colored_prefix + rest
 
 
-def colorize_full_line(line, ansi_code, label=None, show_tag=False, tag_position='after'):
+def colorize_full_line(line, ansi_code, label=None, show_tag=False, tag_position='after', tag_style='normal'):
     """Color the entire line, optionally inserting a [TAG] badge.
 
     Strips any embedded ANSI codes first so inner resets don't cancel the outer color.
+    In inverted mode the badge gets its own escape (colored background, default text)
+    while the rest of the line uses the normal foreground color.
     """
-    if show_tag and label:
-        m = PREFIX_RE.match(line)
-        if m:
-            if tag_position == 'before':
-                line = f'[{label}] ' + line
-            else:
-                line = line[:m.end()] + f' [{label}]' + line[m.end():]
     clean = _ANSI_RE.sub('', line.rstrip('\n'))
+    if show_tag and label:
+        m = PREFIX_RE.match(clean)
+        if m:
+            if tag_style == 'inverted':
+                tag_seq = _ansi(ansi_code + ';7') + f'[{label}]' + RESET
+                if tag_position == 'before':
+                    return tag_seq + ' ' + _ansi(ansi_code) + clean + RESET + '\n'
+                before = clean[:m.end()]
+                after = clean[m.end():]
+                return _ansi(ansi_code) + before + RESET + ' ' + tag_seq + _ansi(ansi_code) + after + RESET + '\n'
+            else:
+                if tag_position == 'before':
+                    clean = f'[{label}] ' + clean
+                else:
+                    clean = clean[:m.end()] + f' [{label}]' + clean[m.end():]
     return _ansi(ansi_code) + clean + RESET + '\n'
 
 
-def colorize_line(line, ansi_code, label, show_tag, color_mode, tag_position='after'):
+def colorize_line(line, ansi_code, label, show_tag, color_mode, tag_position='after', tag_style='normal'):
     if color_mode == 'full_line':
-        return colorize_full_line(line, ansi_code, label, show_tag, tag_position)
-    return colorize_tag_only(line, ansi_code, label, show_tag, tag_position)
+        return colorize_full_line(line, ansi_code, label, show_tag, tag_position, tag_style)
+    return colorize_tag_only(line, ansi_code, label, show_tag, tag_position, tag_style)
 
 
 def colorize_launch_msg(line, ansi_code, color_mode):

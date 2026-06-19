@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lib.colors import make_dim
 from lib.colorizers import PREFIX_RE, LAUNCH_RE, _LOG_LEVELS, colorize_line, colorize_launch_msg
-from lib.config_loader import load_config, merge_color_maps, resolve_node, resolve_node_mode
+from lib.config_loader import load_config, merge_color_maps, resolve_node, resolve_node_mode, resolve_node_style
 from lib.discovery import (
     extract_package_name, extract_launch_file, find_config,
     find_launch_file, extract_included_packages,
@@ -64,12 +64,13 @@ def main():
         'colorize_launch_msgs': global_cfg.get('colorize_launch_msgs', True),
         'unmatched_tag':        global_cfg.get('unmatched_tag',        None),
         'dim_unmatched':        global_cfg.get('dim_unmatched',        False),
+        'tag_style':            global_cfg.get('tag_style',            'normal'),
     }
 
-    color_map, tag_map, mode_map, defaults = {}, {}, {}, base
+    color_map, tag_map, mode_map, style_map, defaults = {}, {}, {}, {}, base
     if config_path:
         try:
-            color_map, tag_map, mode_map, pkg_defaults = load_config(config_path)
+            color_map, tag_map, mode_map, style_map, pkg_defaults = load_config(config_path)
             defaults = {**base, **pkg_defaults}
         except Exception as e:
             print(f'\033[35;1m[dendROS]\033[0m config error ({config_path}): {e}',
@@ -88,9 +89,9 @@ def main():
                 if not inc_config_path:
                     continue
                 try:
-                    inc_color, inc_tag, inc_mode, _ = load_config(inc_config_path)
-                    color_map, tag_map, mode_map = merge_color_maps(
-                        color_map, tag_map, mode_map, [(inc_color, inc_tag, inc_mode)]
+                    inc_color, inc_tag, inc_mode, inc_style, _ = load_config(inc_config_path)
+                    color_map, tag_map, mode_map, style_map = merge_color_maps(
+                        color_map, tag_map, mode_map, style_map, [(inc_color, inc_tag, inc_mode, inc_style)]
                     )
                     if _DEBUG:
                         _dbg(f'merged: {inc_pkg} ({inc_config_path})  +{len(inc_color)} node{"s" if len(inc_color) != 1 else ""}')
@@ -101,6 +102,7 @@ def main():
     show_tag             = defaults.get('show_group_tag',       True)
     color_mode           = defaults.get('color_mode',           'tag_only')
     tag_position         = defaults.get('tag_position',         'after')
+    tag_style            = defaults.get('tag_style',            'normal')
     colorize_launch_msgs = defaults.get('colorize_launch_msgs', True)
     unmatched_tag        = defaults.get('unmatched_tag') or None
     raw_unmatched        = defaults.get('unmatched_color') or None
@@ -148,8 +150,9 @@ def main():
                 return tc.colorize_traceback(content, tb_prefix)
 
             if code:
-                effective_mode = resolve_node_mode(node_name, mode_map) or color_mode
-                return colorize_line(line, code, label, show_tag, effective_mode, tag_position)
+                effective_mode  = resolve_node_mode(node_name, mode_map) or color_mode
+                effective_style = resolve_node_style(node_name, style_map) or tag_style
+                return colorize_line(line, code, label, show_tag, effective_mode, tag_position, effective_style)
             return line
         elif colorize_launch_msgs:
             lm = LAUNCH_RE.match(line)

@@ -42,6 +42,7 @@ groups:
     label: "HW"
     show_tag: false        # suppress badge for this group only
     color_mode: full_line  # per-group: color entire line
+    tag_style: inverted    # per-group: colored background, empty letters
     nodes:
       - robot_state_publisher
       - joint_state_publisher
@@ -50,6 +51,7 @@ defaults:
   color_mode: "tag_only"
   show_group_tag: true
   tag_position: "after"
+  tag_style: "normal"      # normal | inverted
   unmatched_color: null
   unmatched_tag: null
   dim_unmatched: false
@@ -67,6 +69,7 @@ defaults:
 | `nodes` | yes | List of node name patterns. |
 | `show_tag` | no | `false` suppresses the badge for this group only. |
 | `color_mode` | no | Per-group override: `tag_only` or `full_line`. |
+| `tag_style` | no | Per-group override: `normal` (colored text) or `inverted` (colored background). |
 
 ---
 
@@ -94,6 +97,7 @@ The numeric suffix (`-1`, `-2`) is stripped before matching.
 | `color_mode` | `tag_only` | `tag_only` or `full_line`. |
 | `show_group_tag` | `true` | Show `[TAG]` badges for this package. |
 | `tag_position` | `after` | `after` → `[node-N] [TAG] …` · `before` → `[TAG] [node-N] …`. |
+| `tag_style` | `normal` | `normal` (colored text) or `inverted` (colored background, empty letters). |
 | `unmatched_color` | `null` | Color for unmatched nodes. `null` = pass through. |
 | `unmatched_tag` | `null` | Badge for unmatched nodes (e.g. `"?"` → `[?]`). Requires `unmatched_color`. |
 | `dim_unmatched` | `false` | Dim unmatched nodes. Only when `unmatched_color: null`. |

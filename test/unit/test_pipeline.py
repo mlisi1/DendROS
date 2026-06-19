@@ -304,6 +304,7 @@ class TestMixedInput:
 
     def test_line_count_preserved(self, tmp_path):
         prefix = make_prefix(tmp_path, self.PKG, fixture_config('basic.yaml'))
+        _write_global_cfg(prefix, crash_alert=False)  # banner would add extra line
         lines = fixture_lines('mixed.txt')
         stdout, _, _ = run_pipe(prefix, self.PKG, lines)
         assert len(stdout.splitlines()) == len(lines)
@@ -695,3 +696,80 @@ class TestTracebackColorModes:
     def test_off_text_unchanged(self, tmp_path):
         out = self._run_with_cfg(self.TB_LINES, tmp_path, traceback_color='off')
         assert strip_ansi(out) == ''.join(self.TB_LINES)
+
+
+# ── tag_style: inverted pipeline ──────────────────────────────────────────────
+
+class TestTagStylePipeline:
+    """tag_style: inverted produces colored-background badges in the output."""
+
+    NODE_LINE  = "[talker-1] [INFO] [1234.0] [/talker]: hello\n"
+    BLUE_CODE  = '34'
+    INVERTED   = '34;7'
+
+    def _make_config(self, tmp_path, extra_yaml=''):
+        config = f"""\
+groups:
+  talk:
+    color: blue
+    label: "TALK"
+    nodes:
+      - talker
+defaults:
+  show_group_tag: true
+  {extra_yaml}
+"""
+        prefix_dir = tmp_path / 'share' / 'test_pkg' / 'config'
+        prefix_dir.mkdir(parents=True)
+        (prefix_dir / 'dendROS.yaml').write_text(config)
+        return str(tmp_path)
+
+    def test_normal_style_badge_uses_plain_color(self, tmp_path):
+        prefix = self._make_config(tmp_path, 'tag_style: normal')
+        out, _, _ = run_pipe(prefix, 'test_pkg', [self.NODE_LINE])
+        assert f'\033[{self.BLUE_CODE}m[TALK]\033[0m' in out
+        assert f'\033[{self.INVERTED}m' not in out
+
+    def test_inverted_style_badge_uses_reverse_video(self, tmp_path):
+        prefix = self._make_config(tmp_path, 'tag_style: inverted')
+        out, _, _ = run_pipe(prefix, 'test_pkg', [self.NODE_LINE])
+        assert f'\033[{self.INVERTED}m[TALK]\033[0m' in out
+
+    def test_inverted_prefix_still_uses_normal_color(self, tmp_path):
+        prefix = self._make_config(tmp_path, 'tag_style: inverted')
+        out, _, _ = run_pipe(prefix, 'test_pkg', [self.NODE_LINE])
+        assert_segment_colored(out, '[talker-1]', self.BLUE_CODE)
+
+    def test_inverted_global_config_via_home(self, tmp_path):
+        prefix = self._make_config(tmp_path)
+        _write_global_cfg(prefix, tag_style='inverted')
+        out, _, _ = run_pipe(prefix, 'test_pkg', [self.NODE_LINE])
+        assert f'\033[{self.INVERTED}m[TALK]\033[0m' in out
+
+    def test_per_group_tag_style_inverted(self, tmp_path):
+        config = """\
+groups:
+  talk:
+    color: blue
+    label: "TALK"
+    tag_style: inverted
+    nodes:
+      - talker
+defaults:
+  show_group_tag: true
+"""
+        prefix_dir = tmp_path / 'share' / 'test_pkg' / 'config'
+        prefix_dir.mkdir(parents=True)
+        (prefix_dir / 'dendROS.yaml').write_text(config)
+        out, _, _ = run_pipe(str(tmp_path), 'test_pkg', [self.NODE_LINE])
+        assert f'\033[{self.INVERTED}m[TALK]\033[0m' in out
+
+    def test_inverted_full_line_mode_badge_inverted(self, tmp_path):
+        prefix = self._make_config(tmp_path, 'tag_style: inverted\n  color_mode: full_line')
+        out, _, _ = run_pipe(prefix, 'test_pkg', [self.NODE_LINE])
+        assert f'\033[{self.INVERTED}m[TALK]\033[0m' in out
+
+    def test_text_content_preserved(self, tmp_path):
+        prefix = self._make_config(tmp_path, 'tag_style: inverted')
+        out, _, _ = run_pipe(prefix, 'test_pkg', [self.NODE_LINE])
+        assert 'hello' in strip_ansi(out)

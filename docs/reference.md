@@ -73,20 +73,6 @@ Stored in `~/.config/dendROS/defaults.yaml`, managed via `dendros config`:
 
 ---
 
-## dendros dismiss
-
-```bash
-dendros dismiss
-```
-
-Toggles the crash alert banner. First call silences future periodic reprints; second call un-silences and immediately reprints the current banner.
-
-Works by sending `SIGUSR1` to the active pipe process. Safe to call at any time during `ros2 launch`.
-
-See [Crash Alert](crash-alert.md) for full details.
-
----
-
 ## dendros init — CLI flags
 
 | Flag | Alias | Description |

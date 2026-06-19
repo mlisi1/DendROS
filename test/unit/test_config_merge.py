@@ -14,7 +14,7 @@ from lib.discovery import (
     find_launch_file,
     extract_included_packages,
 )
-from lib.config_loader import merge_color_maps, resolve_node_mode
+from lib.config_loader import merge_color_maps, resolve_node_mode, resolve_node_style
 from conftest import (
     run_pipe,
     assert_segment_colored,
@@ -168,35 +168,35 @@ class TestFindLaunchFile:
 
 class TestMergeColorMaps:
     def test_secondary_adds_new_nodes(self):
-        merged_c, merged_t, _ = merge_color_maps(
-            {'talker': '34'}, {'talker': 'TALK'}, {},
-            [({'listener': '32'}, {'listener': 'LIST'}, {})]
+        merged_c, merged_t, _, _ = merge_color_maps(
+            {'talker': '34'}, {'talker': 'TALK'}, {}, {},
+            [({'listener': '32'}, {'listener': 'LIST'}, {}, {})]
         )
         assert merged_c == {'talker': '34', 'listener': '32'}
         assert merged_t == {'talker': 'TALK', 'listener': 'LIST'}
 
     def test_primary_wins_conflict(self):
-        merged_c, merged_t, _ = merge_color_maps(
-            {'talker': '34'}, {'talker': 'PRIMARY'}, {},
-            [({'talker': '31'}, {'talker': 'SECONDARY'}, {})]
+        merged_c, merged_t, _, _ = merge_color_maps(
+            {'talker': '34'}, {'talker': 'PRIMARY'}, {}, {},
+            [({'talker': '31'}, {'talker': 'SECONDARY'}, {}, {})]
         )
         assert merged_c['talker'] == '34'
         assert merged_t['talker'] == 'PRIMARY'
 
     def test_empty_primary_uses_secondary(self):
-        merged_c, merged_t, _ = merge_color_maps(
-            {}, {}, {},
-            [({'node1': '31'}, {'node1': 'N1'}, {})]
+        merged_c, merged_t, _, _ = merge_color_maps(
+            {}, {}, {}, {},
+            [({'node1': '31'}, {'node1': 'N1'}, {}, {})]
         )
         assert merged_c == {'node1': '31'}
         assert merged_t == {'node1': 'N1'}
 
     def test_multiple_secondaries_first_wins(self):
-        merged_c, _, _ = merge_color_maps(
-            {}, {}, {},
+        merged_c, _, _, _ = merge_color_maps(
+            {}, {}, {}, {},
             [
-                ({'shared': '32'}, {'shared': 'A'}, {}),
-                ({'shared': '31'}, {'shared': 'B'}, {}),
+                ({'shared': '32'}, {'shared': 'A'}, {}, {}),
+                ({'shared': '31'}, {'shared': 'B'}, {}, {}),
             ]
         )
         assert merged_c['shared'] == '32'
@@ -204,32 +204,54 @@ class TestMergeColorMaps:
     def test_no_secondaries_returns_copy_of_primary(self):
         primary_c = {'talker': '34'}
         primary_t = {'talker': 'T'}
-        merged_c, merged_t, merged_m = merge_color_maps(primary_c, primary_t, {}, [])
+        merged_c, merged_t, merged_m, merged_s = merge_color_maps(primary_c, primary_t, {}, {}, [])
         assert merged_c == primary_c
         assert merged_c is not primary_c  # it's a copy
         assert merged_m == {}
+        assert merged_s == {}
 
     def test_secondary_mode_map_merged_for_new_nodes(self):
-        merged_c, _, merged_m = merge_color_maps(
-            {'talker': '34'}, {'talker': 'T'}, {},
-            [({'listener': '32'}, {'listener': 'L'}, {'listener': 'full_line'})]
+        merged_c, _, merged_m, _ = merge_color_maps(
+            {'talker': '34'}, {'talker': 'T'}, {}, {},
+            [({'listener': '32'}, {'listener': 'L'}, {'listener': 'full_line'}, {})]
         )
         assert merged_m.get('listener') == 'full_line'
 
     def test_primary_mode_not_overridden_by_secondary(self):
-        merged_c, _, merged_m = merge_color_maps(
-            {'shared': '34'}, {'shared': 'T'}, {'shared': 'tag_only'},
-            [({'shared': '32'}, {'shared': 'S'}, {'shared': 'full_line'})]
+        merged_c, _, merged_m, _ = merge_color_maps(
+            {'shared': '34'}, {'shared': 'T'}, {'shared': 'tag_only'}, {},
+            [({'shared': '32'}, {'shared': 'S'}, {'shared': 'full_line'}, {})]
         )
         assert merged_m.get('shared') == 'tag_only'
 
     def test_secondary_mode_not_added_for_conflicting_node(self):
         # shared node exists in primary; its mode_map entry from secondary is ignored
-        merged_c, _, merged_m = merge_color_maps(
-            {'shared': '34'}, {'shared': 'T'}, {},
-            [({'shared': '32'}, {'shared': 'S'}, {'shared': 'full_line'})]
+        merged_c, _, merged_m, _ = merge_color_maps(
+            {'shared': '34'}, {'shared': 'T'}, {}, {},
+            [({'shared': '32'}, {'shared': 'S'}, {'shared': 'full_line'}, {})]
         )
         assert 'shared' not in merged_m
+
+    def test_secondary_style_map_merged_for_new_nodes(self):
+        merged_c, _, _, merged_s = merge_color_maps(
+            {'talker': '34'}, {'talker': 'T'}, {}, {},
+            [({'listener': '32'}, {'listener': 'L'}, {}, {'listener': 'inverted'})]
+        )
+        assert merged_s.get('listener') == 'inverted'
+
+    def test_primary_style_not_overridden_by_secondary(self):
+        merged_c, _, _, merged_s = merge_color_maps(
+            {'shared': '34'}, {'shared': 'T'}, {}, {'shared': 'normal'},
+            [({'shared': '32'}, {'shared': 'S'}, {}, {'shared': 'inverted'})]
+        )
+        assert merged_s.get('shared') == 'normal'
+
+    def test_secondary_style_not_added_for_conflicting_node(self):
+        merged_c, _, _, merged_s = merge_color_maps(
+            {'shared': '34'}, {'shared': 'T'}, {}, {},
+            [({'shared': '32'}, {'shared': 'S'}, {}, {'shared': 'inverted'})]
+        )
+        assert 'shared' not in merged_s
 
 
 # ── resolve_node_mode ─────────────────────────────────────────────────────────
@@ -252,6 +274,28 @@ class TestResolveNodeMode:
 
     def test_empty_mode_map_returns_none(self):
         assert resolve_node_mode('talker', {}) is None
+
+
+# ── resolve_node_style ────────────────────────────────────────────────────────
+
+class TestResolveNodeStyle:
+    def test_exact_match(self):
+        assert resolve_node_style('talker', {'talker': 'inverted'}) == 'inverted'
+
+    def test_basename_match(self):
+        assert resolve_node_style('/ns/talker', {'talker': 'inverted'}) == 'inverted'
+
+    def test_wildcard_full_path(self):
+        assert resolve_node_style('/ns/nav2_ctrl', {'*/nav2_*': 'inverted'}) == 'inverted'
+
+    def test_wildcard_basename(self):
+        assert resolve_node_style('nav2_controller', {'nav2_*': 'inverted'}) == 'inverted'
+
+    def test_no_match_returns_none(self):
+        assert resolve_node_style('talker', {'listener': 'inverted'}) is None
+
+    def test_empty_style_map_returns_none(self):
+        assert resolve_node_style('talker', {}) is None
 
 
 # ── pipeline integration tests ────────────────────────────────────────────────

@@ -406,3 +406,128 @@ class TestTagPosition:
                                     tag_position='before')
         assert result.startswith(f'\033[{CODE_BLUE}m')
         assert result.endswith(RESET + '\n')
+
+
+# ── tag_style inverted ────────────────────────────────────────────────────────
+
+INVERTED_CODE = CODE_BLUE + ';7'
+
+
+class TestInvertedTag:
+    """tag_style='inverted' renders the badge with colored background (reverse video)."""
+
+    # ── colorize_tag_only ────────────────────────────────────────────────────
+
+    def test_tag_only_badge_uses_inverted_code(self):
+        # In after-position, the space before the badge is inside the ANSI escape
+        result = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=True,
+                                   tag_style='inverted')
+        assert f'\033[{INVERTED_CODE}m [{LABEL}]\033[0m' in result
+
+    def test_tag_only_prefix_still_uses_normal_code(self):
+        result = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=True,
+                                   tag_style='inverted')
+        assert_segment_colored(result, '[talker-1]', CODE_BLUE)
+
+    def test_tag_only_message_still_uncolored(self):
+        result = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=True,
+                                   tag_style='inverted')
+        assert_segment_uncolored(result, "Publishing: 'Hello World'")
+
+    def test_tag_only_badge_after_prefix_by_default(self):
+        result = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=True,
+                                   tag_style='inverted')
+        prefix_pos = result.find('[talker-1]')
+        badge_pos  = result.find(f'[{LABEL}]')
+        assert prefix_pos < badge_pos
+
+    def test_tag_only_inverted_before_position(self):
+        result = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=True,
+                                   tag_position='before', tag_style='inverted')
+        prefix_pos = result.find('[talker-1]')
+        badge_pos  = result.find(f'[{LABEL}]')
+        assert badge_pos < prefix_pos
+
+    def test_tag_only_inverted_before_badge_code(self):
+        result = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=True,
+                                   tag_position='before', tag_style='inverted')
+        assert result.startswith(f'\033[{INVERTED_CODE}m[{LABEL}]\033[0m')
+
+    def test_tag_only_no_badge_when_show_tag_false(self):
+        result = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=False,
+                                   tag_style='inverted')
+        assert f'[{LABEL}]' not in result
+
+    def test_tag_only_normal_is_unchanged_without_style(self):
+        """Omitting tag_style keeps normal behavior."""
+        normal  = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=True)
+        inverted = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=True,
+                                     tag_style='normal')
+        assert normal == inverted
+
+    # ── colorize_full_line ───────────────────────────────────────────────────
+
+    def test_full_line_badge_uses_inverted_code(self):
+        result = colorize_full_line(NODE_LINE, CODE_BLUE, label=LABEL, show_tag=True,
+                                    tag_style='inverted')
+        assert f'\033[{INVERTED_CODE}m[{LABEL}]\033[0m' in result
+
+    def test_full_line_prefix_colored_normally(self):
+        result = colorize_full_line(NODE_LINE, CODE_BLUE, label=LABEL, show_tag=True,
+                                    tag_style='inverted')
+        assert_segment_colored(result, '[talker-1]', CODE_BLUE)
+
+    def test_full_line_badge_not_in_normal_segment(self):
+        result = colorize_full_line(NODE_LINE, CODE_BLUE, label=LABEL, show_tag=True,
+                                    tag_style='inverted')
+        for seg_text, seg_code in colored_segments(result):
+            if f'[{LABEL}]' in seg_text:
+                assert seg_code == INVERTED_CODE, (
+                    f"Badge segment has code {seg_code!r}, expected {INVERTED_CODE!r}"
+                )
+
+    def test_full_line_message_colored(self):
+        result = colorize_full_line(NODE_LINE, CODE_BLUE, label=LABEL, show_tag=True,
+                                    tag_style='inverted')
+        plain = strip_ansi(result)
+        assert "Publishing: 'Hello World'" in plain
+
+    def test_full_line_before_inverted_badge_first(self):
+        result = colorize_full_line(NODE_LINE, CODE_BLUE, label=LABEL, show_tag=True,
+                                    tag_position='before', tag_style='inverted')
+        assert result.startswith(f'\033[{INVERTED_CODE}m[{LABEL}]\033[0m')
+
+    def test_full_line_before_inverted_rest_colored(self):
+        result = colorize_full_line(NODE_LINE, CODE_BLUE, label=LABEL, show_tag=True,
+                                    tag_position='before', tag_style='inverted')
+        plain = strip_ansi(result)
+        assert '[talker-1]' in plain
+
+    def test_full_line_badge_after_prefix_in_plain_text(self):
+        result = colorize_full_line(NODE_LINE, CODE_BLUE, label=LABEL, show_tag=True,
+                                    tag_style='inverted')
+        plain = strip_ansi(result)
+        prefix_pos = plain.find('[talker-1]')
+        badge_pos  = plain.find(f'[{LABEL}]')
+        assert prefix_pos < badge_pos
+
+    def test_full_line_no_badge_when_show_tag_false(self):
+        result = colorize_full_line(NODE_LINE, CODE_BLUE, label=LABEL, show_tag=False,
+                                    tag_style='inverted')
+        assert f'[{LABEL}]' not in result
+
+    # ── colorize_line dispatch ───────────────────────────────────────────────
+
+    def test_colorize_line_passes_style_to_tag_only(self):
+        result_dispatch = colorize_line(NODE_LINE, CODE_BLUE, LABEL, True, 'tag_only',
+                                        tag_style='inverted')
+        result_direct   = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, True,
+                                            tag_style='inverted')
+        assert result_dispatch == result_direct
+
+    def test_colorize_line_passes_style_to_full_line(self):
+        result_dispatch = colorize_line(NODE_LINE, CODE_BLUE, LABEL, True, 'full_line',
+                                        tag_style='inverted')
+        result_direct   = colorize_full_line(NODE_LINE, CODE_BLUE, LABEL, True,
+                                             tag_style='inverted')
+        assert result_dispatch == result_direct
