@@ -61,11 +61,29 @@ Stored in `~/.config/dendROS/defaults.yaml`, managed via `dendros config`:
 | `debug` | `false` | Print debug output on startup. |
 | `config_merge` | `true` | Merge configs from included packages. |
 | `colorize_launch_msgs` | `true` | Colorize lifecycle lines globally. |
+| `crash_alert` | `false` | Print an inline banner when a node dies unexpectedly. |
+| `crash_alert_color` | `node` | `node` = use group color; `red` = always bold red. |
+| `crash_alert_interval` | `30` | Seconds between periodic banner reprints. `0` = only on new crashes. |
+| `traceback_color` | `fancy` | `fancy` = bold red header + dim red frames; `red` = all bold red; `off` = passthrough. |
 | `init_modify_build` | `true` | `dendros init`: patch build files. |
 | `init_on_existing` | `abort` | `dendros init`: `abort`, `merge`, or `overwrite`. |
 | `init_color` | `palette` | `dendros init`: `palette` or `null`. |
 | `init_color_bold` | `false` | `dendros init`: prefix palette colors with `bold`. |
 | `init_label` | `false` | `dendros init`: auto-generate labels. |
+
+---
+
+## dendros dismiss
+
+```bash
+dendros dismiss
+```
+
+Toggles the crash alert banner. First call silences future periodic reprints; second call un-silences and immediately reprints the current banner.
+
+Works by sending `SIGUSR1` to the active pipe process. Safe to call at any time during `ros2 launch`.
+
+See [Crash Alert](crash-alert.md) for full details.
 
 ---
 

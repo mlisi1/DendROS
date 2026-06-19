@@ -72,6 +72,9 @@ nav:
     - Config File: configuration.md
     - Colors: colors.md
     - Config Merging: config-merging.md
+  - Features:
+    - Crash Alert: crash-alert.md
+    - Traceback Highlighting: traceback-highlighting.md
   - Tools:
     - dendros init: dendros-init.md
     - dendros config: global-config.md

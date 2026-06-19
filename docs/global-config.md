@@ -58,6 +58,20 @@ Settings are written to `~/.config/dendROS/defaults.yaml` and apply across all p
 | **Debug mode** | `on` / `off` | Print config summary to stderr on startup. Equivalent to `DENDROS_DEBUG=1`. |
 | **Config merge** | `on` / `off` | Parse launch files for referenced packages and merge their configs. |
 
+### Crash alert
+
+| Setting | Values | Description |
+|---|---|---|
+| **Crash alert** | `on` / `off` | Print an inline banner when a node dies unexpectedly. See [Crash Alert](crash-alert.md). |
+| **Crash alert color** | `node` / `red` | `node` uses the group color; `red` always uses bold red. |
+| **Crash alert interval** | integer (seconds) | Seconds between periodic banner reprints. `0` = only on new crash events. |
+
+### Traceback
+
+| Setting | Values | Description |
+|---|---|---|
+| **Traceback color** | `fancy` / `red` / `off` | `fancy` = bold red header + dim red frames; `red` = all bold red; `off` = passthrough. See [Traceback Highlighting](traceback-highlighting.md). |
+
 ### Init defaults
 
 | Setting | Values | Description |
@@ -83,6 +97,10 @@ dim_unmatched: false
 debug: false
 config_merge: true
 colorize_launch_msgs: true
+crash_alert: false
+crash_alert_color: node
+crash_alert_interval: 30
+traceback_color: fancy
 init_modify_build: true
 init_on_existing: abort
 init_color: palette

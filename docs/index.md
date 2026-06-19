@@ -8,7 +8,21 @@
 
 ---
 
-![Terminal output demo](assets/images/screenshots/terminal_output.png)
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">Colored Terminal Output</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="./assets/images/screenshots/terminal_output.png" width="900" alt="Colored terminal output"/>
+</p>
+</div>
+</div>
 
 DendROS shadows the `ros2` command with a shell function. When you run `ros2 launch` or `ros2 run`, the output is piped through a lightweight Python colorizer that reads a small YAML config from your package, matches the `[node-N]` prefix on each line, and applies group colors. Every other `ros2` subcommand passes through unchanged. Packages without a config are completely unaffected — no changes to launch files, no exit-code clobbering, no buffering.
 
@@ -41,6 +55,16 @@ DendROS shadows the `ros2` command with a shell function. When you run `ros2 lau
 <div class="fc-icon">⚙️</div>
 <strong>Interactive config TUI</strong>
 <p><code>dendros config</code> opens a curses TUI for managing global defaults — no YAML editing required.</p>
+</div>
+<div class="feature-card" markdown>
+<div class="fc-icon">🚨</div>
+<strong>Crash alert</strong>
+<p>Inline banner flags crashed nodes the moment they die, lists exit codes, and reprints periodically so you never miss it.</p>
+</div>
+<div class="feature-card" markdown>
+<div class="fc-icon">🔴</div>
+<strong>Traceback highlighting</strong>
+<p>Python tracebacks colored automatically — bold red header, dim red frames, even when prefixed with a node name.</p>
 </div>
 <div class="feature-card" markdown>
 <div class="fc-icon">🚫</div>

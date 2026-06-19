@@ -22,12 +22,11 @@ DendROS scans every `.py` and `.xml` file in `launch/`, extracts all `Node()` / 
     </div>
     <div class="term-title">dendros init</div>
   </div>
-  <div class="term-body"><span class="t-dim">[dendROS] package: my_bringup</span>
-<span class="t-dim">[dendROS] scanning launch files…</span>
-<span class="t-dim">[dendROS]   main.launch.py: 3 node(s)</span>
-<span class="t-dim">[dendROS] found 3 node(s) in 1 group(s)</span>
-<span class="t-green">[dendROS] created config/dendROS.yaml</span>
-<span class="t-dim">[dendROS] patched CMakeLists.txt</span></div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/dendros_init.png" width="900" alt="dendros init"/>
+</p>
+</div>
 </div>
 
 **Generated config:**
