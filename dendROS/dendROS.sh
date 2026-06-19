@@ -16,6 +16,25 @@ dendros() {
     esac
 }
 
+_dendros_complete() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+
+    if [[ $COMP_CWORD -eq 1 ]]; then
+        COMPREPLY=($(compgen -W "config init" -- "$cur"))
+        return
+    fi
+
+    case "${COMP_WORDS[1]}" in
+        init)
+            COMPREPLY=($(compgen -W "--recursive --labels -r -l" -- "$cur"))
+            ;;
+        *)
+            COMPREPLY=()
+            ;;
+    esac
+}
+complete -F _dendros_complete dendros
+
 ros2() {
     # Set DENDROS_DISABLE=1 to bypass colorization and use the real ros2 directly
     if [[ -n "${DENDROS_DISABLE:-}" && "${DENDROS_DISABLE}" != "0" ]]; then
