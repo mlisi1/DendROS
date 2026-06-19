@@ -10,3 +10,7 @@ test/log/
 test/reports/
 
 *.md
+!docs/*.md
+
+# MkDocs build output
+site/
