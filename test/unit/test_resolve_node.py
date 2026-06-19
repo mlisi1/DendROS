@@ -1,6 +1,7 @@
 """Tests for resolve_node and extract_package_name."""
 import pytest
-from dendROS_pipe import resolve_node, extract_package_name
+from lib.config_loader import resolve_node
+from lib.discovery import extract_package_name
 
 
 # ── resolve_node ──────────────────────────────────────────────────────────────

@@ -10,22 +10,24 @@ import yaml
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'dendROS'))
 
 import dendros_config as cfg_mod
+import lib.global_config as gc_mod
 from dendros_config import (
     _DEFAULTS,
     _FIELDS,
     _DESCS,
+    _UNCHANGED,
+    _val_str,
+)
+from lib.logo import (
     _LOGO_LINES,
     _LOGO_W,
     _LOGO_ROWS,
     _LOGO_PARSED,
-    _UNCHANGED,
-    _val_str,
     _shift_rgb,
     _render_logo_line,
     _make_title_line,
-    load_global_config,
-    save_global_config,
 )
+from lib.global_config import load_global_config, save_global_config
 
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
@@ -34,7 +36,7 @@ from dendros_config import (
 def tmp_config(monkeypatch, tmp_path):
     """Redirect GLOBAL_CONFIG_PATH to a temp file for every test."""
     path = str(tmp_path / "defaults.yaml")
-    monkeypatch.setattr(cfg_mod, "GLOBAL_CONFIG_PATH", path)
+    monkeypatch.setattr(gc_mod, "GLOBAL_CONFIG_PATH", path)
     return path
 
 
@@ -133,7 +135,7 @@ class TestSaveGlobalConfig:
 
     def test_creates_parent_directory(self, monkeypatch, tmp_path):
         deep_path = str(tmp_path / "a" / "b" / "defaults.yaml")
-        monkeypatch.setattr(cfg_mod, "GLOBAL_CONFIG_PATH", deep_path)
+        monkeypatch.setattr(gc_mod, "GLOBAL_CONFIG_PATH", deep_path)
         save_global_config(dict(_DEFAULTS))
         assert os.path.exists(deep_path)
 

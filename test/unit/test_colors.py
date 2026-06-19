@@ -1,6 +1,6 @@
 """Tests for _resolve_color and _hex_to_ansi — all color format combinations."""
 import pytest
-from dendROS_pipe import _resolve_color, _hex_to_ansi
+from lib.colors import _resolve_color, _hex_to_ansi
 
 
 # ── _hex_to_ansi ─────────────────────────────────────────────────────────────

@@ -9,13 +9,12 @@ import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'dendROS'))
 
-from dendROS_pipe import (
+from lib.discovery import (
     extract_launch_file,
     find_launch_file,
     extract_included_packages,
-    merge_color_maps,
-    resolve_node_mode,
 )
+from lib.config_loader import merge_color_maps, resolve_node_mode
 from conftest import (
     run_pipe,
     assert_segment_colored,

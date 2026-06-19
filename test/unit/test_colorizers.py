@@ -4,13 +4,13 @@ Each test verifies exactly which text segments are colored and which are not.
 """
 import re
 import pytest
-from dendROS_pipe import (
+from lib.colorizers import (
     colorize_tag_only,
     colorize_full_line,
     colorize_line,
     colorize_launch_msg,
-    RESET,
 )
+from lib.colors import RESET
 from conftest import (
     colored_segments,
     assert_segment_colored,

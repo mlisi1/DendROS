@@ -9,21 +9,10 @@ import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'dendROS'))
 
-from dendros_init import (
-    make_label,
-    extract_nodes_from_python,
-    extract_nodes_from_xml,
-    scan_launch_file,
-    collect_nodes,
-    write_config,
-    merge_config,
-    modify_cmake,
-    modify_setup_py,
-    modify_setup_cfg,
-    find_package_root,
-    get_package_name,
-    main,
-)
+from lib.config_writer import make_label, write_config, merge_config, _bold_color
+from lib.node_extractor import extract_nodes_from_python, extract_nodes_from_xml, scan_launch_file
+from lib.build_modifier import modify_cmake, modify_setup_py, modify_setup_cfg
+from dendros_init import collect_nodes, find_package_root, get_package_name, main
 
 
 # ── make_label ────────────────────────────────────────────────────────────────
@@ -399,11 +388,11 @@ class TestWriteConfig:
 
     def test_use_bold_skips_already_bold(self, tmp_path):
         # A palette entry that already contains 'bold' should not be double-bolded
-        from dendros_init import _bold_color
+        from lib.config_writer import _bold_color
         assert _bold_color('bold magenta') == 'bold magenta'
 
     def test_use_bold_null_color_unchanged(self, tmp_path):
-        from dendros_init import _bold_color
+        from lib.config_writer import _bold_color
         assert _bold_color('null') == 'null'
 
     def test_use_label_false_writes_empty_label(self, tmp_path):

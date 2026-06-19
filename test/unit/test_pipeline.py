@@ -211,7 +211,7 @@ class TestMultiGroup:
 
     def test_nav_nodes_colored_bold_green(self, tmp_path):
         prefix = make_prefix(tmp_path, self.PKG, fixture_config('multi_group.yaml'))
-        from dendROS_pipe import _resolve_color
+        from lib.colors import _resolve_color
         nav_code = _resolve_color('bold green')
         lines = [
             "[nav2_controller-1] [INFO] [1.0] [n]: Planning\n",
@@ -224,7 +224,7 @@ class TestMultiGroup:
 
     def test_loc_nodes_colored_bold_blue(self, tmp_path):
         prefix = make_prefix(tmp_path, self.PKG, fixture_config('multi_group.yaml'))
-        from dendROS_pipe import _resolve_color
+        from lib.colors import _resolve_color
         loc_code = _resolve_color('bold blue')
         lines = ["[slam_toolbox-1] [INFO] [1.0] [s]: Scanning\n"]
         stdout, _, _ = run_pipe(prefix, self.PKG, lines)
@@ -274,7 +274,7 @@ class TestNamespacePipeline:
         lines = ["[/robot/talker-1] [INFO] [1.0] [t]: msg\n"]
         stdout, _, _ = run_pipe(prefix, self.PKG, lines)
         # Should match via basename fallback
-        from dendROS_pipe import _resolve_color
+        from lib.colors import _resolve_color
         assert ANSI_RE.search(stdout)
 
     def test_full_namespace_match(self, tmp_path):
@@ -316,7 +316,7 @@ class TestWildcardPipeline:
 
     def test_wildcard_suffix_colors_matching_node(self, tmp_path):
         prefix = make_prefix(tmp_path, self.PKG, fixture_config('wildcards.yaml'))
-        from dendROS_pipe import _resolve_color
+        from lib.colors import _resolve_color
         nav_code = _resolve_color('bold green')
         lines = ["[nav2_controller-1] [INFO] [1.0] [n]: Planning\n"]
         stdout, _, _ = run_pipe(prefix, self.PKG, lines)
@@ -324,7 +324,7 @@ class TestWildcardPipeline:
 
     def test_wildcard_matches_second_node_same_pattern(self, tmp_path):
         prefix = make_prefix(tmp_path, self.PKG, fixture_config('wildcards.yaml'))
-        from dendROS_pipe import _resolve_color
+        from lib.colors import _resolve_color
         nav_code = _resolve_color('bold green')
         lines = ["[nav2_planner-1] [INFO] [1.0] [n]: Computing path\n"]
         stdout, _, _ = run_pipe(prefix, self.PKG, lines)
@@ -338,7 +338,7 @@ class TestWildcardPipeline:
 
     def test_wildcard_namespace_pattern_matches(self, tmp_path):
         prefix = make_prefix(tmp_path, self.PKG, fixture_config('wildcards.yaml'))
-        from dendROS_pipe import _resolve_color
+        from lib.colors import _resolve_color
         loc_code = _resolve_color('bold blue')
         lines = ["[/robot/amcl-1] [INFO] [1.0] [a]: Localizing\n"]
         stdout, _, _ = run_pipe(prefix, self.PKG, lines)
@@ -358,7 +358,7 @@ class TestWildcardPipeline:
 
     def test_wildcard_launch_framework_line(self, tmp_path):
         prefix = make_prefix(tmp_path, self.PKG, fixture_config('wildcards.yaml'))
-        from dendROS_pipe import _resolve_color
+        from lib.colors import _resolve_color
         nav_code = _resolve_color('bold green')
         lines = ["[INFO] [nav2_controller-1]: process started with pid [1234]\n"]
         stdout, _, _ = run_pipe(prefix, self.PKG, lines)
@@ -383,7 +383,7 @@ class TestPerGroupShowTag:
         assert '[HW]' not in stdout
 
     def test_color_still_applied_when_show_tag_false(self, tmp_path):
-        from dendROS_pipe import _resolve_color
+        from lib.colors import _resolve_color
         prefix = make_prefix(tmp_path, self.PKG, fixture_config('per_group_show_tag.yaml'))
         lines = ["[robot_state_publisher-1] [INFO] [1.0] [r]: publishing\n"]
         stdout, _, _ = run_pipe(prefix, self.PKG, lines)
@@ -397,7 +397,7 @@ class TestPerGroupColorMode:
     PKG = 'test_pkg_group_mode'
 
     def test_hardware_group_full_line_colors_whole_line(self, tmp_path):
-        from dendROS_pipe import _resolve_color
+        from lib.colors import _resolve_color
         prefix = make_prefix(tmp_path, self.PKG, fixture_config('per_group_color_mode.yaml'))
         hw_code = _resolve_color('dark yellow')
         lines = ["[robot_state_publisher-1] [INFO] [1.0] [r]: publishing\n"]
@@ -452,7 +452,7 @@ class TestDimUnmatched:
         assert_segment_colored(stdout, '[unknown_node-1]', '2')
 
     def test_matched_node_not_dimmed(self, tmp_path):
-        from dendROS_pipe import _resolve_color
+        from lib.colors import _resolve_color
         prefix = make_prefix(tmp_path, self.PKG, fixture_config('dim_unmatched.yaml'))
         nav_code = _resolve_color('bold green')
         lines = ["[nav2_controller-1] [INFO] [1.0] [n]: planning\n"]
@@ -466,8 +466,8 @@ class TestCrashAlertDetection:
     """Unit tests for _detect_death — pure function, no subprocess needed."""
 
     def _detect(self, line):
-        from dendROS_pipe import _detect_death
-        return _detect_death(line)   # returns (node_name, exit_code) or (None, None)
+        from lib.crash_alert import detect_death
+        return detect_death(line)   # returns (node_name, exit_code) or (None, None)
 
     def _node(self, line):
         return self._detect(line)[0]

@@ -2,7 +2,8 @@
 import os
 import pytest
 import yaml
-from dendROS_pipe import load_config, _resolve_color
+from lib.config_loader import load_config
+from lib.colors import _resolve_color
 
 from conftest import CONFIGS_DIR
 
