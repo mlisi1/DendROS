@@ -65,13 +65,16 @@ class TestTracebackPassthrough:
         stdout, _, _ = run_pipe(no_config_prefix(tmp_path), 'no_pkg', self.TRACEBACK)
         assert 'RuntimeError: publisher handle is invalid' in stdout
 
-    def test_traceback_no_ansi_added(self, tmp_path):
+    def test_traceback_colored_red(self, tmp_path):
         stdout, _, _ = run_pipe(no_config_prefix(tmp_path), 'no_pkg', self.TRACEBACK)
-        assert not ANSI_RE.search(stdout)
+        # Header and exception are bold red; frames are dim red
+        assert '\033[31;1m' in stdout   # bold red (header + exception)
+        assert '\033[31;2m' in stdout   # dim red (frames)
 
     def test_traceback_all_lines_present(self, tmp_path):
         stdout, _, _ = run_pipe(no_config_prefix(tmp_path), 'no_pkg', self.TRACEBACK)
-        assert stdout == ''.join(self.TRACEBACK)
+        # Strip ANSI to compare text content — coloring may have been added
+        assert strip_ansi(stdout) == ''.join(self.TRACEBACK)
 
     def test_traceback_order_preserved(self, tmp_path):
         stdout, _, _ = run_pipe(no_config_prefix(tmp_path), 'no_pkg', self.TRACEBACK)
@@ -205,7 +208,7 @@ class TestInterleavedErrorsWithConfig:
         assert_segment_colored(out_lines[0], '[talker-1]', '34')
         assert_segment_colored(out_lines[4], '[talker-1]', '34')
 
-    def test_traceback_in_middle_no_ansi(self, tmp_path):
+    def test_traceback_in_middle_colored_red(self, tmp_path):
         prefix = make_prefix(tmp_path, self.PKG, 'basic.yaml')
         lines = [
             "[talker-1] [INFO] [1.0] [t]: Normal message\n",
@@ -216,8 +219,16 @@ class TestInterleavedErrorsWithConfig:
         ]
         stdout, _, _ = run_pipe(prefix, self.PKG, lines)
         out_lines = stdout.splitlines(keepends=True)
-        for line in out_lines[1:4]:
-            assert not ANSI_RE.search(line), f"Traceback line should not be colored: {line!r}"
+        # Traceback header is bold red
+        assert '\033[31;1m' in out_lines[1]
+        # Frame line is dim red
+        assert '\033[31;2m' in out_lines[2]
+        # Exception line is bold red
+        assert '\033[31;1m' in out_lines[3]
+        # Text content is preserved
+        assert 'Traceback' in strip_ansi(out_lines[1])
+        assert 'File' in strip_ansi(out_lines[2])
+        assert 'RuntimeError' in strip_ansi(out_lines[3])
 
     def test_all_lines_present_when_interleaved(self, tmp_path):
         prefix = make_prefix(tmp_path, self.PKG, 'basic.yaml')
@@ -253,5 +264,11 @@ class TestInterleavedErrorsWithConfig:
             lines = f.readlines()
         stdout, _, _ = run_pipe(prefix, self.PKG, lines)
         for line in stdout.splitlines(keepends=True):
-            if 'Segmentation fault' in line or 'Traceback' in line or line.startswith('  '):
-                assert not ANSI_RE.search(line), f"Should not be colored: {line!r}"
+            # Segmentation fault is C-level output — not a Python traceback, not colored
+            if 'Segmentation fault' in line:
+                assert not ANSI_RE.search(line), f"Segfault should not be colored: {line!r}"
+            # Python traceback header is bold red; frame lines are dim red
+            if 'Traceback (most recent call last)' in strip_ansi(line):
+                assert '\033[31;1m' in line, f"Traceback header should be bold red: {line!r}"
+            elif strip_ansi(line).startswith('  File '):
+                assert '\033[31;2m' in line, f"Traceback frame should be dim red: {line!r}"

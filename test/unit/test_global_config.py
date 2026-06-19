@@ -81,6 +81,10 @@ class TestLoadGlobalConfig:
             "init_color": "null",
             "init_color_bold": True,
             "init_label": True,
+            "crash_alert": True,
+            "crash_alert_color": "red",
+            "crash_alert_interval": 60,
+            "traceback_color": "red",
         }
         with open(tmp_config, "w") as f:
             yaml.dump(data, f)
@@ -154,6 +158,10 @@ class TestSaveGlobalConfig:
             "init_color": "null",
             "init_color_bold": True,
             "init_label": True,
+            "crash_alert": True,
+            "crash_alert_color": "red",
+            "crash_alert_interval": 60,
+            "traceback_color": "off",
         }
         save_global_config(custom)
         result = load_global_config()
@@ -339,3 +347,102 @@ class TestUnchangedSentinel:
 
     def test_identity_comparison(self):
         assert _UNCHANGED is _UNCHANGED
+
+
+# ── crash alert config keys ───────────────────────────────────────────────────
+
+class TestCrashAlertConfig:
+    def test_defaults_have_crash_alert_off(self):
+        assert _DEFAULTS["crash_alert"] is False
+
+    def test_defaults_have_node_color(self):
+        assert _DEFAULTS["crash_alert_color"] == "node"
+
+    def test_fields_include_crash_alert(self):
+        keys = [f[0] for f in _FIELDS]
+        assert "crash_alert" in keys
+        assert "crash_alert_color" in keys
+        assert "crash_alert_corner" not in keys
+
+    def test_crash_alert_is_cycle_field(self):
+        field = next(f for f in _FIELDS if f[0] == "crash_alert")
+        assert field[2] == "cycle"
+        assert False in field[3] and True in field[3]
+
+    def test_crash_alert_color_options(self):
+        field = next(f for f in _FIELDS if f[0] == "crash_alert_color")
+        opts = field[3]
+        assert "node" in opts
+        assert "red" in opts
+
+    def test_descs_have_crash_alert(self):
+        assert "crash_alert" in _DESCS
+        assert "crash_alert_color" in _DESCS
+        assert "crash_alert_corner" not in _DESCS
+
+    def test_load_crash_alert_true(self, tmp_config):
+        with open(tmp_config, "w") as f:
+            yaml.dump({"crash_alert": True}, f)
+        result = load_global_config()
+        assert result["crash_alert"] is True
+
+    def test_load_crash_alert_color_red(self, tmp_config):
+        with open(tmp_config, "w") as f:
+            yaml.dump({"crash_alert_color": "red"}, f)
+        result = load_global_config()
+        assert result["crash_alert_color"] == "red"
+
+    def test_defaults_have_interval_30(self):
+        assert _DEFAULTS["crash_alert_interval"] == 30
+
+    def test_load_crash_alert_interval(self, tmp_config):
+        with open(tmp_config, "w") as f:
+            yaml.dump({"crash_alert_interval": 60}, f)
+        result = load_global_config()
+        assert result["crash_alert_interval"] == 60
+
+    def test_interval_text_field_in_tui(self):
+        field = next(f for f in _FIELDS if f[0] == "crash_alert_interval")
+        assert field[2] == "text"
+
+    def test_save_and_reload_crash_alert(self, tmp_config):
+        cfg = dict(_DEFAULTS)
+        cfg["crash_alert"] = True
+        cfg["crash_alert_color"] = "red"
+        cfg["crash_alert_interval"] = 15
+        save_global_config(cfg)
+        reloaded = load_global_config()
+        assert reloaded["crash_alert"] is True
+        assert reloaded["crash_alert_color"] == "red"
+        assert reloaded["crash_alert_interval"] == 15
+
+
+class TestTracebackColorConfig:
+    def test_defaults_have_fancy(self):
+        assert _DEFAULTS["traceback_color"] == "fancy"
+
+    def test_field_is_cycle(self):
+        field = next(f for f in _FIELDS if f[0] == "traceback_color")
+        assert field[2] == "cycle"
+        assert set(field[3]) == {"fancy", "red", "off"}
+
+    def test_desc_present(self):
+        assert "traceback_color" in _DESCS
+
+    def test_load_traceback_color_off(self, tmp_config):
+        with open(tmp_config, "w") as f:
+            yaml.dump({"traceback_color": "off"}, f)
+        result = load_global_config()
+        assert result["traceback_color"] == "off"
+
+    def test_load_traceback_color_red(self, tmp_config):
+        with open(tmp_config, "w") as f:
+            yaml.dump({"traceback_color": "red"}, f)
+        result = load_global_config()
+        assert result["traceback_color"] == "red"
+
+    def test_roundtrip_traceback_color(self, tmp_config):
+        cfg = dict(_DEFAULTS)
+        cfg["traceback_color"] = "red"
+        save_global_config(cfg)
+        assert load_global_config()["traceback_color"] == "red"

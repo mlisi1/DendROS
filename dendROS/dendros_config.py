@@ -32,6 +32,10 @@ _DEFAULTS = {
     "init_color":           "palette",
     "init_color_bold":      False,
     "init_label":           False,
+    "crash_alert":          False,
+    "crash_alert_color":    "node",
+    "crash_alert_interval": 30,
+    "traceback_color":      "fancy",
 }
 
 # (key, display_label, kind, cycle_options)
@@ -52,6 +56,10 @@ _FIELDS = [
     ("init_color",           "Init: color",           "cycle", ["palette", "null"]),
     ("init_color_bold",      "Init: bold colors",     "cycle", [False, True]),
     ("init_label",           "Init: auto label",      "cycle", [False, True]),
+    ("crash_alert",          "Crash alert",           "cycle", [False, True]),
+    ("crash_alert_color",    "Alert color",           "cycle", ["node", "red"]),
+    ("crash_alert_interval", "Alert interval (s)",    "text",  None),
+    ("traceback_color",      "Traceback color",       "cycle", ["fancy", "red", "off"]),
 ]
 
 _DESCS = {
@@ -116,6 +124,23 @@ _DESCS = {
     "init_label": (
         "off — write label: \"\" for each group (entry is created; fill in manually)",
         "on  — auto-generate a short label from the package name (e.g. nav2_bringup → NB)",
+    ),
+    "crash_alert": (
+        "on  — print an inline alert banner when a ROS 2 node dies unexpectedly;"
+        " run 'dendros dismiss' to silence future reprints",
+        "off — no banner; node death appears only in the normal log stream",
+    ),
+    "crash_alert_color": (
+        "node — color the dead node's name using its configured group color",
+        "red  — always show the dead node's name in bold red regardless of group",
+    ),
+    "crash_alert_interval": (
+        "Seconds between automatic alert reprints while nodes remain crashed.",
+        "0 = print only once (on crash) + again when new nodes die. Default: 30.",
+    ),
+    "traceback_color": (
+        "fancy — bold red header/exception, dim red frame lines (default)",
+        "red   — entire traceback in bold red  |  off — no coloring (white)",
     ),
 }
 

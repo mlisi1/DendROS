@@ -28,27 +28,57 @@ all the same color. By the time you find the line you were looking for, it has s
 **DendROS assigns each group of nodes its own color.** You could have localization in blue, navigation in green,
 hardware in orange — defined once in a small YAML file that lives inside your package.
 No launch file edits. No new ROS 2 dependencies. Packages without a config pass through completely unchanged.
+It also features some quality of life improvements for ROS outputs.
 
 
-<p align="center">
-  <img src="docs/assets/images/screenshots/terminal_output.png" width="650" alt="Colored Terminal Output"/>
-</p>
+
 
 <br clear="right"/>
 
 
 
 ## Features
+
+
+- ### **Color by group** 
+  One config file per package maps node groups to colors, badges, and display rules
+
+<p align="center">
+<img src="docs/assets/images/screenshots/terminal_output.png" width="600" alt="Colored Terminal Output"/>
+</p>
+
+- ### **One command to get started**
+   Too lazy to look up how DendROS config works? We got you covered: `dendros init` scans your launch files and generates an initial config for you
+
+<p align="center">
+<img src="docs/assets/images/screenshots/dendros_init.png" width="600" alt="Colored Terminal Output"/>
+</p>
+
+- ### **Crash alert** 
+  An inline banner flags crashed nodes the moment they die, lists the exit code, and repeats periodically so you don't miss it in fast-scrolling output
+
+<p align="center">
+<img src="docs/assets/images/screenshots/crash_alert.png" width="600" alt="Colored Terminal Output"/>
+</p>
+
+- ### **Traceback highlighting**
+  Python tracebacks are colored automatically: bold red for the header and exception line, dim red for the frames; configurable per session
+
+<p align="center">
+<img src="docs/assets/images/screenshots/highlighted_traceback.png" width="600" alt="Colored Terminal Output"/>
+</p>
+
+- ### **Truly non-invasive** 
+  Shell-level pipe; you won't loose autocompletion or aliases for launch files
+
 <img
   align="right"
   src="docs/assets/images/dendrobate.png"
   width="140"
   style="transform: scaleX(-1);">
 
-- **Color by group** — one config file per package maps node groups to colors, badges, and display rules
-- **One command to get started** — Too lazy to look up how DendROS config works? We got you covered: `dendros init` scans your launch files and generates the config for you
-- **Truly non-invasive** — shell-level pipe; you won't loose autocompletion or aliases for launch files
-- **Works everywhere** — host install, Docker, any ROS 2 distribution
+- ### **Works everywhere** 
+  Host install, Docker, any ROS 2 distribution
 
 ## Install
 

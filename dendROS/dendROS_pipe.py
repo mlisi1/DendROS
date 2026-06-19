@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """DendROS colorizer pipe — reads ros2 output from stdin and colorizes by node group."""
 
-import sys
+import atexit
+import fnmatch
 import os
 import re
-import fnmatch
+import shutil
+import signal
 import subprocess
+import sys
+import time
 
 try:
     import yaml
@@ -30,6 +34,38 @@ _XML_INCLUDE_RE = re.compile(r'\$\(find-pkg-share\s+([a-zA-Z0-9_.-]+)\)')
 _LOG_LEVELS = frozenset({'INFO', 'WARN', 'WARNING', 'ERROR', 'DEBUG', 'FATAL'})
 
 _DEBUG = os.environ.get('DENDROS_DEBUG', '') not in ('', '0')
+
+# Crash alert ─────────────────────────────────────────────────────────────────
+# Launch-framework format: [LEVEL] [node-N]: process has died [pid X, exit code Y]
+_DIED_LAUNCH_RE = re.compile(
+    r'^\[(?:INFO|WARN(?:ING)?|ERROR|DEBUG|FATAL)\]\s+'
+    r'\[([a-zA-Z0-9_./-]+?)(?:-\d+)?\].*?\bprocess has died\b'
+)
+# Node-output format: [node-N]: process has died [pid X, exit code Y]
+_DIED_RE = re.compile(
+    r'^\[([a-zA-Z0-9_./-]+?)(?:-\d+)?\].*?\bprocess has died\b'
+)
+# Exit code embedded in either "process has died" message: "exit code N" (no colon)
+_EXIT_CODE_RE = re.compile(r'\bexit code:?\s+(-?\d+)')
+# Non-zero exit via "process exited with return code: N"
+_EXIT_NONZERO_RE = re.compile(
+    r'^\[([a-zA-Z0-9_./-]+?)(?:-\d+)?\].*?\bprocess exited with return code:\s*(-?\d+)'
+)
+
+_crash_alert_enabled  = False
+_crash_alert_color    = 'node'
+_crash_alert_interval = 30.0   # seconds between periodic reprints; 0 = no reprints
+# Each entry: (node_name, exit_code_str_or_None, ansi_code_or_None)
+_dead_nodes           = []
+_alert_dismissed      = False   # True after 'dendros dismiss'; un-dismiss reprints once
+_last_alert_time      = 0.0
+_pid_file_path        = None
+
+# Traceback colorization ───────────────────────────────────────────────────────
+_TB_START_RE    = re.compile(r'^Traceback \(most recent call last\):\s*$')
+_TB_DURING_RE   = re.compile(r'^During handling of the above exception')
+_in_traceback   = False
+_traceback_color = 'fancy'   # 'fancy' | 'red' | 'off'
 
 # Named color support ─────────────────────────────────────────────────────────
 _COLOR_CODES = {
@@ -104,6 +140,122 @@ def _resolve_color(value):
 
 def _dbg(msg):
     print(f'\033[35;1m[dendROS]\033[0m {msg}', file=sys.stderr, flush=True)
+
+
+# ── Crash alert helpers ───────────────────────────────────────────────────────
+
+def _detect_death(line):
+    """Return (node_name, exit_code) if line signals unexpected node death.
+
+    Handles two line formats:
+      Launch-framework: [LEVEL] [node-N]: process has died [pid X, exit code Y]
+      Node output:      [node-N]: process has died [pid X, exit code Y]
+    Also catches non-zero "process exited with return code: N".
+    Returns (None, None) when no death is detected.
+    """
+    # Launch-framework format — must check first so [ERROR]/[INFO] isn't captured as node name
+    m = _DIED_LAUNCH_RE.match(line)
+    if m:
+        ec_m = _EXIT_CODE_RE.search(line)
+        return m.group(1), (ec_m.group(1) if ec_m else None)
+    # Node-output format — reject if first token is a log level keyword
+    m = _DIED_RE.match(line)
+    if m and m.group(1) not in _LOG_LEVELS:
+        ec_m = _EXIT_CODE_RE.search(line)
+        return m.group(1), (ec_m.group(1) if ec_m else None)
+    # Non-zero exit code (node-output format only)
+    m = _EXIT_NONZERO_RE.match(line)
+    if m and m.group(1) not in _LOG_LEVELS and m.group(2) != '0':
+        return m.group(1), m.group(2)
+    return None, None
+
+
+def _print_alert_banner():
+    """Print a prominent inline alert banner. No-op when dismissed."""
+    global _last_alert_time
+    if _alert_dismissed or not _dead_nodes:
+        return
+    # \033[31;1;7m = bold red + reverse-video → red background, terminal-default text
+    HDR = '\033[31;1;7m'
+    RED = '\033[31;1m'
+    DIM = '\033[2m'
+    RST = '\033[0m'
+
+    parts = []
+    for node_name, exit_code, node_color in _dead_nodes:
+        nc = (f'\033[{node_color}m'
+              if _crash_alert_color == 'node' and node_color else RED)
+        ec = f' exit {exit_code}' if exit_code is not None else ' (died)'
+        parts.append(f'{nc}{node_name}{RST}{DIM}{ec}{RST}')
+
+    nodes = f'{DIM}  ·  {RST}'.join(parts)
+    sys.stdout.write(f'{HDR} !! CRASH ALERT {RST}  {nodes}\n')
+    sys.stdout.flush()
+    _last_alert_time = time.monotonic()
+
+
+def _make_dim(code):
+    """Return a dim variant of an ANSI SGR code: strips bold (1), adds dim (2)."""
+    parts = [p for p in code.split(';') if p and p != '1']
+    if '2' not in parts:
+        parts.append('2')
+    return ';'.join(parts) if parts else '2'
+
+
+def _colorize_traceback(content, prefix=''):
+    """Colorize one traceback line; updates _in_traceback state.
+
+    content: the traceback text (bare line, or content after the node-prefix separator space)
+    prefix:  pre-rendered dim node-prefix to prepend (empty for bare tracebacks)
+    Modes controlled by _traceback_color:
+      'fancy' — bold red header/exception, dim red frames
+      'red'   — all bold red
+      'off'   — passthrough, no color, no state tracking
+    """
+    global _in_traceback
+    if _traceback_color == 'off':
+        return prefix + content if prefix else content
+    stripped = content.rstrip('\n')
+    if _in_traceback:
+        if stripped == '':
+            _in_traceback = False
+            return '\n'
+        if stripped.startswith('  ') or _TB_START_RE.match(content) or _TB_DURING_RE.match(content):
+            frame_color = '\033[31;2m' if _traceback_color == 'fancy' else '\033[31;1m'
+            return f'{prefix}{frame_color}{stripped}\033[0m\n'
+        _in_traceback = False
+        return f'{prefix}\033[31;1m{stripped}\033[0m\n'
+    if _TB_START_RE.match(content) or _TB_DURING_RE.match(content):
+        _in_traceback = True
+        return f'{prefix}\033[31;1m{stripped}\033[0m\n'
+    return prefix + content if prefix else content
+
+
+def _toggle_alert(_sig, _frame):
+    """SIGUSR1 handler: dismiss (silence) or un-dismiss the alert."""
+    global _alert_dismissed
+    _alert_dismissed = not _alert_dismissed
+    if not _alert_dismissed and _dead_nodes:
+        _print_alert_banner()
+
+
+def _write_pid_file():
+    global _pid_file_path
+    try:
+        _pid_file_path = f'/tmp/dendros_alert_{os.getppid()}'
+        with open(_pid_file_path, 'w') as f:
+            f.write(str(os.getpid()))
+    except OSError:
+        _pid_file_path = None
+
+
+def _cleanup():
+    """Remove PID file on exit."""
+    if _pid_file_path:
+        try:
+            os.unlink(_pid_file_path)
+        except OSError:
+            pass
 
 
 def extract_package_name(argv):
@@ -363,6 +515,8 @@ def _load_global_defaults():
         keys = (
             'color_mode', 'show_group_tag', 'unmatched_color', 'debug', 'config_merge',
             'tag_position', 'colorize_launch_msgs', 'unmatched_tag', 'dim_unmatched',
+            'crash_alert', 'crash_alert_color', 'crash_alert_interval',
+            'traceback_color',
         )
         return {k: v for k, v in data.items() if k in keys}
     except Exception:
@@ -371,11 +525,25 @@ def _load_global_defaults():
 
 def main():
     global _DEBUG
+    global _crash_alert_enabled, _crash_alert_color, _crash_alert_interval
+    global _traceback_color
     argv = sys.argv[1:]
 
     global_cfg = _load_global_defaults()
     if global_cfg.get('debug', False):
         _DEBUG = True
+
+    _traceback_color      = global_cfg.get('traceback_color', 'fancy')
+    _crash_alert_enabled  = bool(global_cfg.get('crash_alert', False))
+    _crash_alert_color    = global_cfg.get('crash_alert_color', 'node')
+    try:
+        _crash_alert_interval = float(global_cfg.get('crash_alert_interval', 30))
+    except (TypeError, ValueError):
+        _crash_alert_interval = 30.0
+    if _crash_alert_enabled:
+        _write_pid_file()
+        atexit.register(_cleanup)
+        signal.signal(signal.SIGUSR1, _toggle_alert)
 
     pkg_name = extract_package_name(argv) if argv else None
     config_path = find_config(pkg_name) if pkg_name else None
@@ -453,33 +621,73 @@ def main():
         else:
             _dbg(f'package=\033[1m{pkg_name}\033[0m  no dendROS.yaml found — passthrough mode')
 
+    def _colorize(line):
+        """Apply full colorization pipeline to one line; return the colored line."""
+        m = PREFIX_RE.match(line)
+        if m and m.group(1) not in _LOG_LEVELS:
+            node_name = m.group(1)
+            code, label = resolve_node(node_name, color_map, tag_map)
+            if code is None and unmatched_color:
+                code, label = str(unmatched_color), unmatched_tag
+
+            # Content after the "]" — strip exactly the separator space so that the
+            # 2-space indentation of frame lines is preserved for traceback detection.
+            rest = line[m.end():]
+            content = rest[1:] if rest.startswith(' ') else rest
+
+            if (_traceback_color != 'off' and
+                    (_in_traceback or _TB_START_RE.match(content) or _TB_DURING_RE.match(content))):
+                # Traceback block: dim node prefix + traceback content colors
+                dim = _make_dim(code) if code else '2'
+                tb_prefix = f'\033[{dim}m{m.group(0)}\033[0m '
+                return _colorize_traceback(content, tb_prefix)
+
+            if code:
+                effective_mode = resolve_node_mode(node_name, mode_map) or color_mode
+                return colorize_line(line, code, label, show_tag, effective_mode, tag_position)
+            return line
+        elif colorize_launch_msgs:
+            lm = LAUNCH_RE.match(line)
+            if lm:
+                node_name = lm.group(3)
+                code, _ = resolve_node(node_name, color_map, tag_map)
+                if code is None and unmatched_color:
+                    code = str(unmatched_color)
+                if code:
+                    return colorize_launch_msg(line, code, color_mode)
+        return _colorize_traceback(line)
+
     try:
         for line in sys.stdin:
-            m = PREFIX_RE.match(line)
-            if m and m.group(1) not in _LOG_LEVELS:
-                # node output format: [node-N] [INFO] ...
-                node_name = m.group(1)
-                ansi_code, label = resolve_node(node_name, color_map, tag_map)
-                if ansi_code is None and unmatched_color:
-                    ansi_code = str(unmatched_color)
-                    label = unmatched_tag
-                if ansi_code:
-                    effective_mode = resolve_node_mode(node_name, mode_map) or color_mode
-                    line = colorize_line(line, ansi_code, label, show_tag, effective_mode, tag_position)
-            elif colorize_launch_msgs:
-                # launch-framework format: [INFO] [node-N]: ...
-                lm = LAUNCH_RE.match(line)
-                if lm:
-                    node_name = lm.group(3)
-                    ansi_code, _ = resolve_node(node_name, color_map, tag_map)
-                    if ansi_code is None and unmatched_color:
-                        ansi_code = str(unmatched_color)
-                    if ansi_code:
-                        line = colorize_launch_msg(line, ansi_code, color_mode)
+            new_death = False
 
-            sys.stdout.write(line)
+            # Death detection on raw input before colorization
+            if _crash_alert_enabled:
+                dead_node, exit_code = _detect_death(line)
+                if dead_node:
+                    code, _ = resolve_node(dead_node, color_map, tag_map)
+                    _dead_nodes.append((dead_node, exit_code, code))
+                    new_death = True
+
+            sys.stdout.write(_colorize(line))
             sys.stdout.flush()
-    except (BrokenPipeError, KeyboardInterrupt):
+
+            if _crash_alert_enabled:
+                if new_death:
+                    _print_alert_banner()
+                elif (_dead_nodes and not _alert_dismissed
+                      and _crash_alert_interval > 0
+                      and time.monotonic() - _last_alert_time >= _crash_alert_interval):
+                    _print_alert_banner()
+    except KeyboardInterrupt:
+        # Drain remaining input so ROS 2 shutdown messages / tracebacks reach the terminal
+        try:
+            for line in sys.stdin:
+                sys.stdout.write(_colorize(line))
+                sys.stdout.flush()
+        except Exception:
+            pass
+    except BrokenPipeError:
         pass
 
 

@@ -458,3 +458,240 @@ class TestDimUnmatched:
         lines = ["[nav2_controller-1] [INFO] [1.0] [n]: planning\n"]
         stdout, _, _ = run_pipe(prefix, self.PKG, lines)
         assert_segment_colored(stdout, '[nav2_controller-1]', nav_code)
+
+
+# ── Crash alert: death detection ──────────────────────────────────────────────
+
+class TestCrashAlertDetection:
+    """Unit tests for _detect_death — pure function, no subprocess needed."""
+
+    def _detect(self, line):
+        from dendROS_pipe import _detect_death
+        return _detect_death(line)   # returns (node_name, exit_code) or (None, None)
+
+    def _node(self, line):
+        return self._detect(line)[0]
+
+    def _ec(self, line):
+        return self._detect(line)[1]
+
+    # ── process has died — node-output format ─────────────────────────────────
+
+    def test_detects_process_has_died(self):
+        line = "[my_node-1]: process has died [pid 1234, exit code -11, cmd '/path/node' ; ]\n"
+        assert self._node(line) == 'my_node'
+
+    def test_captures_exit_code_from_died_msg(self):
+        line = "[my_node-1]: process has died [pid 1234, exit code 1, cmd '...' ; ]\n"
+        assert self._ec(line) == '1'
+
+    def test_detects_process_has_died_no_suffix(self):
+        line = "[slam_toolbox]: process has died\n"
+        assert self._node(line) == 'slam_toolbox'
+
+    def test_detects_process_has_died_numeric_suffix(self):
+        line = "[nav2_controller-3]: process has died [pid 5678, exit code 1]\n"
+        assert self._node(line) == 'nav2_controller'
+
+    def test_detects_process_has_died_dotted_name(self):
+        line = "[my.namespace.node-1]: process has died\n"
+        assert self._node(line) == 'my.namespace.node'
+
+    def test_detects_process_has_died_slash_in_name(self):
+        line = "[ns/talker-2]: process has died\n"
+        assert self._node(line) == 'ns/talker'
+
+    # ── process has died — launch-framework format ────────────────────────────
+
+    def test_detects_died_in_launch_info_format(self):
+        line = "[INFO] [controller_server-4]: process has died [pid 171973, exit code 1, cmd '...']\n"
+        assert self._node(line) == 'controller_server'
+
+    def test_detects_died_in_launch_error_format(self):
+        line = "[ERROR] [bt_navigator-5]: process has died [pid 9, exit code 2]\n"
+        assert self._node(line) == 'bt_navigator'
+
+    def test_launch_format_captures_exit_code(self):
+        line = "[ERROR] [controller_server-4]: process has died [pid 1, exit code 1, cmd '/bin/node']\n"
+        assert self._ec(line) == '1'
+
+    def test_error_keyword_not_captured_as_node(self):
+        line = "[ERROR] [controller_server-4]: process has died [pid 1, exit code 1]\n"
+        assert self._node(line) != 'ERROR'
+
+    # ── non-zero exit code ────────────────────────────────────────────────────
+
+    def test_detects_nonzero_exit_code(self):
+        line = "[my_node-1] process exited with return code: 1\n"
+        assert self._node(line) == 'my_node'
+
+    def test_captures_return_code_value(self):
+        line = "[my_node-1] process exited with return code: 42\n"
+        assert self._ec(line) == '42'
+
+    def test_detects_negative_exit_code(self):
+        line = "[my_node-1] process exited with return code: -11\n"
+        assert self._node(line) == 'my_node'
+
+    def test_zero_exit_code_not_detected(self):
+        line = "[my_node-1] process exited with return code: 0\n"
+        assert self._node(line) is None
+
+    # ── normal lines should not trigger ──────────────────────────────────────
+
+    def test_normal_log_line_not_detected(self):
+        line = "[my_node-1] [INFO] [1234.5] [/logger]: hello world\n"
+        assert self._node(line) is None
+
+    def test_launch_started_line_not_detected(self):
+        line = "[INFO] [my_node-1]: process started with pid [1234]\n"
+        assert self._node(line) is None
+
+    def test_empty_line_not_detected(self):
+        node, ec = self._detect("\n")
+        assert node is None and ec is None
+
+    def test_arbitrary_text_not_detected(self):
+        node, ec = self._detect("nothing here\n")
+        assert node is None and ec is None
+
+    # ── pipeline passthrough ──────────────────────────────────────────────────
+
+    def test_death_line_still_passes_through(self, tmp_path):
+        """The death message is written to stdout unchanged (colorized if matched)."""
+        prefix = make_prefix(tmp_path, 'test_pkg', fixture_config('basic.yaml'))
+        death_line = "[talker-1]: process has died [pid 9, exit code -11]\n"
+        stdout, _, rc = run_pipe(prefix, 'test_pkg', [death_line])
+        # Output must contain the original text (modulo ANSI wrapping)
+        assert 'process has died' in strip_ansi(stdout)
+        assert rc == 0
+
+    def test_pipe_survives_death_lines_without_tty(self, tmp_path):
+        """Pipe must not crash when crash_alert is off (default) and death lines arrive."""
+        prefix = make_prefix(tmp_path, 'test_pkg', fixture_config('basic.yaml'))
+        lines = [
+            "[talker-1]: process has died [pid 9, exit code -11]\n",
+            "[listener-2] process exited with return code: 1\n",
+            "[talker-1] [INFO] [1.0] [/t]: hello\n",
+        ]
+        stdout, stderr, rc = run_pipe(prefix, 'test_pkg', lines)
+        # All three lines must reach stdout
+        plain = strip_ansi(stdout)
+        assert 'process has died' in plain
+        assert 'process exited with return code: 1' in plain
+        assert 'hello' in plain
+        assert rc == 0
+
+
+class TestTracebackColorization:
+    """The pipe should colorize Python traceback blocks in dim red."""
+
+    def _run(self, lines, tmp_path):
+        prefix = make_prefix(tmp_path, 'test_pkg', fixture_config('basic.yaml'))
+        stdout, _, rc = run_pipe(prefix, 'test_pkg', lines)
+        assert rc == 0
+        return stdout
+
+    def test_traceback_header_gets_bold_red(self, tmp_path):
+        out = self._run(["Traceback (most recent call last):\n"], tmp_path)
+        # Header line is bold red, not dim
+        assert '\033[31;1m' in out
+        assert '\033[31;2m' not in out
+        assert 'Traceback' in out
+
+    def test_traceback_frame_gets_dim_red(self, tmp_path):
+        lines = [
+            "Traceback (most recent call last):\n",
+            '  File "/path/to/node.py", line 23, in run\n',
+        ]
+        out = self._run(lines, tmp_path)
+        # Frame line is dim red
+        assert '\033[31;2m' in out
+
+    def test_exception_line_gets_bold_red(self, tmp_path):
+        lines = [
+            "Traceback (most recent call last):\n",
+            "  File \"/node.py\", line 1, in f\n",
+            "RuntimeError: something failed\n",
+        ]
+        out = self._run(lines, tmp_path)
+        assert '\033[31;1m' in out
+        assert 'RuntimeError' in out
+
+    def test_node_lines_not_affected_by_traceback_state(self, tmp_path):
+        lines = [
+            "Traceback (most recent call last):\n",
+            "  File \"/node.py\", line 1, in f\n",
+            "RuntimeError: something failed\n",
+            "[talker-1] [INFO] [1.0] [/t]: hello\n",
+        ]
+        out = self._run(lines, tmp_path)
+        # Node line after traceback must still be colorized with its own color
+        segs = colored_segments(out)
+        hello_seg = next((s for s in segs if 'hello' in s[0]), None)
+        assert hello_seg is not None
+
+    def test_normal_lines_not_affected(self, tmp_path):
+        lines = ["[talker-1] [INFO] [1.0] [/t]: hello\n"]
+        out = self._run(lines, tmp_path)
+        assert 'Traceback' not in out
+        # No dim red from traceback path (though node may have its own color)
+        assert '\033[31;2m' not in out
+
+    def test_blank_line_ends_traceback(self, tmp_path):
+        lines = [
+            "Traceback (most recent call last):\n",
+            "  File \"/node.py\", line 1, in f\n",
+            "\n",
+            "Some normal output\n",
+        ]
+        out = self._run(lines, tmp_path)
+        assert '\033[31;2mSome normal output' not in out
+
+
+def _write_global_cfg(prefix, **kwargs):
+    """Write a minimal global config under prefix/.config/dendROS/defaults.yaml."""
+    import yaml as _yaml
+    cfg_dir = os.path.join(prefix, '.config', 'dendROS')
+    os.makedirs(cfg_dir, exist_ok=True)
+    with open(os.path.join(cfg_dir, 'defaults.yaml'), 'w') as fh:
+        _yaml.dump(kwargs, fh)
+
+
+class TestTracebackColorModes:
+    """traceback_color: fancy / red / off modes."""
+
+    TB_LINES = [
+        "Traceback (most recent call last):\n",
+        '  File "/node.py", line 1, in f\n',
+        "RuntimeError: boom\n",
+    ]
+
+    def _run_with_cfg(self, lines, tmp_path, **cfg):
+        prefix = make_prefix(tmp_path, 'test_pkg', fixture_config('basic.yaml'))
+        # run_pipe sets HOME=ament_prefix, so write the global config there
+        _write_global_cfg(prefix, **cfg)
+        stdout, _, rc = run_pipe(prefix, 'test_pkg', lines)
+        assert rc == 0
+        return stdout
+
+    def test_fancy_header_bold_frame_dim(self, tmp_path):
+        out = self._run_with_cfg(self.TB_LINES, tmp_path, traceback_color='fancy')
+        assert '\033[31;1m' in out   # header + exception
+        assert '\033[31;2m' in out   # frame
+
+    def test_red_all_bold(self, tmp_path):
+        out = self._run_with_cfg(self.TB_LINES, tmp_path, traceback_color='red')
+        assert '\033[31;1m' in out
+        assert '\033[31;2m' not in out   # no dim red — everything is bold
+
+    def test_off_no_ansi(self, tmp_path):
+        out = self._run_with_cfg(self.TB_LINES, tmp_path, traceback_color='off')
+        # No red codes; text content preserved
+        assert '\033[31' not in out
+        assert 'Traceback' in out
+        assert 'RuntimeError' in out
+
+    def test_off_text_unchanged(self, tmp_path):
+        out = self._run_with_cfg(self.TB_LINES, tmp_path, traceback_color='off')
+        assert strip_ansi(out) == ''.join(self.TB_LINES)
