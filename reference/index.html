@@ -1226,6 +1226,18 @@
 <td>string</td>
 <td><code>tag_only</code> or <code>full_line</code>. Overrides the package/global setting for this group.</td>
 </tr>
+<tr>
+<td><code>tag_style</code></td>
+<td>no</td>
+<td>string</td>
+<td><code>normal</code> or <code>inverted</code>. Overrides badge style for this group.</td>
+</tr>
+<tr>
+<td><code>highlight</code> / <code>highlights</code></td>
+<td>no</td>
+<td>list</td>
+<td>Keyword entries to highlight within this group's output lines. See <a href="../configuration/#keyword-highlighting">Keyword highlighting</a>.</td>
+</tr>
 </tbody>
 </table>
 <hr />
@@ -1259,6 +1271,12 @@
 <td><code>after</code> or <code>before</code> — badge position relative to <code>[node-N]</code>.</td>
 </tr>
 <tr>
+<td><code>tag_style</code></td>
+<td><code>normal</code></td>
+<td>string</td>
+<td><code>normal</code> or <code>inverted</code> — badge appearance.</td>
+</tr>
+<tr>
 <td><code>unmatched_color</code></td>
 <td><code>null</code></td>
 <td>string|null</td>
@@ -1281,6 +1299,12 @@
 <td><code>true</code></td>
 <td>bool</td>
 <td>Colorize <code>[INFO] [node-N]: …</code> lifecycle lines.</td>
+</tr>
+<tr>
+<td><code>highlight</code> / <code>highlights</code></td>
+<td><code>[]</code></td>
+<td>list</td>
+<td>Keyword entries applied to all matched nodes in this package. See <a href="../configuration/#keyword-highlighting">Keyword highlighting</a>.</td>
 </tr>
 </tbody>
 </table>
@@ -1310,6 +1334,11 @@
 <td><code>tag_position</code></td>
 <td><code>after</code></td>
 <td>Badge position relative to <code>[node-N]</code>.</td>
+</tr>
+<tr>
+<td><code>tag_style</code></td>
+<td><code>normal</code></td>
+<td><code>normal</code> or <code>inverted</code> — badge appearance globally.</td>
 </tr>
 <tr>
 <td><code>unmatched_color</code></td>
@@ -1343,7 +1372,7 @@
 </tr>
 <tr>
 <td><code>crash_alert</code></td>
-<td><code>false</code></td>
+<td><code>true</code></td>
 <td>Print an inline banner when a node dies unexpectedly.</td>
 </tr>
 <tr>
