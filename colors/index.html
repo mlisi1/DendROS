@@ -689,6 +689,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#extended-named-colors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extended named colors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#hex-truecolor" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1060,6 +1071,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#extended-named-colors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extended named colors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#hex-truecolor" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1125,7 +1147,7 @@
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;light</span><span class="nv"> </span><span class="s">cyan&quot;</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;bold</span><span class="nv"> </span><span class="s">light</span><span class="nv"> </span><span class="s">magenta&quot;</span>
 </span></code></pre></div>
-<p><strong>Available names:</strong> <code>black</code> <code>red</code> <code>green</code> <code>yellow</code> <code>blue</code> <code>magenta</code> <code>cyan</code> <code>white</code></p>
+<p><strong>Standard names (ANSI 8-color):</strong> <code>black</code> <code>red</code> <code>green</code> <code>yellow</code> <code>blue</code> <code>magenta</code> <code>cyan</code> <code>white</code></p>
 <p><strong>Modifiers:</strong></p>
 <table>
 <thead>
@@ -1159,9 +1181,88 @@
 </tbody>
 </table>
 <p>Modifiers can be combined: <code>"bold light cyan"</code> → bold + bright cyan.</p>
+<hr />
+<h2 id="extended-named-colors">Extended named colors</h2>
+<p>These names resolve to 24-bit truecolor automatically — no hex needed.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;orange&quot;</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;bold</span><span class="nv"> </span><span class="s">purple&quot;</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;crimson&quot;</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;mint&quot;</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;sky&quot;</span>
+</span></code></pre></div>
+<table>
+  <thead><tr><th>Name</th><th>Color</th><th>Name</th><th>Color</th></tr></thead>
+  <tbody>
+    <tr><td colspan="4" style="background:none;padding:4px 8px;font-size:.8em;opacity:.6">reds &amp; pinks</td></tr>
+    <tr>
+      <td><code style="color:#DC143C">crimson</code></td><td><span style="color:#DC143C">deep red</span></td>
+      <td><code style="color:#800000">maroon</code></td><td><span style="color:#800000">dark red</span></td>
+    </tr>
+    <tr>
+      <td><code style="color:#FF007F">rose</code></td><td><span style="color:#FF007F">vivid rose</span></td>
+      <td><code style="color:#FF69B4">pink</code></td><td><span style="color:#FF69B4">hot pink</span></td>
+    </tr>
+    <tr>
+      <td><code style="color:#FF7F50">coral</code></td><td><span style="color:#FF7F50">coral red</span></td>
+      <td><code style="color:#FA8072">salmon</code></td><td><span style="color:#FA8072">soft salmon</span></td>
+    </tr>
+    <tr><td colspan="4" style="background:none;padding:4px 8px;font-size:.8em;opacity:.6">oranges &amp; yellows</td></tr>
+    <tr>
+      <td><code style="color:#FFA500">orange</code></td><td><span style="color:#FFA500">warm orange</span></td>
+      <td><code style="color:#FFBF00">amber</code></td><td><span style="color:#FFBF00">amber</span></td>
+    </tr>
+    <tr>
+      <td><code style="color:#FFD700">gold</code></td><td><span style="color:#FFD700">golden yellow</span></td>
+      <td></td><td></td>
+    </tr>
+    <tr><td colspan="4" style="background:none;padding:4px 8px;font-size:.8em;opacity:.6">greens</td></tr>
+    <tr>
+      <td><code style="color:#32CD32">lime</code></td><td><span style="color:#32CD32">lime green</span></td>
+      <td><code style="color:#3EB489">mint</code></td><td><span style="color:#3EB489">mint green</span></td>
+    </tr>
+    <tr>
+      <td><code style="color:#808000">olive</code></td><td><span style="color:#808000">dark olive</span></td>
+      <td><code style="color:#008080">teal</code></td><td><span style="color:#008080">dark teal</span></td>
+    </tr>
+    <tr>
+      <td><code style="color:#40E0D0">turquoise</code></td><td><span style="color:#40E0D0">bright turquoise</span></td>
+      <td></td><td></td>
+    </tr>
+    <tr><td colspan="4" style="background:none;padding:4px 8px;font-size:.8em;opacity:.6">blues</td></tr>
+    <tr>
+      <td><code style="color:#87CEEB">sky</code></td><td><span style="color:#87CEEB">sky blue</span></td>
+      <td><code style="color:#007FFF">azure</code></td><td><span style="color:#007FFF">bright blue</span></td>
+    </tr>
+    <tr>
+      <td><code style="color:#000080">navy</code></td><td><span style="color:#000080">dark navy</span></td>
+      <td></td><td></td>
+    </tr>
+    <tr><td colspan="4" style="background:none;padding:4px 8px;font-size:.8em;opacity:.6">purples</td></tr>
+    <tr>
+      <td><code style="color:#967BB6">lavender</code></td><td><span style="color:#967BB6">soft lavender</span></td>
+      <td><code style="color:#9370DB">purple</code></td><td><span style="color:#9370DB">medium purple</span></td>
+    </tr>
+    <tr>
+      <td><code style="color:#EE82EE">violet</code></td><td><span style="color:#EE82EE">light violet</span></td>
+      <td><code style="color:#C8A2C8">lilac</code></td><td><span style="color:#C8A2C8">soft lilac</span></td>
+    </tr>
+    <tr>
+      <td><code style="color:#4B0082">indigo</code></td><td><span style="color:#4B0082">dark indigo</span></td>
+      <td></td><td></td>
+    </tr>
+    <tr><td colspan="4" style="background:none;padding:4px 8px;font-size:.8em;opacity:.6">neutrals</td></tr>
+    <tr>
+      <td><code style="color:#A0522D">brown</code></td><td><span style="color:#A0522D">sienna brown</span></td>
+      <td><code style="color:#808080">grey</code> / <code style="color:#808080">gray</code></td><td><span style="color:#808080">medium grey</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<p><code>bold</code> works with all extended names (<code>"bold orange"</code>, <code>"bold purple"</code>, …).
+<code>light</code> / <code>dark</code> modifiers are ignored for extended names — the RGB value is fixed. Use a <code>#hex</code> code if you need precise control.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p><code>dark</code> / <code>light</code> modifiers do not apply to hex colors — the RGB value itself sets the brightness.</p>
+<p><code>dark</code> / <code>light</code> modifiers do not apply to hex colors or extended named colors — the RGB value itself sets the brightness.</p>
 </div>
 <hr />
 <h2 id="hex-truecolor">Hex truecolor</h2>
@@ -1187,14 +1288,14 @@
 </tr>
 </tbody>
 </table>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#CC8800&quot;</span><span class="w">      </span><span class="c1"># amber</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@#00BFFF&quot;</span><span class="w">     </span><span class="c1"># bold deep sky blue</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;bold</span><span class="nv"> </span><span class="s">#FF4500&quot;</span><span class="w"> </span><span class="c1"># bold orange-red</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#CC8800&quot;</span><span class="w">      </span><span class="c1"># amber</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@#00BFFF&quot;</span><span class="w">     </span><span class="c1"># bold deep sky blue</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;bold</span><span class="nv"> </span><span class="s">#FF4500&quot;</span><span class="w"> </span><span class="c1"># bold orange-red</span>
 </span></code></pre></div>
 <hr />
 <h2 id="raw-ansi-sgr-codes">Raw ANSI SGR codes</h2>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;34;1&quot;</span><span class="w">   </span><span class="c1"># bold blue  (same as &quot;bold blue&quot;)</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;92&quot;</span><span class="w">     </span><span class="c1"># bright green  (same as &quot;light green&quot;)</span>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;34;1&quot;</span><span class="w">   </span><span class="c1"># bold blue  (same as &quot;bold blue&quot;)</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nt">color</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;92&quot;</span><span class="w">     </span><span class="c1"># bright green  (same as &quot;light green&quot;)</span>
 </span></code></pre></div>
 <hr />
 <h2 id="preview">Preview</h2>
@@ -1209,8 +1310,9 @@
   </div>
   <div class="term-body"><span class="t-blue">[node-1]</span> <span class="t-blue t-badge">[LOC]</span>  bold blue
 <span class="t-green">[node-1]</span> <span class="t-green t-badge">[NAV]</span>  bold green
-<span class="t-orange">[node-1]</span> <span class="t-orange t-badge">[HW]</span>   #CC8800
+<span class="t-orange">[node-1]</span> <span class="t-orange t-badge">[HW]</span>   orange
 <span class="t-cyan">[node-1]</span> <span class="t-cyan t-badge">[SEN]</span>  bold cyan
+<span style="color:#9370DB;font-weight:bold">[node-1]</span> <span style="color:#9370DB;font-weight:bold">[AI]</span>   bold purple
 <span class="t-dim">[node-1]</span> <span class="t-dim t-badge">[DBG]</span>  dim cyan</div>
 </div>
 
