@@ -11,6 +11,41 @@ _COLOR_CODES = {
     'blue':  34, 'magenta': 35, 'cyan': 36, 'white':  37,
 }
 
+# Extended named colors resolved as 24-bit truecolor. bold works; light/dark are ignored.
+_HEX_ALIASES = {
+    # reds / pinks
+    'crimson':   'DC143C',
+    'maroon':    '800000',
+    'rose':      'FF007F',
+    'pink':      'FF69B4',
+    'coral':     'FF7F50',
+    'salmon':    'FA8072',
+    # oranges / yellows
+    'orange':    'FFA500',
+    'amber':     'FFBF00',
+    'gold':      'FFD700',
+    # greens
+    'lime':      '32CD32',
+    'mint':      '3EB489',
+    'olive':     '808000',
+    'teal':      '008080',
+    'turquoise': '40E0D0',
+    # blues
+    'sky':       '87CEEB',
+    'azure':     '007FFF',
+    'navy':      '000080',
+    # purples
+    'lavender':  '967BB6',
+    'purple':    '9370DB',
+    'violet':    'EE82EE',
+    'lilac':     'C8A2C8',
+    'indigo':    '4B0082',
+    # neutrals
+    'brown':     'A0522D',
+    'grey':      '808080',
+    'gray':      '808080',
+}
+
 
 def _ansi(code):
     return f'\033[{code}m'
@@ -58,6 +93,9 @@ def _resolve_color(value):
 
     base_code = next((_COLOR_CODES[w] for w in words if w in _COLOR_CODES), None)
     if base_code is None:
+        alias_hex = next((_HEX_ALIASES[w] for w in words if w in _HEX_ALIASES), None)
+        if alias_hex is not None:
+            return _hex_to_ansi(alias_hex, bold=bold)
         return sl
 
     if light:

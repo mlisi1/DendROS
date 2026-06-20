@@ -217,6 +217,70 @@ class TestHexColors:
         assert _resolve_color('#00FF44') == '38;2;0;255;68'
 
 
+# ── Extended named colors (hex aliases) ──────────────────────────────────────
+
+class TestExtendedNamedColors:
+    @pytest.mark.parametrize('name,expected', [
+        # reds / pinks
+        ('crimson',   '38;2;220;20;60'),
+        ('maroon',    '38;2;128;0;0'),
+        ('rose',      '38;2;255;0;127'),
+        ('pink',      '38;2;255;105;180'),
+        ('coral',     '38;2;255;127;80'),
+        ('salmon',    '38;2;250;128;114'),
+        # oranges / yellows
+        ('orange',    '38;2;255;165;0'),
+        ('amber',     '38;2;255;191;0'),
+        ('gold',      '38;2;255;215;0'),
+        # greens
+        ('lime',      '38;2;50;205;50'),
+        ('mint',      '38;2;62;180;137'),
+        ('olive',     '38;2;128;128;0'),
+        ('teal',      '38;2;0;128;128'),
+        ('turquoise', '38;2;64;224;208'),
+        # blues
+        ('sky',       '38;2;135;206;235'),
+        ('azure',     '38;2;0;127;255'),
+        ('navy',      '38;2;0;0;128'),
+        # purples
+        ('lavender',  '38;2;150;123;182'),
+        ('purple',    '38;2;147;112;219'),
+        ('violet',    '38;2;238;130;238'),
+        ('lilac',     '38;2;200;162;200'),
+        ('indigo',    '38;2;75;0;130'),
+        # neutrals
+        ('brown',     '38;2;160;82;45'),
+        ('grey',      '38;2;128;128;128'),
+        ('gray',      '38;2;128;128;128'),
+    ])
+    def test_extended_color(self, name, expected):
+        assert _resolve_color(name) == expected
+
+    @pytest.mark.parametrize('name,expected', [
+        ('bold orange',  '1;38;2;255;165;0'),
+        ('bold crimson', '1;38;2;220;20;60'),
+        ('bold mint',    '1;38;2;62;180;137'),
+        ('bold sky',     '1;38;2;135;206;235'),
+        ('bold navy',    '1;38;2;0;0;128'),
+        ('bold purple',  '1;38;2;147;112;219'),
+        ('bold lavender','1;38;2;150;123;182'),
+    ])
+    def test_bold_extended_color(self, name, expected):
+        assert _resolve_color(name) == expected
+
+    def test_light_modifier_ignored(self):
+        assert _resolve_color('light orange') == _resolve_color('orange')
+
+    def test_dark_modifier_ignored(self):
+        assert _resolve_color('dark purple') == _resolve_color('purple')
+
+    def test_uppercase_extended(self):
+        assert _resolve_color('ORANGE') == _resolve_color('orange')
+
+    def test_gray_grey_alias(self):
+        assert _resolve_color('gray') == _resolve_color('grey')
+
+
 # ── Unknown / edge cases ──────────────────────────────────────────────────────
 
 class TestEdgeCases:

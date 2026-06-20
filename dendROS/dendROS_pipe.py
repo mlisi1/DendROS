@@ -23,7 +23,7 @@ from lib.discovery import (
     extract_package_name, extract_launch_file, find_config,
     find_launch_file, extract_included_packages,
 )
-from lib.global_config import load_global_config
+from lib.global_config import load_global_config, get_node_colors_path
 import lib.crash_alert as ca
 import lib.traceback_color as tc
 
@@ -32,6 +32,36 @@ _DEBUG = os.environ.get('DENDROS_DEBUG', '') not in ('', '0')
 
 def _dbg(msg):
     print(f'\033[35;1m[dendROS]\033[0m {msg}', file=sys.stderr, flush=True)
+
+
+def _save_node_colors(color_map, tag_map, style_map):
+    """Merge color/tag/style maps into the shared node_colors file for cross-terminal use."""
+    import tempfile
+    path = get_node_colors_path()
+    cfg_dir = os.path.dirname(path)
+
+    existing = {}
+    if os.path.isfile(path):
+        try:
+            with open(path) as f:
+                existing = yaml.safe_load(f) or {}
+        except Exception:
+            pass
+
+    merged = {
+        'color_map': {**existing.get('color_map', {}), **color_map},
+        'tag_map':   {**existing.get('tag_map', {}),   **tag_map},
+        'style_map': {**existing.get('style_map', {}), **style_map},
+    }
+
+    try:
+        os.makedirs(cfg_dir, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=cfg_dir, suffix='.tmp')
+        with os.fdopen(fd, 'w') as f:
+            yaml.dump(merged, f, default_flow_style=False)
+        os.replace(tmp, path)
+    except Exception:
+        pass
 
 
 def main():
@@ -100,6 +130,9 @@ def main():
                 except Exception as e:
                     print(f'\033[35;1m[dendROS]\033[0m config error ({inc_config_path}): {e}',
                           file=sys.stderr, flush=True)
+
+    if config_path:
+        _save_node_colors(color_map, tag_map, style_map)
 
     show_tag             = defaults.get('show_group_tag',       True)
     color_mode           = defaults.get('color_mode',           'tag_only')

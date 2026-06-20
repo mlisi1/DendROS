@@ -39,6 +39,11 @@ def get_global_config_path():
     return GLOBAL_CONFIG_PATH if GLOBAL_CONFIG_PATH is not None else os.path.expanduser("~/.config/dendROS/defaults.yaml")
 
 
+def get_node_colors_path():
+    """Return path to the shared node→color map written by the pipe and read by ros2 node list."""
+    return os.path.join(os.path.dirname(get_global_config_path()), 'node_colors.yaml')
+
+
 def load_global_config():
     """Load the global config file, filling missing keys from DEFAULTS."""
     path = get_global_config_path()
