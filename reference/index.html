@@ -775,6 +775,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-list/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ros2 node list
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1008,6 +1036,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ros2-intercepted-subcommands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ros2 — intercepted subcommands
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#dendros-subcommands" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1112,6 +1151,17 @@
     <span class="md-ellipsis">
       
         Global config — all keys
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ros2-intercepted-subcommands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ros2 — intercepted subcommands
       
     </span>
   </a>
@@ -1440,6 +1490,35 @@
 <td><code>init_label</code></td>
 <td><code>false</code></td>
 <td><code>dendros init</code>: auto-generate labels.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="ros2-intercepted-subcommands">ros2 — intercepted subcommands</h2>
+<p>The <code>ros2()</code> shell wrapper intercepts specific subcommands; everything else calls the real <code>ros2</code> binary directly:</p>
+<table>
+<thead>
+<tr>
+<th>Subcommand</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ros2 launch …</code></td>
+<td>Output piped through the DendROS colorizer.</td>
+</tr>
+<tr>
+<td><code>ros2 run …</code></td>
+<td>Output piped through the DendROS colorizer.</td>
+</tr>
+<tr>
+<td><code>ros2 node list</code></td>
+<td>Output piped through <code>dendros_node_list.py</code> — nodes colored by group. See <a href="../node-list/">ros2 node list</a>.</td>
+</tr>
+<tr>
+<td>Everything else</td>
+<td>Passed directly to the real <code>ros2</code> binary, untouched.</td>
 </tr>
 </tbody>
 </table>

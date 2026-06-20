@@ -901,6 +901,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-list/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ros2 node list
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1272,7 +1300,8 @@
 <hr />
 <h2 id="notes">Notes</h2>
 <ul>
-<li>Only <strong>unexpected deaths</strong> trigger the banner — <code>SIGINT</code> from <code>Ctrl-C</code> is not flagged.</li>
+<li><strong>Traceback suppression</strong> — if a node printed a Python traceback before dying, the crash alert for that node is skipped. The traceback already communicates the failure clearly enough; a redundant banner adds noise.</li>
+<li><strong>Ctrl-C suppression</strong> — once <code>Ctrl-C</code> is received, all subsequent node deaths are treated as expected cascade shutdowns and produce no banner. Only true mid-run crashes (before any <code>Ctrl-C</code>) trigger the alert.</li>
 <li>Exit codes are shown next to the node name when available (<code>exit code 1</code>, <code>exit code -11</code>).</li>
 <li>The <code>[node-N]</code> numeric suffix is stripped before the name is displayed in the banner.</li>
 <li>If a node has no configured group color (unmatched node), the banner falls back to bold red.</li>

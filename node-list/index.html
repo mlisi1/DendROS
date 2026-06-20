@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://mlisi1.github.io/DendROS/global-config/">
+        <link rel="canonical" href="https://mlisi1.github.io/DendROS/node-list/">
       
       
-        <link rel="prev" href="../dendros-init/">
+        <link rel="prev" href="../traceback-highlighting/">
       
       
-        <link rel="next" href="../reference/">
+        <link rel="next" href="../dendros-init/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>dendros config - DendROS</title>
+        <title>ros2 node list - DendROS</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#dendros-config" class="md-skip">
+        <a href="#ros2-node-list-colorization" class="md-skip">
           Skip to content
         </a>
       
@@ -113,7 +113,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              dendros config
+              ros2 node list
             
           </span>
         </div>
@@ -283,10 +283,12 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
+      <li class="md-tabs__item md-tabs__item--active">
         <a href="../crash-alert/" class="md-tabs__link">
           
   
@@ -303,12 +305,10 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../dendros-init/" class="md-tabs__link">
           
   
@@ -673,26 +673,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
             
   
   
@@ -710,7 +715,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -781,10 +786,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../node-list/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ros2 node list
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -800,6 +832,76 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-looks-like" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What it looks like
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What it looks like">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bidirectional-node-name-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bidirectional node name discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#badge-and-style-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Badge and style options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -816,31 +918,26 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
             
   
   
@@ -858,7 +955,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -901,37 +998,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    dendros config
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../global-config/" class="md-nav__link">
         
   
   
@@ -947,142 +1017,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#interface" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Interface
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#keyboard-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Keyboard reference
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#settings-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Settings reference
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Settings reference">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#output" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Output
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#unmatched-nodes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Unmatched nodes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#system" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        System
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#crash-alert" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Crash alert
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#traceback" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Traceback
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#init-defaults" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Init defaults
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#config-file" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Config file
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1149,99 +1083,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#interface" class="md-nav__link">
+  <a href="#what-it-looks-like" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Interface
+        What it looks like
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#keyboard-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Keyboard reference
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#settings-reference" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Settings reference
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Settings reference">
+    <nav class="md-nav" aria-label="What it looks like">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#output" class="md-nav__link">
+  <a href="#bidirectional-node-name-discovery" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Output
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#unmatched-nodes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Unmatched nodes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#system" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        System
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#crash-alert" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Crash alert
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#traceback" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Traceback
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#init-defaults" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Init defaults
+        Bidirectional node name discovery
       
     </span>
   </a>
@@ -1254,10 +1111,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#config-file" class="md-nav__link">
+  <a href="#badge-and-style-options" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Config file
+        Badge and style options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
       
     </span>
   </a>
@@ -1281,7 +1149,7 @@
 
 
   
-    <a href="https://github.com/mlisi1/DendROS/edit/main/docs/global-config.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/mlisi1/DendROS/edit/main/docs/node-list.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1289,13 +1157,10 @@
   
 
 
-<h1 id="dendros-config">dendros config</h1>
-<p><code>dendros config</code> opens a full-screen interactive TUI for managing global defaults.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>dendros<span class="w"> </span>config
-</span></code></pre></div>
-<p>Settings are written to <code>~/.config/dendROS/defaults.yaml</code> and apply across all packages as a baseline. Per-package <code>dendROS.yaml</code> <code>defaults:</code> sections override them.</p>
+<h1 id="ros2-node-list-colorization">ros2 node list Colorization</h1>
+<p>When you run <code>ros2 node list</code>, DendROS automatically colorizes the output using the same group colors and badges configured for <code>ros2 launch</code>. No extra setup is required — colors are shared across terminals through a small cache file that the pipe writes during launch.</p>
 <hr />
-<h2 id="interface">Interface</h2>
+<h2 id="what-it-looks-like">What it looks like</h2>
 <div class="term">
   <div class="term-bar">
     <div class="term-dots">
@@ -1303,247 +1168,73 @@
       <div class="term-dot term-dot-yellow"></div>
       <div class="term-dot term-dot-green"></div>
     </div>
-    <div class="term-title">dendros config</div>
+    <div class="term-title">ros2 node list</div>
   </div>
   <div class="term-body-image">
   <p align="center">
-<img src="../assets/images/screenshots/dendros_config.png" width="900" alt="dendros config"/>
+<img src="../assets/images/screenshots/node_list.png" width="900" alt="ros2 node list colorized output"/>
 </p>
 </div>
 </div>
 
 <hr />
-<h2 id="keyboard-reference">Keyboard reference</h2>
+<h3 id="bidirectional-node-name-discovery">Bidirectional node name discovery</h3>
+<p>ROS 2 nodes sometimes register a different name in the graph than the launch process name. For example, <code>slam_toolbox</code> is launched as <code>slam_node</code> (the process name) but registers in the graph as <code>/slam_toolbox</code>. DendROS resolves this automatically:</p>
+<ul>
+<li><strong>Forward</strong>: when a process name (e.g. <code>slam_node</code>) is in your config and its log output reveals the graph name (<code>[slam_toolbox]</code>), both names are added to the cache.</li>
+<li><strong>Reverse</strong>: when a graph name (e.g. <code>slam_toolbox</code>) is in your config and a line from an unknown process references it, both names are added.</li>
+</ul>
+<p>After one launch, <code>ros2 node list</code> shows the correct color for <code>/slam_toolbox</code> even if your config only lists <code>slam_node</code>.</p>
+<hr />
+<h2 id="badge-and-style-options">Badge and style options</h2>
+<p>All badge and color-mode settings from your config and global defaults apply:</p>
 <table>
 <thead>
 <tr>
-<th>Key</th>
-<th>Action</th>
+<th>Setting</th>
+<th>Effect on node list</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><span class="keys"><kbd class="key-arrow-up">Up</kbd></span> / <span class="keys"><kbd class="key-k">K</kbd></span></td>
-<td>Move to previous field</td>
+<td><code>show_group_tag: true</code></td>
+<td><code>[LOC] /amcl_node</code> (badge before or after, per <code>tag_position</code>)</td>
 </tr>
 <tr>
-<td><span class="keys"><kbd class="key-arrow-down">Down</kbd></span> / <span class="keys"><kbd class="key-j">J</kbd></span></td>
-<td>Move to next field</td>
+<td><code>tag_position: before</code></td>
+<td>Badge appears before the node name</td>
 </tr>
 <tr>
-<td><span class="keys"><kbd class="key-arrow-right">Right</kbd></span> / <span class="keys"><kbd class="key-space">Space</kbd></span> / <span class="keys"><kbd class="key-enter">Enter</kbd></span></td>
-<td>Cycle option forward</td>
+<td><code>tag_position: after</code></td>
+<td>Badge appears after the node name</td>
 </tr>
 <tr>
-<td><span class="keys"><kbd class="key-arrow-left">Left</kbd></span></td>
-<td>Cycle option backward</td>
+<td><code>tag_style: inverted</code></td>
+<td>Badge rendered with colored background</td>
 </tr>
 <tr>
-<td><span class="keys"><kbd class="key-e">E</kbd></span></td>
-<td>Open inline text editor for the current field</td>
+<td>Per-group <code>show_tag: false</code></td>
+<td>Badge suppressed for that group only</td>
 </tr>
 <tr>
-<td><span class="keys"><kbd class="key-s">S</kbd></span></td>
-<td>Save to <code>~/.config/dendROS/defaults.yaml</code></td>
+<td><code>unmatched_color</code></td>
+<td>Unmatched nodes shown in the fallback color</td>
 </tr>
 <tr>
-<td><span class="keys"><kbd class="key-q">Q</kbd></span> / <span class="keys"><kbd class="key-escape">Esc</kbd></span></td>
-<td>Quit (prompts if there are unsaved changes)</td>
+<td><code>unmatched_tag</code></td>
+<td>Badge shown next to unmatched nodes (requires <code>unmatched_color</code>)</td>
+</tr>
+<tr>
+<td><code>dim_unmatched</code></td>
+<td>Unmatched nodes dimmed (only when <code>unmatched_color: null</code>)</td>
 </tr>
 </tbody>
 </table>
 <hr />
-<h2 id="settings-reference">Settings reference</h2>
-<h3 id="output">Output</h3>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>Values</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Color mode</strong></td>
-<td><code>tag_only</code> / <code>full_line</code></td>
-<td><code>tag_only</code> colors prefix + badge, preserving severity colors. <code>full_line</code> colors the entire line.</td>
-</tr>
-<tr>
-<td><strong>Show group tag</strong></td>
-<td><code>on</code> / <code>off</code></td>
-<td>Show <code>[TAG]</code> badges globally. Overridable per-group with <code>show_tag: false</code>.</td>
-</tr>
-<tr>
-<td><strong>Tag position</strong></td>
-<td><code>after</code> / <code>before</code></td>
-<td>Badge position: <code>after</code> → <code>[node-N] [TAG] …</code> · <code>before</code> → <code>[TAG] [node-N] …</code>.</td>
-</tr>
-<tr>
-<td><strong>Tag style</strong></td>
-<td><code>normal</code> / <code>inverted</code></td>
-<td><code>normal</code> = colored text on default background. <code>inverted</code> = colored background with empty letters (like crash alert banners). Overridable per-group with <code>tag_style:</code>.</td>
-</tr>
-<tr>
-<td><strong>Colorize launch msgs</strong></td>
-<td><code>on</code> / <code>off</code></td>
-<td>When off, <code>[INFO] [node-N]: process started …</code> lines pass through unchanged.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="unmatched-nodes">Unmatched nodes</h3>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>Values</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Unmatched color</strong></td>
-<td>color / <code>null</code></td>
-<td>Color for nodes not in any group. <code>null</code> = pass through.</td>
-</tr>
-<tr>
-<td><strong>Unmatched tag</strong></td>
-<td>string / <code>null</code></td>
-<td>Badge for unmatched nodes (e.g. <code>?</code> → <code>[?]</code>). Requires <code>unmatched_color</code>.</td>
-</tr>
-<tr>
-<td><strong>Dim unmatched</strong></td>
-<td><code>on</code> / <code>off</code></td>
-<td>Dim unmatched nodes. Only when <code>unmatched_color</code> is <code>null</code>.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="system">System</h3>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>Values</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Debug mode</strong></td>
-<td><code>on</code> / <code>off</code></td>
-<td>Print config summary to stderr on startup. Equivalent to <code>DENDROS_DEBUG=1</code>.</td>
-</tr>
-<tr>
-<td><strong>Config merge</strong></td>
-<td><code>on</code> / <code>off</code></td>
-<td>Parse launch files for referenced packages and merge their configs.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="crash-alert">Crash alert</h3>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>Values</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Crash alert</strong></td>
-<td><code>on</code> / <code>off</code></td>
-<td>Print an inline banner when a node dies unexpectedly. See <a href="../crash-alert/">Crash Alert</a>.</td>
-</tr>
-<tr>
-<td><strong>Crash alert color</strong></td>
-<td><code>node</code> / <code>red</code></td>
-<td><code>node</code> uses the group color; <code>red</code> always uses bold red.</td>
-</tr>
-<tr>
-<td><strong>Crash alert interval</strong></td>
-<td>integer (seconds)</td>
-<td>Seconds between periodic banner reprints. <code>0</code> = only on new crash events.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="traceback">Traceback</h3>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>Values</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Traceback color</strong></td>
-<td><code>fancy</code> / <code>red</code> / <code>off</code></td>
-<td><code>fancy</code> = bold red header + dim red frames; <code>red</code> = all bold red; <code>off</code> = passthrough. See <a href="../traceback-highlighting/">Traceback Highlighting</a>.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="init-defaults">Init defaults</h3>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>Values</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Init: modify build</strong></td>
-<td><code>on</code> / <code>off</code></td>
-<td>Auto-patch build files when running <code>dendros init</code>.</td>
-</tr>
-<tr>
-<td><strong>Init: on existing</strong></td>
-<td><code>abort</code> / <code>merge</code> / <code>overwrite</code></td>
-<td>What to do when a config already exists.</td>
-</tr>
-<tr>
-<td><strong>Init: color</strong></td>
-<td><code>palette</code> / <code>null</code></td>
-<td>Assign cycling palette colors or leave as <code>null</code>.</td>
-</tr>
-<tr>
-<td><strong>Init: bold colors</strong></td>
-<td><code>on</code> / <code>off</code></td>
-<td>Prefix every palette color with <code>bold</code>.</td>
-</tr>
-<tr>
-<td><strong>Init: auto label</strong></td>
-<td><code>on</code> / <code>off</code></td>
-<td>Auto-generate labels (same as <code>--labels</code> flag).</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="config-file">Config file</h2>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># ~/.config/dendROS/defaults.yaml</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">color_mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tag_only</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nt">show_group_tag</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nt">tag_position</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">after</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nt">tag_style</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">normal</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nt">unmatched_color</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nt">unmatched_tag</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nt">dim_unmatched</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nt">debug</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nt">config_merge</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="nt">colorize_launch_msgs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="nt">crash_alert</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="nt">crash_alert_color</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">node</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="nt">crash_alert_interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="nt">traceback_color</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fancy</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="nt">init_modify_build</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="nt">init_on_existing</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">abort</span>
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="nt">init_color</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">palette</span>
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="nt">init_color_bold</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="nt">init_label</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-</span></code></pre></div>
+<h2 id="notes">Notes</h2>
+<ul>
+<li>Only <code>ros2 node list</code> is intercepted (for the moment)</li>
+</ul>
 
 
 
@@ -1579,7 +1270,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../dendros-init/" class="md-footer__link md-footer__link--prev" aria-label="Previous: dendros init">
+          <a href="../traceback-highlighting/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Traceback Highlighting">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -1589,20 +1280,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                dendros init
+                Traceback Highlighting
               </div>
             </div>
           </a>
         
         
           
-          <a href="../reference/" class="md-footer__link md-footer__link--next" aria-label="Next: Reference">
+          <a href="../dendros-init/" class="md-footer__link md-footer__link--next" aria-label="Next: dendros init">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Reference
+                dendros init
               </div>
             </div>
             <div class="md-footer__button md-icon">
