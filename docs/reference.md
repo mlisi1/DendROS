@@ -82,6 +82,19 @@ Stored in `~/.config/dendROS/defaults.yaml`, managed via `dendros config`:
 
 ---
 
+## ros2 — intercepted subcommands
+
+The `ros2()` shell wrapper intercepts specific subcommands; everything else calls the real `ros2` binary directly:
+
+| Subcommand | Behavior |
+|---|---|
+| `ros2 launch …` | Output piped through the DendROS colorizer. |
+| `ros2 run …` | Output piped through the DendROS colorizer. |
+| `ros2 node list` | Output piped through `dendros_node_list.py` — nodes colored by group. See [ros2 node list](node-list.md). |
+| Everything else | Passed directly to the real `ros2` binary, untouched. |
+
+---
+
 ## dendros — subcommands
 
 | Subcommand | Description |

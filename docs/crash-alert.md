@@ -76,7 +76,8 @@ All three settings are exposed in the TUI under **Crash alert**:
 
 ## Notes
 
-- Only **unexpected deaths** trigger the banner — `SIGINT` from `Ctrl-C` is not flagged.
+- **Traceback suppression** — if a node printed a Python traceback before dying, the crash alert for that node is skipped. The traceback already communicates the failure clearly enough; a redundant banner adds noise.
+- **Ctrl-C suppression** — once `Ctrl-C` is received, all subsequent node deaths are treated as expected cascade shutdowns and produce no banner. Only true mid-run crashes (before any `Ctrl-C`) trigger the alert.
 - Exit codes are shown next to the node name when available (`exit code 1`, `exit code -11`).
 - The `[node-N]` numeric suffix is stripped before the name is displayed in the banner.
 - If a node has no configured group color (unmatched node), the banner falls back to bold red.

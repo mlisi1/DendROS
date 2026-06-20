@@ -74,6 +74,14 @@ It also features some quality of life improvements for ROS outputs.
 <p align="center">
 <img src="docs/assets/images/screenshots/highlight.png" width="600" alt="Colored Terminal Output"/>
 </p>
+
+
+- ### **```ros2 node list``` coloring**
+  Brings color to your node lists.
+
+<p align="center">
+<img src="docs/assets/images/screenshots/node_list.png" width="600" alt="ros2 node list"/>
+</p>
   
 
 - ### **Truly non-invasive** 

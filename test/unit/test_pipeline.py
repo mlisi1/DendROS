@@ -77,6 +77,15 @@ class TestBasicTagOnly:
         stdout, _, _ = run_pipe(prefix, self.PKG, lines)
         assert_segment_uncolored(stdout, '[INFO]')
 
+    def test_launch_framework_ansi_prefixed_level_colored(self, tmp_path):
+        # Regression: RCUTILS_COLORIZED_OUTPUT=1 embeds ANSI codes in [INFO] even
+        # when piped (e.g. '\033[32m[INFO]\033[0m [talker-1]: process started').
+        # LAUNCH_RE expects a literal '[INFO]' so ANSI prefix caused a match failure.
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('basic.yaml'))
+        ansi_info = '\033[32m[INFO]\033[0m [talker-1]: process started with pid [1234]\n'
+        stdout, _, _ = run_pipe(prefix, self.PKG, [ansi_info])
+        assert_segment_colored(stdout, '[talker-1]', '34')
+
     def test_plain_line_passes_through(self, tmp_path):
         prefix = make_prefix(tmp_path, self.PKG, fixture_config('basic.yaml'))
         lines = ["Some plain text line\n"]
@@ -592,6 +601,8 @@ class TestCrashAlertRestartAndCounts:
         ca._dead_nodes = []
         ca._death_counts = {}
         ca._crash_alert_color = 'node'
+        ca._traceback_nodes = set()
+        ca._shutdown_mode = False
 
     # ── detect_restart ────────────────────────────────────────────────────────
 
@@ -721,6 +732,47 @@ class TestCrashAlertRestartAndCounts:
         after_restart = lines_out[restart_idx + 1:]
         assert not any('CRASH ALERT' in l for l in after_restart)
 
+    # ── traceback suppression ─────────────────────────────────────────────────
+
+    def test_record_death_suppressed_after_traceback(self):
+        # If a node printed a traceback, its crash alert is redundant.
+        import lib.crash_alert as ca
+        ca.mark_traceback('bt_navigator')
+        ca.record_death('bt_navigator', '1', None)
+        assert ca._dead_nodes == []
+        assert 'bt_navigator' not in ca._death_counts
+
+    def test_record_death_not_suppressed_for_other_nodes(self):
+        # Only the node that had a traceback is suppressed; others still alert.
+        import lib.crash_alert as ca
+        ca.mark_traceback('bt_navigator')
+        ca.record_death('costmap_node', '1', None)
+        assert len(ca._dead_nodes) == 1
+        assert ca._dead_nodes[0][0] == 'costmap_node'
+
+    def test_shutdown_mode_suppresses_all_deaths(self):
+        import lib.crash_alert as ca
+        ca.enter_shutdown_mode()
+        ca.record_death('talker', '1', None)
+        ca.record_death('listener', '1', None)
+        assert ca._dead_nodes == []
+
+    def test_traceback_pipeline_suppresses_crash_alert(self, tmp_path):
+        # Node prints a traceback and then dies — no CRASH ALERT should appear.
+        prefix = make_prefix(tmp_path, 'test_pkg', fixture_config('basic.yaml'))
+        _write_global_cfg(prefix, crash_alert=True)
+        lines = [
+            "[talker-1] Traceback (most recent call last):\n",
+            "[talker-1]   File \"/node.py\", line 1, in spin\n",
+            "[talker-1] RuntimeError: boom\n",
+            "[ERROR] [talker-1]: process has died [pid 1, exit code 1]\n",
+        ]
+        stdout, _, _ = run_pipe(prefix, 'test_pkg', lines)
+        plain = strip_ansi(stdout)
+        assert 'CRASH ALERT' not in plain, (
+            f"Crash alert fired after node already showed a traceback.\nOutput: {plain!r}"
+        )
+
 
 class TestTracebackColorization:
     """The pipe should colorize Python traceback blocks in dim red."""
@@ -834,6 +886,102 @@ class TestTracebackColorModes:
     def test_off_text_unchanged(self, tmp_path):
         out = self._run_with_cfg(self.TB_LINES, tmp_path, traceback_color='off')
         assert strip_ansi(out) == ''.join(self.TB_LINES)
+
+    def test_no_spurious_cr_in_traceback_output(self, tmp_path):
+        # Regression: colorize_traceback used rstrip('\n') which left \r in
+        # stripped when _iter_stdin yielded \r\n-terminated lines.  The embedded
+        # \r in the output moves the cursor to col 0 mid-line, erasing the text.
+        # Send \r\n-terminated traceback lines (simulating mixed line endings) and
+        # assert the output contains no bare \r (i.e. \r not part of \r\n).
+        crlf_lines = [l.replace('\n', '\r\n') for l in self.TB_LINES]
+        out = self._run_with_cfg(crlf_lines, tmp_path, traceback_color='fancy')
+        # Strip all \r\n pairs, then check no bare \r remains
+        normalized = out.replace('\r\n', '\n')
+        assert '\r' not in normalized, (
+            f"Bare \\r found in traceback output — text would be erased on terminal.\n"
+            f"Output repr: {out!r}"
+        )
+        # Content must still be present
+        assert 'Traceback' in normalized
+        assert 'RuntimeError' in normalized
+
+    def test_node_prefixed_traceback_colored(self, tmp_path):
+        # Real ros2 launch prefixes every stderr line with [node-N].
+        # Regression: all existing traceback tests used bare lines; this ensures
+        # the node-output path in _colorize correctly routes to colorize_traceback.
+        lines = [
+            "[talker-1] Traceback (most recent call last):\n",
+            "[talker-1]   File \"/node.py\", line 1, in f\n",
+            "[talker-1] RuntimeError: boom\n",
+        ]
+        out = self._run_with_cfg(lines, tmp_path, traceback_color='fancy')
+        assert '\033[31;1m' in out, f"Expected bold red, got: {out!r}"
+        assert 'Traceback' in out
+        assert 'RuntimeError' in out
+        assert '\033[31;2m' in out, f"Expected dim red frame, got: {out!r}"
+
+    def test_sigint_drains_remaining_output(self, tmp_path):
+        # Regression: SIGINT interrupted raw.read() inside _iter_stdin, which
+        # propagated KeyboardInterrupt *out* of the generator, exhausting it.
+        # The except-KeyboardInterrupt handler then had nothing to drain, so
+        # node-shutdown tracebacks written after Ctrl+C were silently lost.
+        import signal, subprocess, sys, time
+        prefix = make_prefix(tmp_path, 'test_pkg', fixture_config('basic.yaml'))
+        env = os.environ.copy()
+        env['AMENT_PREFIX_PATH'] = prefix
+        env['HOME'] = prefix
+        env.pop('ROS_DISTRO', None)
+
+        pipe_path = os.path.abspath(os.path.join(
+            os.path.dirname(__file__), '..', '..', 'dendROS', 'dendROS_pipe.py'))
+        proc = subprocess.Popen(
+            [sys.executable, pipe_path, 'launch', 'test_pkg'],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            env=env,
+        )
+        try:
+            # Write an initial line and wait for the subprocess to consume it
+            # so it is blocking in raw.read() when SIGINT arrives.
+            proc.stdin.write(b"[talker-1] [INFO] [1.0] [t]: hello\n")
+            proc.stdin.flush()
+            time.sleep(0.2)
+
+            proc.send_signal(signal.SIGINT)
+            time.sleep(0.2)  # give the generator time to catch and continue
+
+            tb = (
+                b"[talker-1] Traceback (most recent call last):\n"
+                b"[talker-1]   File \"/node.py\", line 1, in spin\n"
+                b"[talker-1] KeyboardInterrupt\n"
+            )
+            # BrokenPipeError here means the subprocess already exited (old bug).
+            try:
+                proc.stdin.write(tb)
+                proc.stdin.flush()
+            except BrokenPipeError:
+                pass
+        finally:
+            try:
+                proc.stdin.close()
+            except BrokenPipeError:
+                pass
+            proc.stdin = None  # prevent communicate() from double-flushing
+
+        try:
+            stdout, _ = proc.communicate(timeout=8)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            stdout, _ = proc.communicate()
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+
+        out = stdout.decode()
+        assert 'Traceback' in out, (
+            f"Traceback written after SIGINT was lost — _iter_stdin generator exhausted.\n"
+            f"Output: {out!r}"
+        )
+        assert 'KeyboardInterrupt' in out
 
 
 # ── tag_style: inverted pipeline ──────────────────────────────────────────────

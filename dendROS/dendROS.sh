@@ -63,7 +63,7 @@ ros2() {
     fi
 
     if [[ "$1" == "launch" || "$1" == "run" ]]; then
-        RCUTILS_COLORIZED_OUTPUT=1 "$_ROS2_BIN" "$@" 2>&1 | python3 "$_DENDROS_PIPE" "$@"
+        RCUTILS_COLORIZED_OUTPUT=1 PYTHONUNBUFFERED=1 "$_ROS2_BIN" "$@" 2>&1 | python3 "$_DENDROS_PIPE" "$@"
         return ${PIPESTATUS[0]}
     elif [[ "$1" == "node" && "$2" == "list" ]]; then
         "$_ROS2_BIN" "$@" | python3 "${_DENDROS_DIR}/dendros_node_list.py"

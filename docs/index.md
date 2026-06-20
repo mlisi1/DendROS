@@ -67,6 +67,11 @@ DendROS shadows the `ros2` command with a shell function. When you run `ros2 lau
 <p>Python tracebacks colored automatically — bold red header, dim red frames, even when prefixed with a node name.</p>
 </div>
 <div class="feature-card" markdown>
+<div class="fc-icon">📋</div>
+<strong>ros2 node list colors</strong>
+<p>Node list output is colored with the same group colors and badges. Cross-terminal — launch in one window, list in another.</p>
+</div>
+<div class="feature-card" markdown>
 <div class="fc-icon">🚫</div>
 <strong>Truly non-invasive</strong>
 <p>No launch file changes. Exit codes preserved. <code>DENDROS_DISABLE=1</code> bypasses everything instantly.</p>

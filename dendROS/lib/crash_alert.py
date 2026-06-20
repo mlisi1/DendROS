@@ -27,14 +27,37 @@ _crash_alert_interval = 30.0
 _dead_nodes           = []   # currently-dead: (node_name, exit_code_or_None, ansi_code_or_None)
 _death_counts         = {}   # {node_name: int} — cumulative crashes, never reset
 _last_alert_time      = 0.0
+_traceback_nodes      = set()  # nodes that printed a traceback this session
+_shutdown_mode        = False  # True after SIGINT — cascade deaths are expected
 
 
 def setup(enabled, color, interval):
     """Configure crash alert at pipe startup."""
     global _crash_alert_enabled, _crash_alert_color, _crash_alert_interval
+    global _traceback_nodes, _shutdown_mode
     _crash_alert_enabled  = enabled
     _crash_alert_color    = color
     _crash_alert_interval = interval
+    _traceback_nodes      = set()
+    _shutdown_mode        = False
+
+
+def mark_traceback(node_name):
+    """Record that node_name printed a Python traceback.
+
+    Deaths for this node are suppressed from crash alerts — the traceback
+    already communicates the failure clearly enough.
+    """
+    _traceback_nodes.add(node_name)
+
+
+def enter_shutdown_mode():
+    """Called when SIGINT is received (Ctrl+C).
+
+    All subsequent node deaths are expected cascade shutdowns, not crashes.
+    """
+    global _shutdown_mode
+    _shutdown_mode = True
 
 
 def detect_death(line):
@@ -71,7 +94,14 @@ def detect_restart(line):
 
 
 def record_death(node_name, exit_code, ansi_code):
-    """Add node to the currently-dead list and increment its cumulative death counter."""
+    """Add node to the currently-dead list and increment its cumulative death counter.
+
+    Suppressed when:
+    - The node already printed a Python traceback (traceback communicates the crash).
+    - Shutdown mode is active (SIGINT received — all deaths are cascade/expected).
+    """
+    if _shutdown_mode or node_name in _traceback_nodes:
+        return
     _dead_nodes.append((node_name, exit_code, ansi_code))
     _death_counts[node_name] = _death_counts.get(node_name, 0) + 1
 

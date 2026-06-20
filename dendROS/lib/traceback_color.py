@@ -34,7 +34,7 @@ def colorize_traceback(content, prefix=''):
     global _in_traceback
     if _traceback_color == 'off':
         return prefix + content if prefix else content
-    stripped = content.rstrip('\n')
+    stripped = content.rstrip('\r\n')
     if _in_traceback:
         if stripped == '':
             _in_traceback = False
