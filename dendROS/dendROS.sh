@@ -68,6 +68,9 @@ ros2() {
     elif [[ "$1" == "node" && "$2" == "list" ]]; then
         "$_ROS2_BIN" "$@" | python3 "${_DENDROS_DIR}/dendros_node_list.py"
         return ${PIPESTATUS[0]}
+    elif [[ "$1" == "node" && "$2" == "info" ]]; then
+        "$_ROS2_BIN" "$@" | python3 "${_DENDROS_DIR}/dendros_node_info.py"
+        return ${PIPESTATUS[0]}
     else
         "$_ROS2_BIN" "$@"
     fi
