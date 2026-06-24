@@ -41,7 +41,7 @@ All badge and color-mode settings from your config and global defaults apply:
 
 | Setting | Effect on node list |
 |---|---|
-| `show_group_tag: true` | `[LOC] /amcl_node` (badge before or after, per `tag_position`) |
+| `show_tag_cli: true` | `[LOC] /amcl_node` (badge before or after, per `tag_position`) |
 | `tag_position: before` | Badge appears before the node name |
 | `tag_position: after` | Badge appears after the node name |
 | `tag_style: inverted` | Badge rendered with colored background |

@@ -90,6 +90,20 @@ It also features some quality of life improvements for ROS outputs.
 <img src="docs/assets/images/screenshots/node_info.png" width="600" alt="ros2 node info"/>
 </p>
 
+- ### **```ros2 service list``` coloring**
+  Services are colored by their owning node's group color. Standard ROS 2 system services (`set_parameters`, `get_parameters`, `get_loggers`, …) are shown dimmed so your own services stand out. They can be hidden entirely via `show_default_services: false`.
+
+<p align="center">
+<img src="docs/assets/images/screenshots/service_list.png" width="600" alt="ros2 service list"/>
+</p>
+
+- ### **```ros2 action list``` coloring**
+  Actions are colored by their owning node's group color, with the same badge and style options available in all other CLI commands.
+
+<p align="center">
+<img src="docs/assets/images/screenshots/action_list.png" width="600" alt="ros2 action list"/>
+</p>
+
 - ### **Truly non-invasive** 
   Shell-level pipe; you won't loose autocompletion or aliases for launch files
 

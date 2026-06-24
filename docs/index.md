@@ -77,6 +77,16 @@ DendROS shadows the `ros2` command with a shell function. When you run `ros2 lau
 <p>Node info output is fully colorized: input sections use provider colors, output sections use the node's own color, and live topic/service indicators show connected group counts.</p>
 </div>
 <div class="feature-card" markdown>
+<div class="fc-icon">🔧</div>
+<strong>ros2 service list colors</strong>
+<p>Service list output colored by owning node. Standard ROS 2 system services are dimmed automatically and can be hidden entirely with one config option.</p>
+</div>
+<div class="feature-card" markdown>
+<div class="fc-icon">⚡</div>
+<strong>ros2 action list colors</strong>
+<p>Action list output colored by owning node group, with the same badge and style options available in all other CLI commands.</p>
+</div>
+<div class="feature-card" markdown>
 <div class="fc-icon">🚫</div>
 <strong>Truly non-invasive</strong>
 <p>No launch file changes. Exit codes preserved. <code>DENDROS_DISABLE=1</code> bypasses everything instantly.</p>
