@@ -92,7 +92,22 @@ ros2 launch my_bringup main.launch.py
 !!! success "Done"
     Your terminal output is now colorized. No other changes to your launch files or ROS 2 setup are needed.
 
-![Colorized launch output](assets/images/screenshots/terminal_output.png)
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">Colored Terminal Output</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/terminal_output.png" width="900" alt="Terminal Output"/>
+</p>
+</div>
+</div>
+
 
 ---
 

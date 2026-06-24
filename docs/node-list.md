@@ -52,6 +52,3 @@ All badge and color-mode settings from your config and global defaults apply:
 
 ---
 
-## Notes
-
-- Only `ros2 node list` is intercepted (for the moment)

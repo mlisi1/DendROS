@@ -82,7 +82,13 @@ It also features some quality of life improvements for ROS outputs.
 <p align="center">
 <img src="docs/assets/images/screenshots/node_list.png" width="600" alt="ros2 node list"/>
 </p>
-  
+
+- ### **```ros2 node info``` coloring**
+  Colorizes node info output: the node name gets its group color and badge, section headers are bolded, input sections (Subscribers, Service Clients, Action Clients) are colored with the provider's group color, and output sections (Publishers, Service Servers, Action Servers) with the node's own color. Live topic indicators show connected subscriber and publisher counts per group.
+
+<p align="center">
+<img src="docs/assets/images/screenshots/node_info.png" width="600" alt="ros2 node info"/>
+</p>
 
 - ### **Truly non-invasive** 
   Shell-level pipe; you won't loose autocompletion or aliases for launch files

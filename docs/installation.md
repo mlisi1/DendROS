@@ -90,18 +90,14 @@ DENDROS_DEBUG=1 ros2 launch my_pkg my_launch.py
       <div class="term-dot term-dot-yellow"></div>
       <div class="term-dot term-dot-green"></div>
     </div>
-    <div class="term-title">DENDROS_DEBUG=1 ros2 launch my_bringup main.launch.py</div>
+    <div class="term-title">Colored Terminal Output</div>
   </div>
-  <div class="term-body"><span class="t-dim">[dendROS] package: my_bringup</span>
-<span class="t-dim">[dendROS] config:  /opt/ros/humble/share/my_bringup/config/dendROS.yaml</span>
-<span class="t-dim">[dendROS] mode: tag_only  show_tag: true  unmatched: passthrough</span>
-<span class="t-dim">[dendROS] </span><span class="t-blue">■ localization</span><span class="t-dim"> [LOC]  slam_toolbox, */amcl</span>
-<span class="t-dim">[dendROS] </span><span class="t-green">■ navigation</span><span class="t-dim"> [NAV]  nav2_*</span>
-<span class="t-dim">---</span>
-<span class="t-blue">[slam_toolbox-1]</span> <span class="t-blue t-badge">[LOC]</span> <span class="t-info">[INFO]</span> <span class="t-dim">[1234.1] [slam_toolbox]:</span> map loaded</div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/terminal_output.png" width="900" alt="Terminal Output"/>
+</p>
 </div>
-
-![Verify debug output](assets/images/screenshots/terminal_output.png)
+</div>
 
 If you see `passthrough mode` instead, the config was not found. Check that:
 

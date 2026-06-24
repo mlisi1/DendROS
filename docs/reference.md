@@ -91,6 +91,7 @@ The `ros2()` shell wrapper intercepts specific subcommands; everything else call
 | `ros2 launch …` | Output piped through the DendROS colorizer. |
 | `ros2 run …` | Output piped through the DendROS colorizer. |
 | `ros2 node list` | Output piped through `dendros_node_list.py` — nodes colored by group. See [ros2 node list](node-list.md). |
+| `ros2 node info …` | Output piped through `dendros_node_info.py` — node name, sections, and entries colorized by group. See [ros2 node info](node-info.md). |
 | Everything else | Passed directly to the real `ros2` binary, untouched. |
 
 ---
