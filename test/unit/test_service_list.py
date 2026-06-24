@@ -57,6 +57,7 @@ class TestDefaultDimming:
         '/talker/set_parameters_atomically',
         '/talker/get_loggers',
         '/talker/set_logger_levels',
+        '/talker/get_type_description',
     ]
 
     def test_all_default_services_contain_dim(self, tmp_path):
@@ -212,11 +213,11 @@ class TestServiceListTag:
         line = [l for l in stdout.splitlines() if '/talker/my_service' in l][0]
         assert line.index('[TLK]') < line.index('/talker/my_service')
 
-    def test_tag_hidden_when_show_group_tag_false(self, tmp_path):
+    def test_tag_hidden_when_show_tag_cli_false(self, tmp_path):
         nc = {'color_map': {'talker': '34'}, 'tag_map': {'talker': 'TLK'}, 'style_map': {}}
         stdout, _, _ = run_service_list(str(tmp_path), ['/talker/my_service'],
                                         node_colors=nc,
-                                        global_cfg={'show_group_tag': False})
+                                        global_cfg={'show_tag_cli': False})
         assert '[TLK]' not in stdout
 
     def test_tag_hidden_when_label_empty(self, tmp_path):
@@ -278,3 +279,57 @@ class TestServiceListFallback:
         # No node_colors.yaml — must fall back to AMENT scan
         stdout, _, _ = run_service_list(str(tmp_path), ['/talker/my_service'])
         assert '\033[' in stdout
+
+
+# ── show_default_services config option ──────────────────────────────────────
+
+class TestShowDefaultServices:
+    """show_default_services: false hides standard parameter/logger services entirely."""
+
+    DEFAULT_SVCS = [
+        '/talker/describe_parameters',
+        '/talker/get_parameter_types',
+        '/talker/get_parameters',
+        '/talker/list_parameters',
+        '/talker/set_parameters',
+        '/talker/set_parameters_atomically',
+        '/talker/get_loggers',
+        '/talker/set_logger_levels',
+        '/talker/get_type_description',
+    ]
+
+    def test_default_services_hidden_when_disabled(self, tmp_path):
+        nc = {'color_map': {'talker': '34'}, 'tag_map': {'talker': ''}, 'style_map': {}}
+        for svc in self.DEFAULT_SVCS:
+            stdout, _, _ = run_service_list(str(tmp_path), [svc], node_colors=nc,
+                                            global_cfg={'show_default_services': False})
+            assert svc not in stdout, f'Expected {svc!r} to be hidden'
+
+    def test_non_default_service_still_shown(self, tmp_path):
+        nc = {'color_map': {'talker': '34'}, 'tag_map': {'talker': ''}, 'style_map': {}}
+        stdout, _, _ = run_service_list(str(tmp_path), ['/talker/my_service'],
+                                        node_colors=nc,
+                                        global_cfg={'show_default_services': False})
+        assert '/talker/my_service' in stdout
+
+    def test_mixed_list_only_shows_custom(self, tmp_path):
+        nc = {'color_map': {'talker': '34'}, 'tag_map': {'talker': ''}, 'style_map': {}}
+        lines = ['/talker/set_parameters', '/talker/my_service', '/talker/get_parameters']
+        stdout, _, _ = run_service_list(str(tmp_path), lines, node_colors=nc,
+                                        global_cfg={'show_default_services': False})
+        assert '/talker/my_service' in stdout
+        assert '/talker/set_parameters' not in stdout
+        assert '/talker/get_parameters' not in stdout
+
+    def test_default_services_shown_by_default(self, tmp_path):
+        nc = {'color_map': {'talker': '34'}, 'tag_map': {'talker': ''}, 'style_map': {}}
+        stdout, _, _ = run_service_list(str(tmp_path), ['/talker/set_parameters'],
+                                        node_colors=nc)
+        assert '/talker/set_parameters' in stdout
+
+    def test_hidden_with_type_flag(self, tmp_path):
+        nc = {'color_map': {'talker': '34'}, 'tag_map': {'talker': ''}, 'style_map': {}}
+        line = '/talker/set_parameters [rcl_interfaces/srv/SetParameters]'
+        stdout, _, _ = run_service_list(str(tmp_path), [line], node_colors=nc,
+                                        global_cfg={'show_default_services': False})
+        assert 'set_parameters' not in stdout

@@ -80,7 +80,7 @@ def _dim_type(type_str):
 
 def main():
     cfg = load_global_config()
-    show_tag      = cfg['show_group_tag']
+    show_tag      = cfg['show_tag_cli']
     tag_style     = cfg['tag_style']
     unmatched_clr = cfg['unmatched_color']
     unmatched_tag = cfg['unmatched_tag']

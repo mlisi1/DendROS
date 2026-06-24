@@ -403,10 +403,10 @@ class TestNodeListTag:
                                      global_cfg={'tag_position': 'before'}, node_colors=nc)
         assert stdout.index('[NAV]') < stdout.index('/talker')
 
-    def test_no_tag_when_show_group_tag_false(self, tmp_path):
+    def test_no_tag_when_show_tag_cli_false(self, tmp_path):
         nc = {'color_map': {'talker': '34;1'}, 'tag_map': {'talker': 'NAV'}, 'style_map': {}}
         stdout, _, _ = run_node_list(str(tmp_path), ['/talker'],
-                                     global_cfg={'show_group_tag': False}, node_colors=nc)
+                                     global_cfg={'show_tag_cli': False}, node_colors=nc)
         assert '[NAV]' not in stdout
 
     def test_no_tag_when_label_empty(self, tmp_path):

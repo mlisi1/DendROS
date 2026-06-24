@@ -25,6 +25,7 @@ _DEFAULT_SERVICE_SUFFIXES = {
     'set_parameters_atomically',
     'get_loggers',
     'set_logger_levels',
+    'get_type_description',
 }
 
 
@@ -97,11 +98,12 @@ def _dim_type(type_str):
 
 def main():
     cfg = load_global_config()
-    show_tag      = cfg['show_group_tag']
-    tag_style     = cfg['tag_style']
-    unmatched_clr = cfg['unmatched_color']
-    unmatched_tag = cfg['unmatched_tag']
-    dim_unmatched = cfg['dim_unmatched']
+    show_tag             = cfg['show_tag_cli']
+    tag_style            = cfg['tag_style']
+    unmatched_clr        = cfg['unmatched_color']
+    unmatched_tag        = cfg['unmatched_tag']
+    dim_unmatched        = cfg['dim_unmatched']
+    show_default_services = cfg['show_default_services']
     unmatched_ansi = _resolve_color(unmatched_clr) if unmatched_clr else None
 
     color_map, tag_map, style_map = _load_shared_colors()
@@ -131,6 +133,8 @@ def main():
         type_part = _dim_type(type_str) if type_str else ''
 
         if _is_default_service(name):
+            if not show_default_services:
+                continue
             # Dim the name using the node's color when available; fall back to plain dim.
             node = _node_path(name)
             ansi_code, _ = resolve_node(node, color_map, tag_map) if node else (None, None)

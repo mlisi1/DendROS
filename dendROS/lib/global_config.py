@@ -13,7 +13,8 @@ GLOBAL_CONFIG_PATH = None
 
 DEFAULTS = {
     "color_mode":           "tag_only",
-    "show_group_tag":       True,
+    "show_tag_launch":      True,
+    "show_tag_cli":         True,
     "tag_position":         "before",
     "unmatched_color":      None,
     "debug":                False,
@@ -31,6 +32,7 @@ DEFAULTS = {
     "crash_alert_interval": 30,
     "traceback_color":      "fancy",
     "tag_style":            "normal",
+    "show_default_services": True,
 }
 
 

@@ -63,7 +63,7 @@ def _badge(label, ansi_code, style):
 
 def main():
     cfg = load_global_config()
-    show_tag       = cfg['show_group_tag']
+    show_tag       = cfg['show_tag_cli']
     tag_position   = cfg['tag_position']
     tag_style      = cfg['tag_style']
     unmatched_clr  = cfg['unmatched_color']

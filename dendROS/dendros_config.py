@@ -26,17 +26,19 @@ from lib.logo import (
 
 # (key, display_label, kind, cycle_options)
 _FIELDS = [
-    ("color_mode",           "Color mode",            "cycle", ["tag_only", "full_line"]),
-    ("show_group_tag",       "Show group tag",        "cycle", [True, False]),
-    ("tag_position",         "Tag position",          "cycle", ["after", "before"]),
+    ("color_mode",            "Color mode",              "cycle", ["tag_only", "full_line"]),
+    ("show_tag_launch",       "Show tag (launch/run)",   "cycle", [True, False]),
+    ("show_tag_cli",          "Show tag (CLI)",           "cycle", [True, False]),
+    ("tag_position",          "Tag position",             "cycle", ["after", "before"]),
     ("tag_style",            "Tag style",             "cycle", ["normal", "inverted"]),
     ("unmatched_color",      "Unmatched color",       "text",  None),
     ("debug",                "Debug mode",            "cycle", [False, True]),
     ("config_merge",         "Config merge",          "cycle", [True, False]),
     ("colorize_launch_msgs", "Colorize launch msgs",  "cycle", [True, False]),
     ("unmatched_tag",        "Unmatched tag",         "text",  None),
-    ("dim_unmatched",        "Dim unmatched",         "cycle", [False, True]),
-    ("init_modify_build",    "Init: modify build",    "cycle", [True, False]),
+    ("dim_unmatched",         "Dim unmatched",           "cycle", [False, True]),
+    ("show_default_services", "Show default services",   "cycle", [True, False]),
+    ("init_modify_build",     "Init: modify build",      "cycle", [True, False]),
     ("init_on_existing",     "Init: on existing",     "cycle", ["abort", "merge", "overwrite"]),
     ("init_color",           "Init: color",           "cycle", ["palette", "null"]),
     ("init_color_bold",      "Init: bold colors",     "cycle", [False, True]),
@@ -54,9 +56,17 @@ _DESCS = {
         "full_line — strip embedded ANSI and color the entire line; cleaner but"
         " overrides severity colors",
     ),
-    "show_group_tag": (
-        "on  — show colored [LOC] / [NAV] badges next to the [node-N] prefix",
-        "off — no badges; only the prefix itself is colored",
+    "show_tag_launch": (
+        "on  — show colored [LOC] / [NAV] badges in ros2 launch / ros2 run output",
+        "off — no badges in launch output; only the [node-N] prefix is colored",
+    ),
+    "show_tag_cli": (
+        "on  — show colored [LOC] / [NAV] badges in ros2 node list / node info / service list / action list",
+        "off — no badges in CLI commands; only the name itself is colored",
+    ),
+    "show_default_services": (
+        "on  — include standard parameter/logger services in ros2 service list (shown dimmed)",
+        "off — hide describe_parameters, get_parameters, set_parameters, get_loggers … from ros2 service list",
     ),
     "tag_position": (
         "after  — badge appears after the prefix: [node-N] [TAG] [INFO] …",

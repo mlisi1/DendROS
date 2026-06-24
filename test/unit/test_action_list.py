@@ -158,11 +158,11 @@ class TestActionListTag:
         line = [l for l in stdout.splitlines() if '/robot/spin' in l][0]
         assert line.index('[ROB]') < line.index('/robot/spin')
 
-    def test_tag_hidden_when_show_group_tag_false(self, tmp_path):
+    def test_tag_hidden_when_show_tag_cli_false(self, tmp_path):
         nc = {'color_map': {'robot': '33'}, 'tag_map': {'robot': 'ROB'}, 'style_map': {}}
         stdout, _, _ = run_action_list(str(tmp_path), ['/robot/spin'],
                                        node_colors=nc,
-                                       global_cfg={'show_group_tag': False})
+                                       global_cfg={'show_tag_cli': False})
         assert '[ROB]' not in stdout
 
     def test_inverted_tag_style(self, tmp_path):

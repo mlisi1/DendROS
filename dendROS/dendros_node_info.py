@@ -212,7 +212,7 @@ def _fetch_from_env(item_set, env_key):
 
 def main():
     cfg = load_global_config()
-    show_tag       = cfg['show_group_tag']
+    show_tag       = cfg['show_tag_cli']
     tag_position   = cfg['tag_position']
     tag_style      = cfg['tag_style']
     unmatched_clr  = cfg['unmatched_color']

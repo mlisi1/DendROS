@@ -113,9 +113,9 @@ class TestNodeInfoNodeName:
                                      node_colors=_nc())
         assert stdout.index('[CTL]') < stdout.index('/motion_controller')
 
-    def test_no_tag_when_show_group_tag_false(self, tmp_path):
+    def test_no_tag_when_show_tag_cli_false(self, tmp_path):
         stdout, _, _ = run_node_info(str(tmp_path), SAMPLE_INFO,
-                                     global_cfg={'show_group_tag': False},
+                                     global_cfg={'show_tag_cli': False},
                                      node_colors=_nc())
         assert '[CTL]' not in stdout
 

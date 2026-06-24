@@ -105,7 +105,7 @@ def main():
 
     base = {
         'color_mode':           global_cfg.get('color_mode',           'tag_only'),
-        'show_group_tag':       global_cfg.get('show_group_tag',       True),
+        'show_group_tag':       global_cfg.get('show_tag_launch',      True),
         'unmatched_color':      global_cfg.get('unmatched_color',      None),
         'tag_position':         global_cfg.get('tag_position',         'after'),
         'colorize_launch_msgs': global_cfg.get('colorize_launch_msgs', True),
