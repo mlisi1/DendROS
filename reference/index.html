@@ -782,6 +782,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../param-change-alert/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameter Change Alert
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../node-list/" class="md-nav__link">
         
   
@@ -874,6 +902,62 @@
     
   
     ros2 action list
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../param-list/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ros2 param list
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../param-describe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ros2 param describe
   
 
     
@@ -1561,6 +1645,21 @@
 <td><code>fancy</code> = bold red header + dim red frames; <code>red</code> = all bold red; <code>off</code> = passthrough.</td>
 </tr>
 <tr>
+<td><code>param_change_alert</code></td>
+<td><code>true</code></td>
+<td>Print inline notification on runtime parameter changes.</td>
+</tr>
+<tr>
+<td><code>param_change_alert_scope</code></td>
+<td><code>tracked</code></td>
+<td><code>tracked</code> = only config-listed nodes; <code>all</code> = entire graph.</td>
+</tr>
+<tr>
+<td><code>param_change_alert_style</code></td>
+<td><code>inline</code></td>
+<td><code>inline</code> = compact line; <code>inverted</code> = white-background strip.</td>
+</tr>
+<tr>
 <td><code>init_modify_build</code></td>
 <td><code>true</code></td>
 <td><code>dendros init</code>: patch build files.</td>
@@ -1621,6 +1720,14 @@
 <tr>
 <td><code>ros2 action list</code></td>
 <td>Output piped through <code>dendros_action_list.py</code> — actions colored by owning node. See <a href="../action-list/">ros2 action list</a>.</td>
+</tr>
+<tr>
+<td><code>ros2 param list</code></td>
+<td>Output piped through <code>dendros_param_list.py</code> — node headers colored, param lines dimmed. See <a href="../param-list/">ros2 param list</a>.</td>
+</tr>
+<tr>
+<td><code>ros2 param describe</code></td>
+<td>Output piped through <code>dendros_param_describe.py</code> — badge + colored param name, dim labels, bold section headers. See <a href="../param-describe/">ros2 param describe</a>.</td>
 </tr>
 <tr>
 <td>Everything else</td>
