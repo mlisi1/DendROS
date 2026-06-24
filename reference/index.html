@@ -831,6 +831,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../service-list/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ros2 service list
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../action-list/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ros2 action list
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1366,7 +1422,7 @@
 <td><code>show_group_tag</code></td>
 <td><code>true</code></td>
 <td>bool</td>
-<td>Show badges for all groups in this package.</td>
+<td>Show badges in <code>ros2 launch</code> / <code>ros2 run</code> output for all groups in this package.</td>
 </tr>
 <tr>
 <td><code>tag_position</code></td>
@@ -1430,14 +1486,19 @@
 <td>Global default output mode.</td>
 </tr>
 <tr>
-<td><code>show_group_tag</code></td>
+<td><code>show_tag_launch</code></td>
 <td><code>true</code></td>
-<td>Show badges globally.</td>
+<td>Show badges in <code>ros2 launch</code> / <code>ros2 run</code> output globally.</td>
+</tr>
+<tr>
+<td><code>show_tag_cli</code></td>
+<td><code>true</code></td>
+<td>Show badges in <code>ros2 node list</code>, <code>node info</code>, <code>service list</code>, <code>action list</code> globally.</td>
 </tr>
 <tr>
 <td><code>tag_position</code></td>
 <td><code>after</code></td>
-<td>Badge position relative to <code>[node-N]</code>.</td>
+<td>Badge position relative to <code>[node-N]</code> in launch/run output.</td>
 </tr>
 <tr>
 <td><code>tag_style</code></td>
@@ -1458,6 +1519,11 @@
 <td><code>dim_unmatched</code></td>
 <td><code>false</code></td>
 <td>Dim unmatched nodes globally.</td>
+</tr>
+<tr>
+<td><code>show_default_services</code></td>
+<td><code>true</code></td>
+<td>When <code>false</code>, hide standard ROS 2 system services from <code>ros2 service list</code> output.</td>
 </tr>
 <tr>
 <td><code>debug</code></td>
@@ -1547,6 +1613,14 @@
 <tr>
 <td><code>ros2 node info …</code></td>
 <td>Output piped through <code>dendros_node_info.py</code> — node name, sections, and entries colorized by group. See <a href="../node-info/">ros2 node info</a>.</td>
+</tr>
+<tr>
+<td><code>ros2 service list</code></td>
+<td>Output piped through <code>dendros_service_list.py</code> — services colored by owning node; default system services dimmed. See <a href="../service-list/">ros2 service list</a>.</td>
+</tr>
+<tr>
+<td><code>ros2 action list</code></td>
+<td>Output piped through <code>dendros_action_list.py</code> — actions colored by owning node. See <a href="../action-list/">ros2 action list</a>.</td>
 </tr>
 <tr>
 <td>Everything else</td>
