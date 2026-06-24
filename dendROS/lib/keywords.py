@@ -86,7 +86,7 @@ def apply_keyword_highlights(colorized_line, highlights):
             active_code = None if (code == '' or code == '0') else code
             result.append(tok)
         else:
-            restore = f'\033[{active_code}m' if active_code else RESET
+            restore = (f'{RESET}\033[{active_code}m' if active_code else RESET)
             text = tok
             for pattern, kw_code in highlights:
                 text = pattern.sub(

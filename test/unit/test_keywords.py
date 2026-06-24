@@ -138,8 +138,8 @@ class TestApplyKeywordHighlights:
         line = f'\033[{BLUE}mtext error text\033[0m\n'
         kws = build_keyword_highlights([{'word': 'error', 'color': 'bold red'}], BLUE)
         result = apply_keyword_highlights(line, kws)
-        # After keyword, should restore to BLUE
-        assert f'\033[{RED}merror\033[{BLUE}m' in result
+        # After keyword, restore is RESET + BLUE (clears any bold/inverted from keyword)
+        assert f'\033[{RED}merror\033[0m\033[{BLUE}m' in result
 
     def test_keyword_in_reset_segment_restores_to_reset(self):
         # After a RESET the active_code is None
