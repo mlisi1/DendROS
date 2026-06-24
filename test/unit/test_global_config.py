@@ -90,6 +90,9 @@ class TestLoadGlobalConfig:
             "traceback_color": "red",
             "tag_style": "inverted",
             "show_default_services": False,
+            "param_change_alert": True,
+            "param_change_alert_scope": "all",
+            "param_change_alert_style": "inverted",
         }
         with open(tmp_config, "w") as f:
             yaml.dump(data, f)
@@ -172,6 +175,9 @@ class TestSaveGlobalConfig:
             "traceback_color": "off",
             "tag_style": "inverted",
             "show_default_services": False,
+            "param_change_alert": True,
+            "param_change_alert_scope": "all",
+            "param_change_alert_style": "inverted",
         }
         save_global_config(custom)
         result = load_global_config()

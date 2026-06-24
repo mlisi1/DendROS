@@ -34,6 +34,7 @@ from lib.discovery import (
 from lib.global_config import load_global_config, get_node_colors_path
 import lib.crash_alert as ca
 import lib.traceback_color as tc
+import lib.param_watcher as pw
 
 _DEBUG = os.environ.get('DENDROS_DEBUG', '') not in ('', '0')
 
@@ -149,6 +150,12 @@ def main():
 
     if config_path:
         _save_node_colors(color_map, tag_map, style_map)
+
+    param_alert         = bool(global_cfg.get('param_change_alert', False))
+    param_alert_scope   = global_cfg.get('param_change_alert_scope', 'tracked')
+    param_alert_style   = global_cfg.get('param_change_alert_style', 'inline')
+    if param_alert:
+        pw.setup(color_map, tag_map, param_alert_scope)
 
     show_tag             = defaults.get('show_group_tag',       True)
     color_mode           = defaults.get('color_mode',           'tag_only')
@@ -363,6 +370,11 @@ def main():
                         ca.handle_restart(restarted)
 
             _emit(_colorize(line))
+
+            if param_alert:
+                for notif in pw.drain(color_map, tag_map, style_map, tag_style, show_tag,
+                                      param_alert_style):
+                    _emit(notif)
 
             if ca._crash_alert_enabled:
                 if new_death:

@@ -76,6 +76,9 @@ Stored in `~/.config/dendROS/defaults.yaml`, managed via `dendros config`:
 | `crash_alert_color` | `node` | `node` = use group color; `red` = always bold red. |
 | `crash_alert_interval` | `30` | Seconds between periodic banner reprints. `0` = only on new crashes. |
 | `traceback_color` | `fancy` | `fancy` = bold red header + dim red frames; `red` = all bold red; `off` = passthrough. |
+| `param_change_alert` | `true` | Print inline notification on runtime parameter changes. |
+| `param_change_alert_scope` | `tracked` | `tracked` = only config-listed nodes; `all` = entire graph. |
+| `param_change_alert_style` | `inline` | `inline` = compact line; `inverted` = white-background strip. |
 | `init_modify_build` | `true` | `dendros init`: patch build files. |
 | `init_on_existing` | `abort` | `dendros init`: `abort`, `merge`, or `overwrite`. |
 | `init_color` | `palette` | `dendros init`: `palette` or `null`. |
@@ -96,6 +99,8 @@ The `ros2()` shell wrapper intercepts specific subcommands; everything else call
 | `ros2 node info …` | Output piped through `dendros_node_info.py` — node name, sections, and entries colorized by group. See [ros2 node info](node-info.md). |
 | `ros2 service list` | Output piped through `dendros_service_list.py` — services colored by owning node; default system services dimmed. See [ros2 service list](service-list.md). |
 | `ros2 action list` | Output piped through `dendros_action_list.py` — actions colored by owning node. See [ros2 action list](action-list.md). |
+| `ros2 param list` | Output piped through `dendros_param_list.py` — node headers colored, param lines dimmed. See [ros2 param list](param-list.md). |
+| `ros2 param describe` | Output piped through `dendros_param_describe.py` — badge + colored param name, dim labels, bold section headers. See [ros2 param describe](param-describe.md). |
 | Everything else | Passed directly to the real `ros2` binary, untouched. |
 
 ---

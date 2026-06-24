@@ -43,10 +43,13 @@ _FIELDS = [
     ("init_color",           "Init: color",           "cycle", ["palette", "null"]),
     ("init_color_bold",      "Init: bold colors",     "cycle", [False, True]),
     ("init_label",           "Init: auto label",      "cycle", [False, True]),
-    ("crash_alert",          "Crash alert",           "cycle", [False, True]),
-    ("crash_alert_color",    "Alert color",           "cycle", ["node", "red"]),
-    ("crash_alert_interval", "Alert interval (s)",    "text",  None),
-    ("traceback_color",      "Traceback color",       "cycle", ["fancy", "red", "off"]),
+    ("crash_alert",              "Crash alert",           "cycle", [False, True]),
+    ("crash_alert_color",        "Alert color",           "cycle", ["node", "red"]),
+    ("crash_alert_interval",     "Alert interval (s)",    "text",  None),
+    ("traceback_color",          "Traceback color",       "cycle", ["fancy", "red", "off"]),
+    ("param_change_alert",       "Param change alert",    "cycle", [False, True]),
+    ("param_change_alert_scope", "Param alert scope",     "cycle", ["tracked", "all"]),
+    ("param_change_alert_style", "Param alert style",     "cycle", ["inline", "inverted"]),
 ]
 
 _DESCS = {
@@ -139,6 +142,18 @@ _DESCS = {
     "traceback_color": (
         "fancy — bold red header/exception, dim red frame lines (default)",
         "red   — entire traceback in bold red  |  off — no coloring (white)",
+    ),
+    "param_change_alert": (
+        "on  — print an inline notification in the launch terminal whenever a parameter changes at runtime",
+        "off — parameter changes are silent; use ros2 param get to check values manually",
+    ),
+    "param_change_alert_scope": (
+        "tracked — only notify for nodes that have a color group in a dendROS.yaml config",
+        "all     — notify for every node on the ROS graph (includes nodes with no config entry)",
+    ),
+    "param_change_alert_style": (
+        "inline   — compact single line: [dendROS] param  [TAG] /node  param_name → value",
+        "inverted — reverse-video block with node color as background; harder to miss",
     ),
 }
 
