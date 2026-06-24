@@ -511,3 +511,121 @@ class TestTopicListFallback:
                                       pub_nodes={'/scan': ['amcl']},
                                       sub_nodes={'/scan': []})
         assert '\033[' in stdout
+
+
+# ── topic_sort ────────────────────────────────────────────────────────────────
+
+class TestTopicListSort:
+    """topic_sort=group: system topics first, then by publisher group, then unmatched."""
+
+    # Helper that returns the plain-text order of topic names in stdout
+    @staticmethod
+    def _order(stdout):
+        result = []
+        for line in stdout.splitlines():
+            plain = strip_ansi(line).strip()
+            if not plain:
+                continue
+            # Topic name is the first token starting with '/'
+            # (pub count blocks and badge come before it)
+            for token in plain.split():
+                if token.startswith('/'):
+                    result.append(token)
+                    break
+        return result
+
+    def test_default_sort_preserves_ros2_order(self, tmp_path):
+        nc = {'color_map': {'talker': '32', 'nav': '34'}, 'tag_map': {}, 'style_map': {}}
+        topics = ['/zebra', '/alpha', '/middle']
+        stdout, _, _ = run_topic_list(str(tmp_path), topics,
+                                      node_colors=nc,
+                                      pub_nodes={'/zebra': ['talker'], '/alpha': ['nav'],
+                                                 '/middle': ['talker']},
+                                      sub_nodes={t: [] for t in topics})
+        order = self._order(stdout)
+        assert order == ['/zebra', '/alpha', '/middle']
+
+    def test_group_sort_topics_grouped_by_color(self, tmp_path):
+        nc = {'color_map': {'loc': '34', 'nav': '35'}, 'tag_map': {}, 'style_map': {}}
+        # Input order: nav topic, then loc topic, then another nav topic
+        topics = ['/cmd_vel', '/scan', '/plan']
+        pub = {'/cmd_vel': ['nav'], '/scan': ['loc'], '/plan': ['nav']}
+        stdout, _, _ = run_topic_list(str(tmp_path), topics,
+                                      node_colors=nc,
+                                      pub_nodes=pub,
+                                      sub_nodes={t: [] for t in topics},
+                                      global_cfg={'topic_sort': 'group'})
+        order = self._order(stdout)
+        # /cmd_vel and /plan (nav group, first seen) before /scan (loc group)
+        cmd_i  = order.index('/cmd_vel')
+        plan_i = order.index('/plan')
+        scan_i = order.index('/scan')
+        assert cmd_i < scan_i and plan_i < scan_i
+
+    def test_group_sort_alphabetical_within_group(self, tmp_path):
+        nc = {'color_map': {'nav': '35'}, 'tag_map': {}, 'style_map': {}}
+        topics = ['/zebra', '/alpha', '/middle']
+        pub = {t: ['nav'] for t in topics}
+        stdout, _, _ = run_topic_list(str(tmp_path), topics,
+                                      node_colors=nc,
+                                      pub_nodes=pub,
+                                      sub_nodes={t: [] for t in topics},
+                                      global_cfg={'topic_sort': 'group'})
+        order = self._order(stdout)
+        assert order == ['/alpha', '/middle', '/zebra']
+
+    def test_group_sort_system_topics_first(self, tmp_path):
+        nc = {'color_map': {'talker': '32'}, 'tag_map': {}, 'style_map': {}}
+        topics = ['/chatter', '/parameter_events', '/scan', '/rosout']
+        stdout, _, _ = run_topic_list(str(tmp_path), topics,
+                                      node_colors=nc,
+                                      pub_nodes={'/chatter': ['talker'], '/scan': ['talker']},
+                                      sub_nodes={t: [] for t in topics
+                                                 if t not in ('/parameter_events', '/rosout')},
+                                      global_cfg={'topic_sort': 'group'})
+        order = self._order(stdout)
+        # /parameter_events and /rosout come before any application topic
+        app_indices = [order.index(t) for t in ['/chatter', '/scan'] if t in order]
+        sys_indices = [order.index(t) for t in ['/parameter_events', '/rosout'] if t in order]
+        assert all(s < a for s in sys_indices for a in app_indices)
+
+    def test_group_sort_unmatched_topics_last(self, tmp_path):
+        nc = {'color_map': {'talker': '32'}, 'tag_map': {}, 'style_map': {}}
+        topics = ['/unknown', '/chatter']
+        pub = {'/unknown': [], '/chatter': ['talker']}
+        stdout, _, _ = run_topic_list(str(tmp_path), topics,
+                                      node_colors=nc,
+                                      pub_nodes=pub,
+                                      sub_nodes={t: [] for t in topics},
+                                      global_cfg={'topic_sort': 'group'})
+        order = self._order(stdout)
+        assert order.index('/chatter') < order.index('/unknown')
+
+    def test_group_sort_empty_lines_dropped(self, tmp_path):
+        nc = {'color_map': {'talker': '32'}, 'tag_map': {}, 'style_map': {}}
+        topics = ['/chatter', '', '/scan']
+        pub = {'/chatter': ['talker'], '/scan': ['talker']}
+        stdout, _, _ = run_topic_list(str(tmp_path), topics,
+                                      node_colors=nc,
+                                      pub_nodes=pub,
+                                      sub_nodes={'/chatter': [], '/scan': []},
+                                      global_cfg={'topic_sort': 'group'})
+        # In group mode, empty lines are dropped
+        non_empty = [l for l in stdout.splitlines() if l]
+        assert len(non_empty) == 2
+
+    def test_group_sort_groups_in_first_occurrence_order(self, tmp_path):
+        nc = {'color_map': {'nav': '35', 'loc': '34'}, 'tag_map': {}, 'style_map': {}}
+        # nav topic appears first in input → nav group comes first in sorted output
+        topics = ['/cmd_vel', '/scan', '/plan']
+        pub = {'/cmd_vel': ['nav'], '/scan': ['loc'], '/plan': ['nav']}
+        stdout, _, _ = run_topic_list(str(tmp_path), topics,
+                                      node_colors=nc,
+                                      pub_nodes=pub,
+                                      sub_nodes={t: [] for t in topics},
+                                      global_cfg={'topic_sort': 'group'})
+        order = self._order(stdout)
+        # nav group (first seen) → loc group
+        first_nav = min(order.index(t) for t in ['/cmd_vel', '/plan'])
+        first_loc = order.index('/scan')
+        assert first_nav < first_loc

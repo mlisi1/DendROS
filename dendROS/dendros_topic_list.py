@@ -108,6 +108,27 @@ def _split_type(line):
     return line, None
 
 
+def _sort_by_group(render_info):
+    """Reorder render_info for topic_sort='group':
+    system topics first (original order), then matched topics grouped by color
+    (groups in first-occurrence order, alphabetical within group), then
+    unmatched/dim/plain topics alphabetically. Empty lines are dropped."""
+    system  = [x for x in render_info if x[0] == 'system']
+    matched = [x for x in render_info if x[0] == 'matched']
+    other   = [x for x in render_info if x[0] not in ('empty', 'system', 'matched')]
+
+    group_order = {}
+    for item in matched:
+        ansi = item[1]
+        if ansi not in group_order:
+            group_order[ansi] = len(group_order)
+
+    matched_sorted = sorted(matched, key=lambda x: (group_order.get(x[1], 999), x[6]))
+    other_sorted   = sorted(other,   key=lambda x: x[6] or '')
+
+    return system + matched_sorted + other_sorted
+
+
 def _fetch_from_env(item_set, env_key):
     ov = os.environ.get(env_key)
     if ov is None:
@@ -126,6 +147,7 @@ def main():
     unmatched_clr  = cfg['unmatched_color']
     unmatched_tag  = cfg['unmatched_tag']
     dim_unmatched  = cfg['dim_unmatched']
+    topic_sort     = cfg.get('topic_sort', 'default')
     unmatched_ansi = _resolve_color(unmatched_clr) if unmatched_clr else None
 
     color_map, tag_map, style_map = _load_shared_colors()
@@ -229,6 +251,9 @@ def main():
     max_pub_w = max(pub_vws, default=0)
     max_mid_w = max(mid_vws, default=0)
     has_subs  = any(sub_groups.get(t, []) for t in all_topics)
+
+    if topic_sort == 'group':
+        render_info = _sort_by_group(render_info)
 
     # ── Pass 2: render with aligned columns ───────────────────────────────────
     for case, ansi, badge_label, ns, pgroups, sgroups, name, type_str in render_info:

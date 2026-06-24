@@ -33,6 +33,7 @@ DEFAULTS = {
     "traceback_color":          "fancy",
     "tag_style":                "normal",
     "show_default_services":    True,
+    "topic_sort":               "default",
     "param_change_alert":       True,
     "param_change_alert_scope": "tracked",
     "param_change_alert_style": "inline",
