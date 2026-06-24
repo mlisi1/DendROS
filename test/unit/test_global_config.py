@@ -70,7 +70,8 @@ class TestLoadGlobalConfig:
     def test_loads_existing_file(self, tmp_config):
         data = {
             "color_mode": "full_line",
-            "show_group_tag": False,
+            "show_tag_launch": False,
+            "show_tag_cli": False,
             "tag_position": "before",
             "unmatched_color": "bold blue",
             "debug": True,
@@ -88,6 +89,7 @@ class TestLoadGlobalConfig:
             "crash_alert_interval": 60,
             "traceback_color": "red",
             "tag_style": "inverted",
+            "show_default_services": False,
         }
         with open(tmp_config, "w") as f:
             yaml.dump(data, f)
@@ -99,7 +101,9 @@ class TestLoadGlobalConfig:
             yaml.dump({"color_mode": "full_line"}, f)
         result = load_global_config()
         assert result["color_mode"] == "full_line"
-        assert result["show_group_tag"] == _DEFAULTS["show_group_tag"]
+        assert result["show_tag_launch"] == _DEFAULTS["show_tag_launch"]
+        assert result["show_tag_cli"] == _DEFAULTS["show_tag_cli"]
+        assert result["show_default_services"] == _DEFAULTS["show_default_services"]
         assert result["unmatched_color"] == _DEFAULTS["unmatched_color"]
         assert result["debug"] == _DEFAULTS["debug"]
 
@@ -148,7 +152,8 @@ class TestSaveGlobalConfig:
     def test_roundtrip_custom_values(self, tmp_config):
         custom = {
             "color_mode": "full_line",
-            "show_group_tag": False,
+            "show_tag_launch": False,
+            "show_tag_cli": False,
             "tag_position": "before",
             "unmatched_color": "#FF6600",
             "debug": True,
@@ -166,6 +171,7 @@ class TestSaveGlobalConfig:
             "crash_alert_interval": 60,
             "traceback_color": "off",
             "tag_style": "inverted",
+            "show_default_services": False,
         }
         save_global_config(custom)
         result = load_global_config()

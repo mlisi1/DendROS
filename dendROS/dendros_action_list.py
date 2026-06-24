@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Colorize ros2 node list output using all available dendROS.yaml configs."""
+"""Colorize ros2 action list output using dendROS node colors."""
 
 import os
 import sys
@@ -17,7 +17,6 @@ from lib.global_config import load_global_config, get_node_colors_path
 
 
 def _load_shared_colors():
-    """Read the color/tag/style maps written by the pipe on ros2 launch/run."""
     if yaml is None:
         return {}, {}, {}
     path = get_node_colors_path()
@@ -36,7 +35,6 @@ def _load_shared_colors():
 
 
 def _scan_configs():
-    """Fallback: return paths to all dendROS.yaml files found in AMENT_PREFIX_PATH."""
     if yaml is None:
         return []
     seen, paths = set(), []
@@ -61,83 +59,82 @@ def _badge(label, ansi_code, style):
     return f'\033[{ansi_code}m[{label}]{RESET}'
 
 
+def _node_path(action_name):
+    """Extract the probable owning-node path: '/nav/navigate' → '/nav', '/action' → ''."""
+    head, _ = action_name.rsplit('/', 1)
+    return head
+
+
+def _split_type(line):
+    """Split 'name [type]' into (name, type_str) or (name, None) when no type present."""
+    if line.endswith(']') and ' [' in line:
+        name, rest = line.rsplit(' [', 1)
+        return name, rest[:-1]
+    return line, None
+
+
+def _dim_type(type_str):
+    """Render a type annotation as dim: ' [\033[2mtype\033[0m]'."""
+    return f' [\033[2m{type_str}{RESET}]'
+
+
 def main():
     cfg = load_global_config()
-    show_tag       = cfg['show_tag_cli']
-    tag_position   = cfg['tag_position']
-    tag_style      = cfg['tag_style']
-    unmatched_clr  = cfg['unmatched_color']
-    unmatched_tag  = cfg['unmatched_tag']
-    dim_unmatched  = cfg['dim_unmatched']
-    debug          = os.environ.get('DENDROS_DEBUG') == '1' or cfg.get('debug', False)
+    show_tag      = cfg['show_tag_cli']
+    tag_style     = cfg['tag_style']
+    unmatched_clr = cfg['unmatched_color']
+    unmatched_tag = cfg['unmatched_tag']
+    dim_unmatched = cfg['dim_unmatched']
     unmatched_ansi = _resolve_color(unmatched_clr) if unmatched_clr else None
 
-    # Primary source: shared file written by the pipe on ros2 launch/run
     color_map, tag_map, style_map = _load_shared_colors()
 
-    if color_map:
-        if debug:
-            print(f'[dendROS node list] using shared node colors: {get_node_colors_path()}',
-                  file=sys.stderr)
-    else:
-        # Fallback: scan AMENT_PREFIX_PATH for installed configs
+    if not color_map:
         config_paths = _scan_configs()
-        if debug:
-            print(f'[dendROS node list] no shared colors found, scanning AMENT_PREFIX_PATH',
-                  file=sys.stderr)
-            print(f'[dendROS node list] AMENT_PREFIX_PATH={os.environ.get("AMENT_PREFIX_PATH", "<not set>")}',
-                  file=sys.stderr)
-            print(f'[dendROS node list] configs found: {config_paths or "<none>"}', file=sys.stderr)
-
         tuples = []
         for path in config_paths:
             try:
                 c, t, m, s, k, _ = load_config(path)
                 tuples.append((c, t, m, s, k))
-            except Exception as e:
-                if debug:
-                    print(f'[dendROS node list] error loading {path}: {e}', file=sys.stderr)
-
+            except Exception:
+                pass
         if tuples:
             c0, t0, m0, s0, k0 = tuples[0]
             color_map, tag_map, _, style_map, _ = merge_color_maps(
                 c0, t0, m0, s0, k0, tuples[1:]
             )
 
-    if debug:
-        print(f'[dendROS node list] color_map keys: {list(color_map.keys()) or "<empty>"}',
-              file=sys.stderr)
-
-    if not color_map and debug:
-        print('[dendROS node list] no colors loaded — passthrough mode', file=sys.stderr)
-
     for line in sys.stdin:
-        node = line.rstrip('\n')
-        if not node:
+        raw = line.rstrip('\n')
+        if not raw:
             sys.stdout.write('\n')
             continue
 
-        ansi_code, label = resolve_node(node, color_map, tag_map)
+        name, type_str = _split_type(raw)
+        type_part = _dim_type(type_str) if type_str else ''
+
+        node = _node_path(name)
+        ansi_code, label = resolve_node(node, color_map, tag_map) if node else (None, None)
 
         if ansi_code:
             node_style = resolve_node_style(node, style_map) or tag_style
-            colored    = f'\033[{ansi_code}m{node}{RESET}'
+            colored    = f'\033[{ansi_code}m{name}{RESET}'
             if show_tag and label:
                 badge = _badge(label, ansi_code, node_style)
-                out = f'{badge} {colored}' if tag_position == 'before' else f'{colored} {badge}'
+                out = f'{badge} {colored}{type_part}'
             else:
-                out = colored
+                out = f'{colored}{type_part}'
         elif unmatched_ansi:
-            colored = f'\033[{unmatched_ansi}m{node}{RESET}'
+            colored = f'\033[{unmatched_ansi}m{name}{RESET}'
             if show_tag and unmatched_tag:
                 badge = _badge(unmatched_tag, unmatched_ansi, tag_style)
-                out = f'{badge} {colored}' if tag_position == 'before' else f'{colored} {badge}'
+                out = f'{badge} {colored}{type_part}'
             else:
-                out = colored
+                out = f'{colored}{type_part}'
         elif dim_unmatched:
-            out = f'\033[2m{node}{RESET}'
+            out = f'\033[2m{name}{RESET}{type_part}'
         else:
-            out = node
+            out = f'{name}{type_part}'
 
         sys.stdout.write(out + '\n')
         sys.stdout.flush()

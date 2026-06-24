@@ -43,7 +43,7 @@ dendros enable     # unsets DENDROS_DISABLE
 | Key | Default | Type | Description |
 |---|---|---|---|
 | `color_mode` | `tag_only` | string | `tag_only` or `full_line`. |
-| `show_group_tag` | `true` | bool | Show badges for all groups in this package. |
+| `show_group_tag` | `true` | bool | Show badges in `ros2 launch` / `ros2 run` output for all groups in this package. |
 | `tag_position` | `after` | string | `after` or `before` — badge position relative to `[node-N]`. |
 | `tag_style` | `normal` | string | `normal` or `inverted` — badge appearance. |
 | `unmatched_color` | `null` | string\|null | Color for nodes not in any group. |
@@ -61,12 +61,14 @@ Stored in `~/.config/dendROS/defaults.yaml`, managed via `dendros config`:
 | Key | Default | Description |
 |---|---|---|
 | `color_mode` | `tag_only` | Global default output mode. |
-| `show_group_tag` | `true` | Show badges globally. |
-| `tag_position` | `after` | Badge position relative to `[node-N]`. |
+| `show_tag_launch` | `true` | Show badges in `ros2 launch` / `ros2 run` output globally. |
+| `show_tag_cli` | `true` | Show badges in `ros2 node list`, `node info`, `service list`, `action list` globally. |
+| `tag_position` | `after` | Badge position relative to `[node-N]` in launch/run output. |
 | `tag_style` | `normal` | `normal` or `inverted` — badge appearance globally. |
 | `unmatched_color` | `null` | Global fallback color for unmatched nodes. |
 | `unmatched_tag` | `null` | Global badge for unmatched nodes. |
 | `dim_unmatched` | `false` | Dim unmatched nodes globally. |
+| `show_default_services` | `true` | When `false`, hide standard ROS 2 system services from `ros2 service list` output. |
 | `debug` | `false` | Print debug output on startup. |
 | `config_merge` | `true` | Merge configs from included packages. |
 | `colorize_launch_msgs` | `true` | Colorize lifecycle lines globally. |
@@ -92,6 +94,8 @@ The `ros2()` shell wrapper intercepts specific subcommands; everything else call
 | `ros2 run …` | Output piped through the DendROS colorizer. |
 | `ros2 node list` | Output piped through `dendros_node_list.py` — nodes colored by group. See [ros2 node list](node-list.md). |
 | `ros2 node info …` | Output piped through `dendros_node_info.py` — node name, sections, and entries colorized by group. See [ros2 node info](node-info.md). |
+| `ros2 service list` | Output piped through `dendros_service_list.py` — services colored by owning node; default system services dimmed. See [ros2 service list](service-list.md). |
+| `ros2 action list` | Output piped through `dendros_action_list.py` — actions colored by owning node. See [ros2 action list](action-list.md). |
 | Everything else | Passed directly to the real `ros2` binary, untouched. |
 
 ---

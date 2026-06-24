@@ -47,15 +47,22 @@ Settings are written to `~/.config/dendROS/defaults.yaml` and apply across all p
 
 ## Settings reference
 
-### Output
+### Output (launch / run)
 
 | Setting | Values | Description |
 |---|---|---|
 | **Color mode** | `tag_only` / `full_line` | `tag_only` colors prefix + badge, preserving severity colors. `full_line` colors the entire line. |
-| **Show group tag** | `on` / `off` | Show `[TAG]` badges globally. Overridable per-group with `show_tag: false`. |
+| **Show tag (launch/run)** | `on` / `off` | Show `[TAG]` badges in `ros2 launch` and `ros2 run` output. Overridable per-group with `show_tag: false`. |
 | **Tag position** | `after` / `before` | Badge position: `after` → `[node-N] [TAG] …` · `before` → `[TAG] [node-N] …`. |
 | **Tag style** | `normal` / `inverted` | `normal` = colored text on default background. `inverted` = colored background with empty letters (like crash alert banners). Overridable per-group with `tag_style:`. |
 | **Colorize launch msgs** | `on` / `off` | When off, `[INFO] [node-N]: process started …` lines pass through unchanged. |
+
+### CLI commands
+
+| Setting | Values | Description |
+|---|---|---|
+| **Show tag (CLI)** | `on` / `off` | Show `[TAG]` badges in `ros2 node list`, `ros2 node info`, `ros2 service list`, and `ros2 action list`. |
+| **Show default services** | `on` / `off` | When off, standard ROS 2 system services (`set_parameters`, `get_parameters`, `get_loggers`, …) are hidden from `ros2 service list` output entirely. When on, they appear dimmed. |
 
 ### Unmatched nodes
 
@@ -103,12 +110,14 @@ Settings are written to `~/.config/dendROS/defaults.yaml` and apply across all p
 ```yaml
 # ~/.config/dendROS/defaults.yaml
 color_mode: tag_only
-show_group_tag: true
+show_tag_launch: true
+show_tag_cli: true
 tag_position: after
 tag_style: normal
 unmatched_color: null
 unmatched_tag: null
 dim_unmatched: false
+show_default_services: true
 debug: false
 config_merge: true
 colorize_launch_msgs: true
