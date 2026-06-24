@@ -1121,8 +1121,8 @@ class TestKeywordHighlightPipeline:
         out, _, _ = run_pipe(prefix, self.PKG, [self.NODE_LINE])
         from lib.colors import _resolve_color
         blue = _resolve_color('blue')
-        # After the keyword (bold red), we restore to the node's blue
-        assert f'\033[31;1mimportant\033[{blue}m' in out
+        # After the keyword, restore is RESET + node blue (clears any bold/inverted)
+        assert f'\033[31;1mimportant\033[0m\033[{blue}m' in out
 
     def test_defaults_keyword_applied_to_all_matched_nodes(self, tmp_path):
         prefix = self._make_prefix(tmp_path, extra_defaults=(

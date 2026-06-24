@@ -72,6 +72,11 @@ DendROS shadows the `ros2` command with a shell function. When you run `ros2 lau
 <p>Node list output is colored with the same group colors and badges. Cross-terminal — launch in one window, list in another.</p>
 </div>
 <div class="feature-card" markdown>
+<div class="fc-icon">🔎</div>
+<strong>ros2 node info colors</strong>
+<p>Node info output is fully colorized: input sections use provider colors, output sections use the node's own color, and live topic/service indicators show connected group counts.</p>
+</div>
+<div class="feature-card" markdown>
 <div class="fc-icon">🚫</div>
 <strong>Truly non-invasive</strong>
 <p>No launch file changes. Exit codes preserved. <code>DENDROS_DISABLE=1</code> bypasses everything instantly.</p>

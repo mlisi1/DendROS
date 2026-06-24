@@ -76,6 +76,7 @@ nav:
     - Crash Alert: crash-alert.md
     - Traceback Highlighting: traceback-highlighting.md
     - ros2 node list: node-list.md
+    - ros2 node info: node-info.md
   - Tools:
     - dendros init: dendros-init.md
     - dendros config: global-config.md
