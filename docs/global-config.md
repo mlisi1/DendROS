@@ -93,6 +93,14 @@ Settings are written to `~/.config/dendROS/defaults.yaml` and apply across all p
 |---|---|---|
 | **Traceback color** | `fancy` / `red` / `off` | `fancy` = bold red header + dim red frames; `red` = all bold red; `off` = passthrough. See [Traceback Highlighting](traceback-highlighting.md). |
 
+### Parameter change alert
+
+| Setting | Values | Description |
+|---|---|---|
+| **Param change alert** | `on` / `off` | Print an inline notification whenever a node's parameter changes at runtime. See [Parameter Change Alert](param-change-alert.md). |
+| **Param alert scope** | `tracked` / `all` | `tracked` = only nodes with a config group; `all` = entire ROS graph. |
+| **Param alert style** | `inline` / `inverted` | `inline` = compact colored line; `inverted` = full white-background strip, harder to miss in busy logs. |
+
 ### Init defaults
 
 | Setting | Values | Description |
@@ -121,10 +129,13 @@ show_default_services: true
 debug: false
 config_merge: true
 colorize_launch_msgs: true
-crash_alert: false
+crash_alert: true
 crash_alert_color: node
 crash_alert_interval: 30
 traceback_color: fancy
+param_change_alert: true
+param_change_alert_scope: tracked
+param_change_alert_style: inline
 init_modify_build: true
 init_on_existing: abort
 init_color: palette

@@ -75,10 +75,13 @@ nav:
   - Features:
     - Crash Alert: crash-alert.md
     - Traceback Highlighting: traceback-highlighting.md
+    - Parameter Change Alert: param-change-alert.md
     - ros2 node list: node-list.md
     - ros2 node info: node-info.md
     - ros2 service list: service-list.md
     - ros2 action list: action-list.md
+    - ros2 param list: param-list.md
+    - ros2 param describe: param-describe.md
   - Tools:
     - dendros init: dendros-init.md
     - dendros config: global-config.md

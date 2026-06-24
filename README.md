@@ -104,6 +104,30 @@ It also features some quality of life improvements for ROS outputs.
 <img src="docs/assets/images/screenshots/action_list.png" width="600" alt="ros2 action list"/>
 </p>
 
+- ### **```ros2 param list``` coloring**
+  Node headers are colored with the group badge; parameter names are rendered dim so the structure is easy to scan. `--param-type` type annotations are dimmed automatically.
+
+<p align="center">
+<img src="docs/assets/images/screenshots/param_list.png" width="600" alt="ros2 param list"/>
+</p>
+
+- ### **```ros2 param describe``` coloring**
+  The group badge and parameter name are highlighted; field labels (`Type:`, `Description:`) are dimmed; section headers like `Constraints:` are bolded so the output structure is immediately readable.
+
+<p align="center">
+<img src="docs/assets/images/screenshots/param_describe.png" width="600" alt="ros2 param describe"/>
+</p>
+
+- ### **Parameter change alert**
+  When a node's parameter changes at runtime — via `ros2 param set` or any parameter service client — an inline notification appears in the launch terminal showing the node, parameter name, and old→new value. Two styles: compact inline and a full-width inverted block that's hard to miss in busy logs.
+
+<p align="center">
+<img src="docs/assets/images/screenshots/param_alert_inline.png" width="600" alt="param change alert inline"/>
+</p>
+<p align="center">
+<img src="docs/assets/images/screenshots/param_alert_inverted.png" width="600" alt="param change alert inverted"/>
+</p>
+
 - ### **Truly non-invasive** 
   Shell-level pipe; you won't loose autocompletion or aliases for launch files
 

@@ -87,6 +87,21 @@ DendROS shadows the `ros2` command with a shell function. When you run `ros2 lau
 <p>Action list output colored by owning node group, with the same badge and style options available in all other CLI commands.</p>
 </div>
 <div class="feature-card" markdown>
+<div class="fc-icon">📝</div>
+<strong>ros2 param list colors</strong>
+<p>Node headers colored with group badges; parameter names dimmed. Type annotations from <code>--param-type</code> rendered dim automatically.</p>
+</div>
+<div class="feature-card" markdown>
+<div class="fc-icon">🔬</div>
+<strong>ros2 param describe colors</strong>
+<p>Badge and bold colored param name at the top; field labels dimmed; section headers like <code>Constraints:</code> bolded for instant readability.</p>
+</div>
+<div class="feature-card" markdown>
+<div class="fc-icon">🔔</div>
+<strong>Parameter change alert</strong>
+<p>Inline notification whenever a node's parameter changes at runtime — shows node, param name, and old→new value directly in the launch log.</p>
+</div>
+<div class="feature-card" markdown>
 <div class="fc-icon">🚫</div>
 <strong>Truly non-invasive</strong>
 <p>No launch file changes. Exit codes preserved. <code>DENDROS_DISABLE=1</code> bypasses everything instantly.</p>

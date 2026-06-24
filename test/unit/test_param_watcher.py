@@ -465,9 +465,9 @@ class TestInvertedAlertStyle:
 
 class TestGlobalConfigDefaults:
 
-    def test_param_change_alert_default_false(self):
+    def test_param_change_alert_default_true(self):
         from lib.global_config import DEFAULTS
-        assert DEFAULTS['param_change_alert'] is False
+        assert DEFAULTS['param_change_alert'] is True
 
     def test_param_change_alert_scope_default_tracked(self):
         from lib.global_config import DEFAULTS
