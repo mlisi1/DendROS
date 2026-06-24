@@ -18,17 +18,17 @@ from lib.colors import RESET, _resolve_color
 from lib.global_config import load_global_config, get_node_colors_path
 import lib.ros_graph as ros_graph
 
-# "  Section Name:" — two leading spaces, words, colon
 _SECTION_RE = re.compile(r'^  ([A-Za-z][A-Za-z ]*):$')
 
-# Output sections: entries colored with the node's own color (no tag)
-_OUTPUT_SECTIONS = {'Publishers', 'Service Servers', 'Action Servers'}
+_OUTPUT_SECTIONS    = {'Publishers', 'Service Servers', 'Action Servers'}
+_INPUT_SECTION_KIND = {
+    'Subscribers':    'topics',
+    'Service Clients': 'services',
+    'Action Clients':  'actions',
+}
 
-# Input sections: entries colored with the publishing node's color
-_INPUT_SECTIONS = {'Subscribers'}
 
-
-# ── color/config loading (shared with dendros_node_list) ─────────────────────
+# ── color/config loading ──────────────────────────────────────────────────────
 
 def _load_shared_colors():
     if yaml is None:
@@ -75,29 +75,108 @@ def _badge(label, ansi_code, style):
     return f'\033[{ansi_code}m[{label}]{RESET}'
 
 
-def _format_entry(raw, ansi_code=None):
-    """Color the name part of an entry line; always dim the type annotation."""
+def _item_name(stripped):
+    """Extract item name from 'name: type' or 'name [type]'; None for (None)."""
+    if stripped == '(None)':
+        return None
+    if ': ' in stripped:
+        return stripped.split(': ', 1)[0]
+    if ' [' in stripped:
+        return stripped.split(' [', 1)[0]
+    if stripped.startswith('/'):
+        return stripped
+    return None
+
+
+def _nodes_to_groups(nodes, color_map, tag_map):
+    """Group nodes by color code, summing counts. Returns [(code, count), ...]."""
+    counts = {}
+    for node in nodes:
+        code, _ = resolve_node(node, color_map, tag_map)
+        if code:
+            counts[code] = counts.get(code, 0) + 1
+    return list(counts.items())
+
+
+def _nodes_to_codes(nodes, color_map, tag_map):
+    """Deduplicated [code, ...] — used for service/action client extra providers."""
+    codes = []
+    for node in nodes:
+        code, _ = resolve_node(node, color_map, tag_map)
+        if code and code not in codes:
+            codes.append(code)
+    return codes
+
+
+def _format_entry(raw, ansi_code=None, trail_groups=(), post_codes=()):
+    """Format a ros2 node info entry line.
+
+    ansi_code    — ANSI code to color the item name (None = no color).
+    trail_groups — [(code, count), ...] rendered as inverted-video counts AFTER type.
+                   Used for topic subscriber/publisher indicators.
+    post_codes   — [code, ...] rendered as trailing ■ squares AFTER type.
+                   Used for service/action extra providers.
+
+    Handles both 'name: type' and 'name [type]' entry formats.
+    """
     stripped = raw.lstrip()
     indent   = raw[:len(raw) - len(stripped)]
 
     if stripped == '(None)':
         return f'{indent}\033[2m(None){RESET}'
 
+    trailing = ''
+    if trail_groups:
+        trailing += '  ' + ' '.join(f'\033[{c};7m{n}\033[0m' for c, n in trail_groups)
+    if post_codes:
+        trailing += '  ' + ' '.join(f'\033[{c}m■{RESET}' for c in post_codes)
+
     if ': ' in stripped:
         name, type_str = stripped.split(': ', 1)
         if ansi_code:
-            return f'{indent}\033[{ansi_code}m{name}{RESET}: \033[2m{type_str}{RESET}'
-        return f'{indent}{name}: \033[2m{type_str}{RESET}'
+            return (f'{indent}\033[{ansi_code}m{name}{RESET}: '
+                    f'\033[2m{type_str}{RESET}{trailing}')
+        return f'{indent}{name}: \033[2m{type_str}{RESET}{trailing}'
+
+    if ' [' in stripped:
+        name, rest = stripped.split(' [', 1)
+        type_str = rest.rstrip(']')
+        if ansi_code:
+            return (f'{indent}\033[{ansi_code}m{name}{RESET} '
+                    f'[\033[2m{type_str}{RESET}]{trailing}')
+        return f'{indent}{name} [\033[2m{type_str}{RESET}]{trailing}'
 
     if ansi_code:
-        return f'\033[{ansi_code}m{raw}{RESET}'
-    return raw
+        return f'{indent}\033[{ansi_code}m{stripped}{RESET}{trailing}'
+    return f'{indent}{stripped}{trailing}'
 
 
-# ── graph-aware subscriber coloring ──────────────────────────────────────────
+# ── graph-aware item collection ───────────────────────────────────────────────
 
-def _collect_input_topics(lines):
-    """Return set of topic names appearing under _INPUT_SECTIONS."""
+def _collect_input_items(lines):
+    """Scan buffered lines; return {'topics': set, 'services': set, 'actions': set}."""
+    items = {'topics': set(), 'services': set(), 'actions': set()}
+    current_section = None
+    past_first = False
+    for raw in lines:
+        if not past_first:
+            if raw:
+                past_first = True
+            continue
+        m = _SECTION_RE.match(raw)
+        if m:
+            current_section = m.group(1)
+            continue
+        kind = _INPUT_SECTION_KIND.get(current_section)
+        if kind and raw.strip():
+            name = _item_name(raw.strip())
+            if name:
+                items[kind].add(name)
+    return items
+
+
+def _collect_output_topics(lines):
+    """Return the set of topic names listed in the Publishers section."""
     topics = set()
     current_section = None
     past_first = False
@@ -110,40 +189,23 @@ def _collect_input_topics(lines):
         if m:
             current_section = m.group(1)
             continue
-        if current_section in _INPUT_SECTIONS and raw.strip() and raw.strip() != '(None)':
-            stripped = raw.strip()
-            if ': ' in stripped:
-                topics.add(stripped.split(': ', 1)[0])
+        if current_section == 'Publishers' and raw.strip():
+            name = _item_name(raw.strip())
+            if name:
+                topics.add(name)
     return topics
 
 
-def _build_topic_color_map(topics, color_map, tag_map):
-    """Return {topic: ansi_code} by querying the ROS 2 graph for publishers.
-
-    In tests, set DENDROS_TOPIC_PUBLISHERS to a JSON dict
-    {topic: [node_basename, ...]} to skip the live graph query.
-    """
-    if not color_map or not topics:
-        return {}
-
-    override = os.environ.get('DENDROS_TOPIC_PUBLISHERS')
-    if override is not None:
-        try:
-            topic_to_nodes = json.loads(override)
-        except (json.JSONDecodeError, ValueError):
-            topic_to_nodes = {}
-    else:
-        topic_to_nodes = ros_graph.get_topic_publishers(topics)
-
-    result = {}
-    for topic, pub_nodes in topic_to_nodes.items():
-        if not pub_nodes:
-            continue
-        # First publisher wins (multiple publishers: future work)
-        code, _ = resolve_node(pub_nodes[0], color_map, tag_map)
-        if code:
-            result[topic] = code
-    return result
+def _fetch_from_env(item_set, env_key):
+    """Return {item: [node, ...]} from env var JSON, or None to use live graph."""
+    ov = os.environ.get(env_key)
+    if ov is None:
+        return None
+    try:
+        injected = json.loads(ov)
+    except (json.JSONDecodeError, ValueError):
+        injected = {}
+    return {item: injected.get(item, []) for item in item_set}
 
 
 # ── main ──────────────────────────────────────────────────────────────────────
@@ -173,20 +235,67 @@ def main():
                 c0, t0, m0, s0, k0, tuples[1:]
             )
 
-    # Buffer stdin — needed to pre-scan subscriber topics before rendering
     lines = [line.rstrip('\n') for line in sys.stdin]
 
-    # Pre-scan input topics and query the graph once
-    input_topics     = _collect_input_topics(lines)
-    topic_color_map  = _build_topic_color_map(input_topics, color_map, tag_map)
+    input_items   = _collect_input_items(lines)
+    output_topics = _collect_output_topics(lines)
 
-    # Render
+    # ── fetch provider nodes (env vars → single live graph call) ─────────────
+    sub_ov   = _fetch_from_env(input_items['topics'],   'DENDROS_TOPIC_PUBLISHERS')
+    svc_ov   = _fetch_from_env(input_items['services'], 'DENDROS_SERVICE_SERVERS')
+    act_ov   = _fetch_from_env(input_items['actions'],  'DENDROS_ACTION_SERVERS')
+    psub_ov  = _fetch_from_env(output_topics,           'DENDROS_TOPIC_SUBSCRIBERS')
+
+    sub_nodes  = sub_ov  or {}
+    svc_nodes  = svc_ov  or {}
+    act_nodes  = act_ov  or {}
+    psub_nodes = psub_ov or {}
+
+    # One rclpy session for anything not covered by env vars
+    if color_map:
+        live_topics   = input_items['topics']   if sub_ov  is None else set()
+        live_services = input_items['services'] if svc_ov  is None else set()
+        live_actions  = input_items['actions']  if act_ov  is None else set()
+        live_psubs    = output_topics            if psub_ov is None else set()
+
+        if live_topics or live_services or live_actions or live_psubs:
+            try:
+                raw = ros_graph.get_all_providers(
+                    topics=live_topics, services=live_services,
+                    actions=live_actions, pub_topics=live_psubs,
+                )
+                if sub_ov  is None:
+                    sub_nodes  = {t: raw.get(t, []) for t in live_topics}
+                if svc_ov  is None:
+                    svc_nodes  = {s: raw.get(s, []) for s in live_services}
+                if act_ov  is None:
+                    act_nodes  = {a: raw.get(a, []) for a in live_actions}
+                if psub_ov is None:
+                    psub_nodes = {t: raw.get(ros_graph._PUB_SUB_PREFIX + t, [])
+                                  for t in live_psubs}
+            except Exception:
+                pass
+
+    # ── convert to display structures ─────────────────────────────────────────
+    # Topics: grouped counts → inverted-video trailing indicators
+    sub_groups = {t: _nodes_to_groups(sub_nodes.get(t, []),  color_map, tag_map)
+                  for t in input_items['topics']}
+    pub_groups = {t: _nodes_to_groups(psub_nodes.get(t, []), color_map, tag_map)
+                  for t in output_topics}
+
+    # Services/actions: flat code list → trailing ■ squares for extras
+    svc_codes  = {s: _nodes_to_codes(svc_nodes.get(s, []), color_map, tag_map)
+                  for s in input_items['services']}
+    act_codes  = {a: _nodes_to_codes(act_nodes.get(a, []), color_map, tag_map)
+                  for a in input_items['actions']}
+
+    # ── render ────────────────────────────────────────────────────────────────
     ansi_code       = None
     current_section = None
     first_line      = True
 
     for raw in lines:
-        # ── node name (first non-empty line) ──────────────────────────────────
+        # ── node name ─────────────────────────────────────────────────────────
         if first_line:
             if not raw:
                 sys.stdout.write('\n')
@@ -225,12 +334,22 @@ def main():
 
         # ── content line ──────────────────────────────────────────────────────
         if raw.strip():
+            name = _item_name(raw.strip())
+
             if current_section in _OUTPUT_SECTIONS and ansi_code:
-                out = _format_entry(raw, ansi_code)
-            elif current_section in _INPUT_SECTIONS:
-                stripped = raw.strip()
-                topic    = stripped.split(': ', 1)[0] if ': ' in stripped else None
-                out      = _format_entry(raw, topic_color_map.get(topic) if topic else None)
+                groups = pub_groups.get(name, []) if (name and current_section == 'Publishers') else []
+                out = _format_entry(raw, ansi_code, trail_groups=groups)
+
+            elif current_section == 'Subscribers':
+                groups  = sub_groups.get(name, []) if name else []
+                primary = groups[0][0] if groups else None
+                out = _format_entry(raw, primary, trail_groups=groups)
+
+            elif current_section in ('Service Clients', 'Action Clients'):
+                codes = (svc_codes if current_section == 'Service Clients'
+                         else act_codes).get(name, []) if name else []
+                out = _format_entry(raw, codes[0] if codes else None,
+                                    post_codes=codes[1:])
             else:
                 out = _format_entry(raw)
         else:
