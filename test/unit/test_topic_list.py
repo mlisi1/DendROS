@@ -497,6 +497,71 @@ class TestTopicListUnmatched:
         assert '[\033[2mstd_msgs/msg/String\033[0m]' in stdout
 
 
+# ── topic list -v (verbose) ───────────────────────────────────────────────────
+
+class TestTopicListVerbose:
+
+    def _run(self, tmp_path, lines):
+        return run_topic_list(str(tmp_path), lines)
+
+    def test_section_headers_bold(self, tmp_path):
+        stdout, _, _ = self._run(tmp_path, [
+            'Published topics:',
+            ' * /chatter [std_msgs/msg/String] 1 publisher',
+        ])
+        assert '\033[1mPublished topics:\033[0m' in stdout
+
+    def test_subscribed_header_bold(self, tmp_path):
+        stdout, _, _ = self._run(tmp_path, [
+            'Subscribed topics:',
+            ' * /chatter [std_msgs/msg/String] 1 subscriber',
+        ])
+        assert '\033[1mSubscribed topics:\033[0m' in stdout
+
+    def test_type_dimmed(self, tmp_path):
+        stdout, _, _ = self._run(tmp_path, [
+            'Published topics:',
+            ' * /chatter [std_msgs/msg/String] 1 publisher',
+        ])
+        assert '[\033[2mstd_msgs/msg/String\033[0m]' in stdout
+
+    def test_topic_name_uncolored(self, tmp_path):
+        stdout, _, _ = self._run(tmp_path, [
+            'Published topics:',
+            ' * /chatter [std_msgs/msg/String] 1 publisher',
+        ])
+        line = next(l for l in stdout.splitlines() if '/chatter' in l)
+        plain = strip_ansi(line)
+        assert plain.startswith(' * /chatter')
+
+    def test_count_preserved(self, tmp_path):
+        stdout, _, _ = self._run(tmp_path, [
+            'Published topics:',
+            ' * /chatter [std_msgs/msg/String] 3 publishers',
+        ])
+        assert '3 publishers' in strip_ansi(stdout)
+
+    def test_empty_lines_pass_through(self, tmp_path):
+        stdout, _, _ = self._run(tmp_path, [
+            'Published topics:',
+            ' * /chatter [std_msgs/msg/String] 1 publisher',
+            '',
+            'Subscribed topics:',
+            ' * /chatter [std_msgs/msg/String] 1 subscriber',
+        ])
+        lines = stdout.splitlines()
+        assert '' in lines
+
+    def test_multiple_topics(self, tmp_path):
+        stdout, _, _ = self._run(tmp_path, [
+            'Published topics:',
+            ' * /chatter [std_msgs/msg/String] 1 publisher',
+            ' * /scan [sensor_msgs/msg/LaserScan] 1 publisher',
+        ])
+        assert '[\033[2mstd_msgs/msg/String\033[0m]' in stdout
+        assert '[\033[2msensor_msgs/msg/LaserScan\033[0m]' in stdout
+
+
 # ── AMENT_PREFIX_PATH fallback ────────────────────────────────────────────────
 
 class TestTopicListFallback:

@@ -3,6 +3,7 @@
 
 import json
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -21,6 +22,29 @@ _INDENT = '  '
 
 # System topics shown plain (no color, tag, or count blocks)
 _SYSTEM_TOPICS = {'/parameter_events', '/rosout'}
+
+_SECTION_RE      = re.compile(r'^(Published|Subscribed) topics:$')
+_VERBOSE_TOPIC_RE = re.compile(r'^( \* )(/\S+)( \[)([^\]]+)(\].*)$')
+
+
+def _is_verbose(raw_lines):
+    return any(_SECTION_RE.match(l.rstrip('\n')) for l in raw_lines)
+
+
+def _format_verbose(raw_lines):
+    """Apply minimal formatting to ros2 topic list -v output."""
+    for raw in raw_lines:
+        line = raw.rstrip('\n')
+        if _SECTION_RE.match(line):
+            sys.stdout.write(f'\033[1m{line}\033[0m\n')
+        else:
+            m = _VERBOSE_TOPIC_RE.match(line)
+            if m:
+                bullet, name, bracket, type_str, rest = m.groups()
+                sys.stdout.write(f'{bullet}{name}{bracket}\033[2m{type_str}\033[0m{rest}\n')
+            else:
+                sys.stdout.write(line + '\n')
+        sys.stdout.flush()
 
 
 def _load_shared_colors():
@@ -141,6 +165,11 @@ def _fetch_from_env(item_set, env_key):
 
 
 def main():
+    raw_lines = [line for line in sys.stdin]
+    if _is_verbose(raw_lines):
+        _format_verbose(raw_lines)
+        return
+
     cfg = load_global_config()
     show_tag       = cfg['show_tag_cli']
     tag_style      = cfg['tag_style']
@@ -167,11 +196,10 @@ def main():
             )
 
     # ── Parse input ───────────────────────────────────────────────────────────
-    raw_lines  = [line.rstrip('\n') for line in sys.stdin]
     all_topics = set()   # excludes system topics
     parsed     = []      # [(raw, name_or_None, type_str_or_None)]
 
-    for raw in raw_lines:
+    for raw in [l.rstrip('\n') for l in raw_lines]:
         if not raw:
             parsed.append((raw, None, None))
             continue
