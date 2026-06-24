@@ -23,11 +23,13 @@ sys.path.insert(0, os.path.join(REPO_ROOT, 'dendROS'))
 # ── ANSI helpers ─────────────────────────────────────────────────────────────
 
 ANSI_RE = re.compile(r'\033\[([0-9;]*)m')
+# Broader regex that strips any CSI sequence (e.g. \033[K for erase-to-EOL)
+_FULL_ANSI_RE = re.compile(r'\033\[[^a-zA-Z]*[a-zA-Z]')
 
 
 def strip_ansi(s: str) -> str:
     """Remove all ANSI escape sequences from s."""
-    return ANSI_RE.sub('', s)
+    return _FULL_ANSI_RE.sub('', s)
 
 
 def ansi_codes(s: str) -> list:

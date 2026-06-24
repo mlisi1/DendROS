@@ -27,12 +27,15 @@ DEFAULTS = {
     "init_color":           "palette",
     "init_color_bold":      False,
     "init_label":           False,
-    "crash_alert":          True,
-    "crash_alert_color":    "node",
-    "crash_alert_interval": 30,
-    "traceback_color":      "fancy",
-    "tag_style":            "normal",
-    "show_default_services": True,
+    "crash_alert":              True,
+    "crash_alert_color":        "node",
+    "crash_alert_interval":     30,
+    "traceback_color":          "fancy",
+    "tag_style":                "normal",
+    "show_default_services":    True,
+    "param_change_alert":       True,
+    "param_change_alert_scope": "tracked",
+    "param_change_alert_style": "inline",
 }
 
 
@@ -72,4 +75,4 @@ def save_global_config(cfg):
     path = get_global_config_path()
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
-        yaml.dump({k: cfg[k] for k in DEFAULTS}, f, default_flow_style=False)
+        yaml.dump({k: cfg.get(k, DEFAULTS[k]) for k in DEFAULTS}, f, default_flow_style=False)
