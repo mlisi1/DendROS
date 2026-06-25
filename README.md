@@ -47,6 +47,9 @@ It also features some quality of life improvements for ROS outputs.
 <img src="docs/assets/images/screenshots/terminal_output.png" width="600" alt="Colored Terminal Output"/>
 </p>
 
+- ### **All main `ros2` CLI commands wrapped**
+  `ros2 node list`, `ros2 node info`, `ros2 service list`, `ros2 action list`, `ros2 topic list`, `ros2 param list`, and `ros2 param describe` — all colorized with the same group colors and badges, no extra config required. [→ Full feature list](https://mlisi1.github.io/DendROS/node-list/#ros2--intercepted-subcommands)
+
 - ### **One command to get started**
    Too lazy to look up how DendROS config works? We got you covered: `dendros init` scans your launch files and generates an initial config for you
 
@@ -76,47 +79,7 @@ It also features some quality of life improvements for ROS outputs.
 </p>
 
 
-- ### **```ros2 node list``` coloring**
-  Brings color to your node lists.
 
-<p align="center">
-<img src="docs/assets/images/screenshots/node_list.png" width="600" alt="ros2 node list"/>
-</p>
-
-- ### **```ros2 node info``` coloring**
-  Colorizes node info output: the node name gets its group color and badge, section headers are bolded, input sections (Subscribers, Service Clients, Action Clients) are colored with the provider's group color, and output sections (Publishers, Service Servers, Action Servers) with the node's own color. Live topic indicators show connected subscriber and publisher counts per group.
-
-<p align="center">
-<img src="docs/assets/images/screenshots/node_info.png" width="600" alt="ros2 node info"/>
-</p>
-
-- ### **```ros2 service list``` coloring**
-  Services are colored by their owning node's group color. Standard ROS 2 system services (`set_parameters`, `get_parameters`, `get_loggers`, …) are shown dimmed so your own services stand out. They can be hidden entirely via `show_default_services: false`.
-
-<p align="center">
-<img src="docs/assets/images/screenshots/service_list.png" width="600" alt="ros2 service list"/>
-</p>
-
-- ### **```ros2 action list``` coloring**
-  Actions are colored by their owning node's group color, with the same badge and style options available in all other CLI commands.
-
-<p align="center">
-<img src="docs/assets/images/screenshots/action_list.png" width="600" alt="ros2 action list"/>
-</p>
-
-- ### **```ros2 param list``` coloring**
-  Node headers are colored with the group badge; parameter names are rendered dim so the structure is easy to scan. `--param-type` type annotations are dimmed automatically.
-
-<p align="center">
-<img src="docs/assets/images/screenshots/param_list.png" width="600" alt="ros2 param list"/>
-</p>
-
-- ### **```ros2 param describe``` coloring**
-  The group badge and parameter name are highlighted; field labels (`Type:`, `Description:`) are dimmed; section headers like `Constraints:` are bolded so the output structure is immediately readable.
-
-<p align="center">
-<img src="docs/assets/images/screenshots/param_describe.png" width="600" alt="ros2 param describe"/>
-</p>
 
 - ### **Parameter change alert**
   When a node's parameter changes at runtime — via `ros2 param set` or any parameter service client — an inline notification appears in the launch terminal showing the node, parameter name, and old→new value. Two styles: compact inline and a full-width inverted block that's hard to miss in busy logs.
