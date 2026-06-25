@@ -922,6 +922,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../topic-list/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ros2 topic list
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../param-list/" class="md-nav__link">
         
   
@@ -1610,6 +1638,11 @@
 <td>When <code>false</code>, hide standard ROS 2 system services from <code>ros2 service list</code> output.</td>
 </tr>
 <tr>
+<td><code>topic_sort</code></td>
+<td><code>default</code></td>
+<td><code>default</code> = ros2 alphabetical order; <code>group</code> = system topics first, then by publisher group.</td>
+</tr>
+<tr>
 <td><code>debug</code></td>
 <td><code>false</code></td>
 <td>Print debug output on startup.</td>
@@ -1728,6 +1761,10 @@
 <tr>
 <td><code>ros2 param describe</code></td>
 <td>Output piped through <code>dendros_param_describe.py</code> — badge + colored param name, dim labels, bold section headers. See <a href="../param-describe/">ros2 param describe</a>.</td>
+</tr>
+<tr>
+<td><code>ros2 topic list</code></td>
+<td>Output piped through <code>dendros_topic_list.py</code> — topics colored by primary publisher group, pub/sub count blocks, badge left. <code>-v</code> verbose: bold headers, dim types. See <a href="../topic-list/">ros2 topic list</a>.</td>
 </tr>
 <tr>
 <td>Everything else</td>
