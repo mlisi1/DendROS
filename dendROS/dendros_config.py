@@ -38,6 +38,7 @@ _FIELDS = [
     ("unmatched_tag",        "Unmatched tag",         "text",  None),
     ("dim_unmatched",         "Dim unmatched",           "cycle", [False, True]),
     ("show_default_services", "Show default services",   "cycle", [True, False]),
+    ("topic_sort",            "Topic list sort",          "cycle", ["default", "group"]),
     ("init_modify_build",     "Init: modify build",      "cycle", [True, False]),
     ("init_on_existing",     "Init: on existing",     "cycle", ["abort", "merge", "overwrite"]),
     ("init_color",           "Init: color",           "cycle", ["palette", "null"]),
@@ -70,6 +71,11 @@ _DESCS = {
     "show_default_services": (
         "on  — include standard parameter/logger services in ros2 service list (shown dimmed)",
         "off — hide describe_parameters, get_parameters, set_parameters, get_loggers … from ros2 service list",
+    ),
+    "topic_sort": (
+        "default — show topics in the order ros2 reports them (alphabetical by ROS 2)",
+        "group   — system topics first, then topics grouped by publisher color group"
+        " (groups in first-occurrence order, alphabetical within each group)",
     ),
     "tag_position": (
         "after  — badge appears after the prefix: [node-N] [TAG] [INFO] …",

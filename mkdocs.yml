@@ -80,6 +80,7 @@ nav:
     - ros2 node info: node-info.md
     - ros2 service list: service-list.md
     - ros2 action list: action-list.md
+    - ros2 topic list: topic-list.md
     - ros2 param list: param-list.md
     - ros2 param describe: param-describe.md
   - Tools:

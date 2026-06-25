@@ -42,11 +42,6 @@ DendROS shadows the `ros2` command with a shell function. When you run `ros2 lau
 <p>Exact names, namespaced paths, and <code>fnmatch</code> wildcards. <code>nav2_*</code> covers every Nav2 node in one pattern.</p>
 </div>
 <div class="feature-card" markdown>
-<div class="fc-icon">🔗</div>
-<strong>Automatic config merging</strong>
-<p>DendROS parses your launch file and merges configs from included packages at runtime. No extra steps.</p>
-</div>
-<div class="feature-card" markdown>
 <div class="fc-icon">🛠️</div>
 <strong>Scaffold in one command</strong>
 <p><code>dendros init</code> scans your launch files and writes a ready-to-edit <code>dendROS.yaml</code> automatically.</p>
@@ -67,34 +62,9 @@ DendROS shadows the `ros2` command with a shell function. When you run `ros2 lau
 <p>Python tracebacks colored automatically — bold red header, dim red frames, even when prefixed with a node name.</p>
 </div>
 <div class="feature-card" markdown>
-<div class="fc-icon">📋</div>
-<strong>ros2 node list colors</strong>
-<p>Node list output is colored with the same group colors and badges. Cross-terminal — launch in one window, list in another.</p>
-</div>
-<div class="feature-card" markdown>
-<div class="fc-icon">🔎</div>
-<strong>ros2 node info colors</strong>
-<p>Node info output is fully colorized: input sections use provider colors, output sections use the node's own color, and live topic/service indicators show connected group counts.</p>
-</div>
-<div class="feature-card" markdown>
-<div class="fc-icon">🔧</div>
-<strong>ros2 service list colors</strong>
-<p>Service list output colored by owning node. Standard ROS 2 system services are dimmed automatically and can be hidden entirely with one config option.</p>
-</div>
-<div class="feature-card" markdown>
-<div class="fc-icon">⚡</div>
-<strong>ros2 action list colors</strong>
-<p>Action list output colored by owning node group, with the same badge and style options available in all other CLI commands.</p>
-</div>
-<div class="feature-card" markdown>
-<div class="fc-icon">📝</div>
-<strong>ros2 param list colors</strong>
-<p>Node headers colored with group badges; parameter names dimmed. Type annotations from <code>--param-type</code> rendered dim automatically.</p>
-</div>
-<div class="feature-card" markdown>
-<div class="fc-icon">🔬</div>
-<strong>ros2 param describe colors</strong>
-<p>Badge and bold colored param name at the top; field labels dimmed; section headers like <code>Constraints:</code> bolded for instant readability.</p>
+<div class="fc-icon">🖥️</div>
+<strong>All ros2 CLI commands wrapped</strong>
+<p>Node list, node info, service list, action list, topic list, param list, param describe — all colorized with the same group colors and badges, zero config overhead. [See all →](reference.md#ros2--intercepted-subcommands)</p>
 </div>
 <div class="feature-card" markdown>
 <div class="fc-icon">🔔</div>

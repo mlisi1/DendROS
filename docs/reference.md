@@ -69,6 +69,7 @@ Stored in `~/.config/dendROS/defaults.yaml`, managed via `dendros config`:
 | `unmatched_tag` | `null` | Global badge for unmatched nodes. |
 | `dim_unmatched` | `false` | Dim unmatched nodes globally. |
 | `show_default_services` | `true` | When `false`, hide standard ROS 2 system services from `ros2 service list` output. |
+| `topic_sort` | `default` | `default` = ros2 alphabetical order; `group` = system topics first, then by publisher group. |
 | `debug` | `false` | Print debug output on startup. |
 | `config_merge` | `true` | Merge configs from included packages. |
 | `colorize_launch_msgs` | `true` | Colorize lifecycle lines globally. |
@@ -101,6 +102,7 @@ The `ros2()` shell wrapper intercepts specific subcommands; everything else call
 | `ros2 action list` | Output piped through `dendros_action_list.py` — actions colored by owning node. See [ros2 action list](action-list.md). |
 | `ros2 param list` | Output piped through `dendros_param_list.py` — node headers colored, param lines dimmed. See [ros2 param list](param-list.md). |
 | `ros2 param describe` | Output piped through `dendros_param_describe.py` — badge + colored param name, dim labels, bold section headers. See [ros2 param describe](param-describe.md). |
+| `ros2 topic list` | Output piped through `dendros_topic_list.py` — topics colored by primary publisher group, pub/sub count blocks, badge left. `-v` verbose: bold headers, dim types. See [ros2 topic list](topic-list.md). |
 | Everything else | Passed directly to the real `ros2` binary, untouched. |
 
 ---

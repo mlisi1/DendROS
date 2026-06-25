@@ -61,8 +61,9 @@ Settings are written to `~/.config/dendROS/defaults.yaml` and apply across all p
 
 | Setting | Values | Description |
 |---|---|---|
-| **Show tag (CLI)** | `on` / `off` | Show `[TAG]` badges in `ros2 node list`, `ros2 node info`, `ros2 service list`, and `ros2 action list`. |
+| **Show tag (CLI)** | `on` / `off` | Show `[TAG]` badges in `ros2 node list`, `ros2 node info`, `ros2 service list`, `ros2 action list`, and `ros2 topic list`. |
 | **Show default services** | `on` / `off` | When off, standard ROS 2 system services (`set_parameters`, `get_parameters`, `get_loggers`, …) are hidden from `ros2 service list` output entirely. When on, they appear dimmed. |
+| **Topic list sort** | `default` / `group` | `default` preserves ros2's alphabetical order. `group` places system topics first, then groups topics by their publisher's color group (groups in first-occurrence order, alphabetical within each group), with unmatched topics last. See [ros2 topic list](topic-list.md). |
 
 ### Unmatched nodes
 
@@ -126,6 +127,7 @@ unmatched_color: null
 unmatched_tag: null
 dim_unmatched: false
 show_default_services: true
+topic_sort: default
 debug: false
 config_merge: true
 colorize_launch_msgs: true
