@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="docs/assets/images/logo_no_bg.png" width="300" alt="DendROS"/>
+  <img src="docs/assets/images/logo_no_bg.png" width="400" alt="DendROS"/>
 </p>
-
-<h1 align="center">DendROS</h1>
 <p align="center"><em>Color-coded ROS 2 output — because a wall of white text from 32 nodes is nobody's debugging tool.</em></p>
 
 <p align="center">
@@ -20,10 +18,21 @@
 <br>
 
 
-
-
 You launched your stack. Nav2, SLAM, hardware drivers, your own nodes — all printing to the same terminal,
 all the same color. By the time you find the line you were looking for, it has scrolled past.
+
+<div align="center">
+<table>
+<tr>
+<th>Vanilla <code>ros2 launch</code></th>
+<th>With DendROS</th>
+</tr>
+<tr>
+<td><img src="docs/assets/images/screenshots/vanilla.gif" width="380"/></td>
+<td><img src="docs/assets/images/screenshots/dendros_demo.gif" width="380"/></td>
+</tr>
+</table>
+</div>
 
 **DendROS assigns each group of nodes its own color.** You could have localization in blue, navigation in green,
 hardware in orange — defined once in a small YAML file that lives inside your package.
@@ -37,15 +46,13 @@ It also features some quality of life improvements for ROS outputs.
 
 
 
+
 ## Features
 
 
 - ### **Color by group** 
   One config file per package maps node groups to colors, badges, and display rules
 
-<p align="center">
-<img src="docs/assets/images/screenshots/terminal_output.png" width="600" alt="Colored Terminal Output"/>
-</p>
 
 - ### **All main `ros2` CLI commands wrapped**
   `ros2 node list`, `ros2 node info`, `ros2 service list`, `ros2 action list`, `ros2 topic list`, `ros2 param list`, and `ros2 param describe` — all colorized with the same group colors and badges, no extra config required. [→ Full feature list](https://mlisi1.github.io/DendROS/node-list/#ros2--intercepted-subcommands)
