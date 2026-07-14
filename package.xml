@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>dendros</name>
+  <version>1.0.0</version>
+  <description>Color-coded, per-node output for ros2 CLI — a shell wrapper around ros2 with configurable colorization, crash alerts, and tooling.</description>
+  <maintainer email="michele.lisi@phd.unipi.it">Michele Lisi</maintainer>
+  <license>MIT</license>
+
+  <url type="website">https://mlisi1.github.io/DendROS</url>
+  <url type="repository">https://github.com/mlisi1/DendROS</url>
+  <url type="bugtracker">https://github.com/mlisi1/DendROS/issues</url>
+  <author email="michele.lisi@phd.unipi.it">Michele Lisi</author>
+
+  <exec_depend>ros2cli</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
