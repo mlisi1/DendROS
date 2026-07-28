@@ -37,6 +37,8 @@ DEFAULTS = {
     "param_change_alert":       True,
     "param_change_alert_scope": "tracked",
     "param_change_alert_style": "inline",
+    "show_timestamp":           True,
+    "show_logger_name":         True,
 }
 
 

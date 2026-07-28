@@ -9,6 +9,8 @@ from lib.colorizers import (
     colorize_full_line,
     colorize_line,
     colorize_launch_msg,
+    strip_log_metadata,
+    PREFIX_RE,
 )
 from lib.colors import RESET
 from conftest import (
@@ -30,6 +32,7 @@ LAUNCH_WARN   = "[WARN] [talker-1]: process had stderr output: warning\n"
 LAUNCH_ERROR  = "[ERROR] [listener-1]: process has died [pid 9999, exit code -11]\n"
 PLAIN_LINE    = "Some plain text with no bracket prefix\n"
 ANSI_EMBED    = "[talker-1] \033[33m[WARN]\033[0m embedded warning\n"
+ANSI_EMBED_WARN = "[talker-1] \033[33m[WARN]\033[0m [1234.5] [/talker]: careful\n"
 
 CODE_BLUE = '34'
 CODE_RED  = '31'
@@ -531,3 +534,65 @@ class TestInvertedTag:
         result_direct   = colorize_full_line(NODE_LINE, CODE_BLUE, LABEL, True,
                                              tag_style='inverted')
         assert result_dispatch == result_direct
+
+
+# ── strip_log_metadata ────────────────────────────────────────────────────────
+
+class TestStripLogMetadata:
+    """show_timestamp / show_logger_name: strip [ts] and/or [logger] from the tail."""
+
+    def _prefix_end(self, line):
+        return PREFIX_RE.match(line).end()
+
+    def test_both_true_returns_unchanged(self):
+        result = strip_log_metadata(NODE_LINE, self._prefix_end(NODE_LINE), True, True)
+        assert result == NODE_LINE
+
+    def test_show_timestamp_false_removes_timestamp(self):
+        result = strip_log_metadata(NODE_LINE, self._prefix_end(NODE_LINE), False, True)
+        assert '[1234.567890]' not in result
+        assert '[/talker]' in result
+        assert result == "[talker-1] [INFO] [/talker]: Publishing: 'Hello World'\n"
+
+    def test_show_logger_name_false_removes_logger(self):
+        result = strip_log_metadata(NODE_LINE, self._prefix_end(NODE_LINE), True, False)
+        assert '[/talker]' not in result
+        assert '[1234.567890]' in result
+        assert result == "[talker-1] [INFO] [1234.567890]: Publishing: 'Hello World'\n"
+
+    def test_both_false_removes_both(self):
+        result = strip_log_metadata(NODE_LINE, self._prefix_end(NODE_LINE), False, False)
+        assert result == "[talker-1] [INFO]: Publishing: 'Hello World'\n"
+
+    def test_message_text_preserved(self):
+        result = strip_log_metadata(NODE_LINE, self._prefix_end(NODE_LINE), False, False)
+        assert "Publishing: 'Hello World'" in result
+
+    def test_prefix_untouched(self):
+        result = strip_log_metadata(NODE_LINE, self._prefix_end(NODE_LINE), False, False)
+        assert result.startswith('[talker-1]')
+
+    def test_embedded_ansi_severity_preserved(self):
+        # RCUTILS_COLORIZED_OUTPUT wraps [WARN] in ANSI; that must survive stripping.
+        result = strip_log_metadata(ANSI_EMBED_WARN, self._prefix_end(ANSI_EMBED_WARN), False, False)
+        assert '\033[33m[WARN]\033[0m' in result
+        assert '1234.5' not in result
+        assert '/talker' not in result
+
+    def test_non_matching_line_returned_unchanged(self):
+        result = strip_log_metadata(PLAIN_LINE, 0, False, False)
+        assert result == PLAIN_LINE
+
+    def test_preserves_newline(self):
+        result = strip_log_metadata(NODE_LINE, self._prefix_end(NODE_LINE), False, False)
+        assert result.endswith('\n')
+
+    def test_works_after_colorize_tag_only(self):
+        # Typical pipeline order: color the prefix first, then strip metadata
+        # from the (unaffected) tail.
+        colored = colorize_tag_only(NODE_LINE, CODE_BLUE, LABEL, show_tag=False)
+        prefix_end = len(f'\033[{CODE_BLUE}m[talker-1]\033[0m')
+        result = strip_log_metadata(colored, prefix_end, False, False)
+        assert_segment_colored(result, '[talker-1]', CODE_BLUE)
+        assert '[1234.567890]' not in result
+        assert '[/talker]' not in result

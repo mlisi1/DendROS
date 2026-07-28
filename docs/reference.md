@@ -50,6 +50,8 @@ dendros enable     # unsets DENDROS_DISABLE
 | `unmatched_tag` | `null` | string\|null | Badge for unmatched nodes. Only shown when `unmatched_color` is set. |
 | `dim_unmatched` | `false` | bool | Dim unmatched nodes. Only when `unmatched_color: null`. |
 | `colorize_launch_msgs` | `true` | bool | Colorize `[INFO] [node-N]: …` lifecycle lines. |
+| `show_timestamp` | `true` | bool | Show the `[timestamp]` bracket in node log lines for this package. |
+| `show_logger_name` | `true` | bool | Show the `[logger_name]` bracket in node log lines for this package. |
 | `highlight` / `highlights` | `[]` | list | Keyword entries applied to all matched nodes in this package. See [Keyword highlighting](configuration.md#keyword-highlighting). |
 
 ---
@@ -73,6 +75,8 @@ Stored in `~/.config/dendROS/defaults.yaml`, managed via `dendros config`:
 | `debug` | `false` | Print debug output on startup. |
 | `config_merge` | `true` | Merge configs from included packages. |
 | `colorize_launch_msgs` | `true` | Colorize lifecycle lines globally. |
+| `show_timestamp` | `true` | Show the `[timestamp]` bracket in node log lines globally. |
+| `show_logger_name` | `true` | Show the `[logger_name]` bracket in node log lines globally. |
 | `crash_alert` | `true` | Print an inline banner when a node dies unexpectedly. |
 | `crash_alert_color` | `node` | `node` = use group color; `red` = always bold red. |
 | `crash_alert_interval` | `30` | Seconds between periodic banner reprints. `0` = only on new crashes. |

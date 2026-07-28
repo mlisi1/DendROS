@@ -14,6 +14,42 @@ LAUNCH_RE = re.compile(
 
 _LOG_LEVELS = frozenset({'INFO', 'WARN', 'WARNING', 'ERROR', 'DEBUG', 'FATAL'})
 
+# Tail of a node output line, after the [node-N] prefix:
+#   [LEVEL] [timestamp] [logger_name]: message
+# group 1 = "[LEVEL]" (with any surrounding ANSI, e.g. RCUTILS_COLORIZED_OUTPUT)
+# group 2 = " [timestamp]"
+# group 3 = " [logger_name]"
+# group 4 = ": message" (rest of the line, including trailing newline)
+_METADATA_RE = re.compile(
+    r'^(\s*(?:\033\[[0-9;]*m)*\[(?:INFO|WARN(?:ING)?|ERROR|DEBUG|FATAL)\](?:\033\[[0-9;]*m)*)'
+    r'(\s*\[[^\]]*\])'
+    r'(\s*\[[^\]]*\])'
+    r'(:.*)$',
+    re.DOTALL,
+)
+
+
+def strip_log_metadata(line, prefix_end, show_timestamp=True, show_logger_name=True):
+    """Remove the [timestamp] and/or [logger_name] brackets from a node log line's tail.
+
+    `prefix_end` is the index just past the [node-N] prefix (PREFIX_RE.match(line).end()).
+    Lines whose tail doesn't match the expected "[LEVEL] [ts] [logger]: msg" shape
+    (e.g. traceback continuation lines) are returned unchanged.
+    """
+    if show_timestamp and show_logger_name:
+        return line
+    prefix = line[:prefix_end]
+    m = _METADATA_RE.match(line[prefix_end:])
+    if not m:
+        return line
+    level_part, ts_part, logger_part, colon_rest = m.groups()
+    new_tail = level_part
+    if show_timestamp:
+        new_tail += ts_part
+    if show_logger_name:
+        new_tail += logger_part
+    return prefix + new_tail + colon_rest
+
 
 def colorize_tag_only(line, ansi_code, label, show_tag, tag_position='after', tag_style='normal'):
     """Color only the [node-N] prefix and optional [TAG] badge."""
