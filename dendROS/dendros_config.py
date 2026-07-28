@@ -6,6 +6,7 @@ import os
 import sys
 import textwrap
 import time
+from typing import List, NamedTuple, Optional
 
 try:
     import yaml
@@ -24,36 +25,87 @@ from lib.logo import (
     draw_logo_ansi,
 )
 
-# (key, display_label, kind, cycle_options)
-_FIELDS = [
-    ("color_mode",            "Color mode",              "cycle", ["tag_only", "full_line"]),
-    ("show_tag_launch",       "Show tag (launch/run)",   "cycle", [True, False]),
-    ("show_tag_cli",          "Show tag (CLI)",           "cycle", [True, False]),
-    ("tag_position",          "Tag position",             "cycle", ["after", "before"]),
-    ("tag_style",            "Tag style",             "cycle", ["normal", "inverted"]),
-    ("unmatched_color",      "Unmatched color",       "text",  None),
-    ("debug",                "Debug mode",            "cycle", [False, True]),
-    ("config_merge",         "Config merge",          "cycle", [True, False]),
-    ("colorize_launch_msgs", "Colorize launch msgs",  "cycle", [True, False]),
-    ("show_timestamp",       "Show timestamp",        "cycle", [True, False]),
-    ("show_logger_name",     "Show logger name",      "cycle", [True, False]),
-    ("unmatched_tag",        "Unmatched tag",         "text",  None),
-    ("dim_unmatched",         "Dim unmatched",           "cycle", [False, True]),
-    ("show_default_services", "Show default services",   "cycle", [True, False]),
-    ("topic_sort",            "Topic list sort",          "cycle", ["default", "group"]),
-    ("init_modify_build",     "Init: modify build",      "cycle", [True, False]),
-    ("init_on_existing",     "Init: on existing",     "cycle", ["abort", "merge", "overwrite"]),
-    ("init_color",           "Init: color",           "cycle", ["palette", "null"]),
-    ("init_color_bold",      "Init: bold colors",     "cycle", [False, True]),
-    ("init_label",           "Init: auto label",      "cycle", [False, True]),
-    ("crash_alert",              "Crash alert",           "cycle", [False, True]),
-    ("crash_alert_color",        "Alert color",           "cycle", ["node", "red"]),
-    ("crash_alert_interval",     "Alert interval (s)",    "text",  None),
-    ("traceback_color",          "Traceback color",       "cycle", ["fancy", "red", "off"]),
-    ("param_change_alert",       "Param change alert",    "cycle", [False, True]),
-    ("param_change_alert_scope", "Param alert scope",     "cycle", ["tracked", "all"]),
-    ("param_change_alert_style", "Param alert style",     "cycle", ["inline", "inverted"]),
+class Field(NamedTuple):
+    """One setting row. `group` must be a tab_id declared in _TAB_ORDER.
+
+    Appended at the end (not inserted) so existing positional access
+    (f[0], f[2], f[3]) keeps working — only exact-4-variable unpacking breaks.
+    """
+    key:   str
+    label: str
+    kind:  str                    # "cycle" | "text"
+    opts:  Optional[List[object]]
+    group: str
+
+
+# (tab_id, display_label) — order here is the order tabs render left-to-right.
+# This controls tab ORDER/LABEL only; the field→tab mapping lives solely in
+# each Field.group above, so adding a setting later never touches this list
+# unless it needs a brand-new category.
+_TAB_ORDER = [
+    ("output",      "Output"),
+    ("cli",         "CLI"),
+    ("unmatched",   "Unmatched"),
+    ("system",      "System"),
+    ("diagnostics", "Diagnostics"),
+    ("param",       "Param Alerts"),
+    ("init",        "Init"),
 ]
+
+_FIELDS = [
+    # ── Output (launch / run) ────────────────────────────────────────────────
+    Field("color_mode",            "Color mode",              "cycle", ["tag_only", "full_line"],          "output"),
+    Field("show_tag_launch",       "Show tag (launch/run)",   "cycle", [True, False],                       "output"),
+    Field("tag_position",          "Tag position",             "cycle", ["after", "before"],                "output"),
+    Field("tag_style",             "Tag style",                "cycle", ["normal", "inverted"],             "output"),
+    Field("colorize_launch_msgs",  "Colorize launch msgs",     "cycle", [True, False],                       "output"),
+    Field("show_timestamp",        "Show timestamp",           "cycle", [True, False],                       "output"),
+    Field("show_logger_name",      "Show logger name",         "cycle", [True, False],                       "output"),
+
+    # ── CLI commands ─────────────────────────────────────────────────────────
+    Field("show_tag_cli",          "Show tag (CLI)",           "cycle", [True, False],                       "cli"),
+    Field("show_default_services", "Show default services",   "cycle", [True, False],                       "cli"),
+    Field("topic_sort",            "Topic list sort",          "cycle", ["default", "group"],               "cli"),
+
+    # ── Unmatched nodes ──────────────────────────────────────────────────────
+    Field("unmatched_color",       "Unmatched color",          "text",  None,                                "unmatched"),
+    Field("unmatched_tag",         "Unmatched tag",             "text",  None,                                "unmatched"),
+    Field("dim_unmatched",         "Dim unmatched",             "cycle", [False, True],                       "unmatched"),
+
+    # ── System ───────────────────────────────────────────────────────────────
+    Field("debug",                 "Debug mode",                "cycle", [False, True],                      "system"),
+    Field("config_merge",          "Config merge",              "cycle", [True, False],                      "system"),
+
+    # ── Diagnostics (crash alert + traceback) ────────────────────────────────
+    Field("crash_alert",           "Crash alert",               "cycle", [False, True],                      "diagnostics"),
+    Field("crash_alert_color",     "Alert color",                "cycle", ["node", "red"],                   "diagnostics"),
+    Field("crash_alert_interval",  "Alert interval (s)",         "text",  None,                                "diagnostics"),
+    Field("traceback_color",       "Traceback color",            "cycle", ["fancy", "red", "off"],           "diagnostics"),
+
+    # ── Parameter change alert ───────────────────────────────────────────────
+    Field("param_change_alert",       "Param change alert",     "cycle", [False, True],                      "param"),
+    Field("param_change_alert_scope", "Param alert scope",       "cycle", ["tracked", "all"],                "param"),
+    Field("param_change_alert_style", "Param alert style",       "cycle", ["inline", "inverted"],            "param"),
+
+    # ── Init defaults ────────────────────────────────────────────────────────
+    Field("init_modify_build",     "Init: modify build",        "cycle", [True, False],                      "init"),
+    Field("init_on_existing",      "Init: on existing",          "cycle", ["abort", "merge", "overwrite"],  "init"),
+    Field("init_color",            "Init: color",                "cycle", ["palette", "null"],               "init"),
+    Field("init_color_bold",       "Init: bold colors",           "cycle", [False, True],                    "init"),
+    Field("init_label",            "Init: auto label",            "cycle", [False, True],                    "init"),
+]
+
+
+def _fields_for_tab(tab_id):
+    """Return the Field entries whose group == tab_id, in _FIELDS declaration order."""
+    return [f for f in _FIELDS if f.group == tab_id]
+
+
+_TAB_IDS = {tid for tid, _ in _TAB_ORDER}
+assert not ({f.group for f in _FIELDS} - _TAB_IDS), (
+    f"Field group(s) not declared in _TAB_ORDER: {({f.group for f in _FIELDS} - _TAB_IDS)}"
+)
+assert all(_fields_for_tab(tid) for tid, _ in _TAB_ORDER), "Every declared tab must have >=1 field"
 
 _DESCS = {
     "color_mode": (
@@ -283,6 +335,29 @@ def _edit_text(scr, prompt, current):
 
 # ── main TUI loop ─────────────────────────────────────────────────────────────
 
+def _draw_tab_bar(scr, row, fc, w, cur_tab):
+    """Render the tab strip. Falls back to a compact "‹ n/N Label ›" indicator
+    when the full set of tab labels doesn't fit the available width — same
+    graceful-degradation spirit as the side logo's _LOGO_MIN_W cutoff.
+    """
+    avail_w = w - fc - 2
+    full_labels = [f"{i + 1}:{lbl}" for i, (_, lbl) in enumerate(_TAB_ORDER)]
+    full_width  = sum(len(l) + 3 for l in full_labels) - 3
+
+    if full_width <= avail_w:
+        col = fc
+        for i, lbl in enumerate(full_labels):
+            is_cur = (i == cur_tab)
+            txt  = f"[{lbl}]" if is_cur else f" {lbl} "
+            attr = (curses.color_pair(_CP_SEL) | curses.A_BOLD) if is_cur else (curses.color_pair(_CP_DIM) | curses.A_DIM)
+            _put(scr, row, col, txt, attr)
+            col += len(txt) + 1
+    else:
+        _, cur_label = _TAB_ORDER[cur_tab]
+        compact = f"‹ {cur_tab + 1}/{len(_TAB_ORDER)} {cur_label} ›"
+        _put(scr, row, fc, compact[:avail_w], curses.color_pair(_CP_SEL) | curses.A_BOLD)
+
+
 def _run(scr):
     if curses.has_colors():
         _init_colors()
@@ -292,6 +367,7 @@ def _run(scr):
 
     cfg        = load_global_config()
     dirty      = False
+    cur_tab    = 0
     sel        = 0
     status     = ("", 0)
     hue_offset = 0.0
@@ -315,19 +391,30 @@ def _run(scr):
         if use_logo:
             _draw_vline(scr, _LOGO_W, start_row=1, end_row=1 + _LOGO_ROWS + 1)
 
-        for i, (key, label, kind, opts) in enumerate(_FIELDS):
-            row    = 2 + i
-            val    = cfg[key]
+        tab_id, tab_label = _TAB_ORDER[cur_tab]
+        fields = _fields_for_tab(tab_id)
+        sel = min(sel, len(fields) - 1)
+
+        _draw_tab_bar(scr, 1, fc, w, cur_tab)
+        try:
+            scr.hline(2, fc, curses.ACS_HLINE, max(0, w - fc),
+                      curses.color_pair(_CP_DIM) | curses.A_DIM)
+        except curses.error:
+            pass
+
+        for i, f in enumerate(fields):
+            row    = 3 + i
+            val    = cfg[f.key]
             is_sel = (i == sel)
             prefix = " ► " if is_sel else "   "
             row_attr = (curses.color_pair(_CP_SEL) | curses.A_BOLD) if is_sel else 0
 
             _put(scr, row, fc,     prefix,          row_attr)
-            _put(scr, row, fc + 3, f"{label:<22}",  row_attr)
+            _put(scr, row, fc + 3, f"{f.label:<22}",  row_attr)
 
             col = fc + 26
-            if kind == "cycle" and opts:
-                for opt in opts:
+            if f.kind == "cycle" and f.opts:
+                for opt in f.opts:
                     is_cur   = (str(opt) == str(val))
                     opt_txt  = f"[{_val_str(opt)}]" if is_cur else _val_str(opt)
                     opt_attr = (curses.color_pair(_CP_VAL) | curses.A_BOLD) if is_cur else (curses.color_pair(_CP_DIM) | curses.A_DIM)
@@ -338,14 +425,14 @@ def _run(scr):
                 val_attr = (curses.color_pair(_CP_VAL) | curses.A_BOLD) if is_sel else curses.color_pair(_CP_VAL)
                 _put(scr, row, col, val_txt, val_attr)
 
-        sep_row  = 2 + len(_FIELDS) + 1
+        sep_row  = 3 + len(fields) + 1
         desc_row = sep_row + 1
         try:
             scr.hline(sep_row, fc, curses.ACS_HLINE, max(0, w - fc),
                       curses.color_pair(_CP_DIM) | curses.A_DIM)
         except curses.error:
             pass
-        key_sel = _FIELDS[sel][0]
+        key_sel = fields[sel].key
         max_desc_w = max(10, w - fc - 4)
         desc_end_row = desc_row
         for line in _DESCS.get(key_sel, ()):
@@ -359,7 +446,7 @@ def _run(scr):
             _put(scr, st_row, fc + 2, status[0],
                  curses.color_pair(status[1]) | curses.A_BOLD)
 
-        hints = "  ↑↓ navigate   Space/→ cycle   e edit text   s save   q quit"
+        hints = "  ↑↓ field   ←→/Space cycle   Tab/h l tab   1-9 jump   e edit   s save   q quit"
         _put(scr, h - 1, 0, hints[:w - 1].ljust(w - 1), curses.A_REVERSE | curses.A_DIM)
 
         scr.refresh()
@@ -373,35 +460,49 @@ def _run(scr):
             continue
 
         status = ("", 0)
-        field_key, field_label, kind, opts = _FIELDS[sel]
+        field = fields[sel]
 
         if key in (curses.KEY_UP, ord('k')):
             sel = max(0, sel - 1)
 
         elif key in (curses.KEY_DOWN, ord('j')):
-            sel = min(len(_FIELDS) - 1, sel + 1)
+            sel = min(len(fields) - 1, sel + 1)
+
+        elif key in (9, ord('l')):
+            cur_tab = (cur_tab + 1) % len(_TAB_ORDER)
+            sel = 0
+
+        elif key in (curses.KEY_BTAB, ord('h')):
+            cur_tab = (cur_tab - 1) % len(_TAB_ORDER)
+            sel = 0
+
+        elif ord('1') <= key <= ord('9'):
+            idx = key - ord('1')
+            if idx < len(_TAB_ORDER):
+                cur_tab = idx
+                sel = 0
 
         elif key in (ord(' '), curses.KEY_RIGHT, 10, 13, curses.KEY_ENTER):
-            if kind == "cycle" and opts:
-                cur_idx = next((i for i, o in enumerate(opts) if str(o) == str(cfg[field_key])), 0)
-                cfg[field_key] = opts[(cur_idx + 1) % len(opts)]
+            if field.kind == "cycle" and field.opts:
+                cur_idx = next((i for i, o in enumerate(field.opts) if str(o) == str(cfg[field.key])), 0)
+                cfg[field.key] = field.opts[(cur_idx + 1) % len(field.opts)]
                 dirty = True
             else:
-                result = _edit_text(scr, field_label, cfg[field_key])
+                result = _edit_text(scr, field.label, cfg[field.key])
                 if result is not _UNCHANGED:
-                    cfg[field_key] = result
+                    cfg[field.key] = result
                     dirty = True
 
         elif key == curses.KEY_LEFT:
-            if kind == "cycle" and opts:
-                cur_idx = next((i for i, o in enumerate(opts) if str(o) == str(cfg[field_key])), 0)
-                cfg[field_key] = opts[(cur_idx - 1) % len(opts)]
+            if field.kind == "cycle" and field.opts:
+                cur_idx = next((i for i, o in enumerate(field.opts) if str(o) == str(cfg[field.key])), 0)
+                cfg[field.key] = field.opts[(cur_idx - 1) % len(field.opts)]
                 dirty = True
 
         elif key == ord('e'):
-            result = _edit_text(scr, field_label, cfg[field_key])
+            result = _edit_text(scr, field.label, cfg[field.key])
             if result is not _UNCHANGED:
-                cfg[field_key] = result
+                cfg[field.key] = result
                 dirty = True
 
         elif key == ord('s'):

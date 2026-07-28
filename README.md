@@ -134,7 +134,7 @@ ros2 launch my_bringup main.launch.py
 
 ## Global settings
 
-If you want to customize the global configs, `dendros config` opens an interactive TUI to tune defaults across all your packages. Use the arrow keys to navigate or to change the selected option. 
+If you want to customize the global configs, `dendros config` opens an interactive TUI to tune defaults across all your packages, grouped into tabs (`Tab`/`h`/`l` to switch, arrow keys to navigate a tab's fields and change the selected option). See the [full keyboard reference](https://mlisi1.github.io/DendROS/global-config/#keyboard-reference).
 
 <p align="center">
   <img src="docs/assets/images/screenshots/dendros_config.png" width="780" alt="dendros config TUI"/>

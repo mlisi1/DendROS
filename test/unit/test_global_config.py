@@ -17,6 +17,8 @@ from dendros_config import (
     _DESCS,
     _UNCHANGED,
     _val_str,
+    _TAB_ORDER,
+    _fields_for_tab,
 )
 from lib.logo import (
     _LOGO_LINES,
@@ -220,27 +222,63 @@ class TestFieldDefinitions:
             assert k in field_keys, f"No field entry for default key '{k}'"
 
     def test_all_cycle_fields_have_options(self):
-        for key, label, kind, opts in _FIELDS:
-            if kind == "cycle":
-                assert opts is not None and len(opts) >= 2, (
-                    f"Cycle field '{key}' needs at least 2 options"
+        for f in _FIELDS:
+            if f.kind == "cycle":
+                assert f.opts is not None and len(f.opts) >= 2, (
+                    f"Cycle field '{f.key}' needs at least 2 options"
                 )
 
     def test_all_fields_have_descriptions(self):
-        for key, _, _, _ in _FIELDS:
-            assert key in _DESCS, f"No description for field '{key}'"
-            assert len(_DESCS[key]) >= 1
+        for f in _FIELDS:
+            assert f.key in _DESCS, f"No description for field '{f.key}'"
+            assert len(_DESCS[f.key]) >= 1
 
     def test_cycle_options_include_default_value(self):
         """Every default value must appear as a cycle option for its field."""
-        for key, _, kind, opts in _FIELDS:
-            if kind != "cycle":
+        for f in _FIELDS:
+            if f.kind != "cycle":
                 continue
-            default = _DEFAULTS[key]
-            opt_strs = [str(o) for o in opts]
+            default = _DEFAULTS[f.key]
+            opt_strs = [str(o) for o in f.opts]
             assert str(default) in opt_strs, (
-                f"Default '{default}' for '{key}' not in cycle options {opts}"
+                f"Default '{default}' for '{f.key}' not in cycle options {f.opts}"
             )
+
+
+# ── tab grouping ──────────────────────────────────────────────────────────────
+
+class TestTabGrouping:
+    def test_every_field_has_a_declared_group(self):
+        tab_ids = {tid for tid, _ in _TAB_ORDER}
+        for f in _FIELDS:
+            assert f.group in tab_ids, f"Field '{f.key}' has undeclared group '{f.group}'"
+
+    def test_every_declared_tab_has_at_least_one_field(self):
+        for tid, label in _TAB_ORDER:
+            assert len(_fields_for_tab(tid)) >= 1, f"Tab '{tid}' ({label}) has no fields"
+
+    def test_no_duplicate_tab_ids(self):
+        ids = [tid for tid, _ in _TAB_ORDER]
+        assert len(ids) == len(set(ids))
+
+    def test_tab_field_counts_sum_to_total_field_count(self):
+        total = sum(len(_fields_for_tab(tid)) for tid, _ in _TAB_ORDER)
+        assert total == len(_FIELDS)
+
+    def test_fields_for_tab_preserves_fields_declaration_order(self):
+        output_fields = _fields_for_tab("output")
+        assert output_fields[0].key == "color_mode"
+        assert output_fields[-1].key == "show_logger_name"
+
+    def test_field_is_namedtuple_with_group_attribute(self):
+        assert hasattr(_FIELDS[0], "group")
+        assert isinstance(_FIELDS[0], tuple)
+
+    def test_field_positional_indexing_still_works(self):
+        # group is appended, not inserted, so f[0..3] must remain
+        # (key, label, kind, opts) for backward compatibility.
+        f = _FIELDS[0]
+        assert f[0] == f.key and f[1] == f.label and f[2] == f.kind and f[3] == f.opts
 
 
 # ── logo data integrity ───────────────────────────────────────────────────────
