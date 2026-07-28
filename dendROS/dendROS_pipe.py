@@ -24,7 +24,7 @@ except ImportError:
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lib.colors import make_dim
-from lib.colorizers import PREFIX_RE, LAUNCH_RE, _LOG_LEVELS, colorize_line, colorize_launch_msg
+from lib.colorizers import PREFIX_RE, LAUNCH_RE, _LOG_LEVELS, colorize_line, colorize_launch_msg, strip_log_metadata
 from lib.config_loader import load_config, merge_color_maps, resolve_node, resolve_node_mode, resolve_node_style
 from lib.keywords import build_keyword_highlights, resolve_node_keywords, apply_keyword_highlights
 from lib.discovery import (
@@ -113,6 +113,8 @@ def main():
         'unmatched_tag':        global_cfg.get('unmatched_tag',        None),
         'dim_unmatched':        global_cfg.get('dim_unmatched',        False),
         'tag_style':            global_cfg.get('tag_style',            'normal'),
+        'show_timestamp':       global_cfg.get('show_timestamp',       True),
+        'show_logger_name':     global_cfg.get('show_logger_name',     True),
     }
 
     color_map, tag_map, mode_map, style_map, keyword_map, defaults = {}, {}, {}, {}, {}, base
@@ -162,6 +164,8 @@ def main():
     tag_position         = defaults.get('tag_position',         'after')
     tag_style            = defaults.get('tag_style',            'normal')
     colorize_launch_msgs = defaults.get('colorize_launch_msgs', True)
+    show_timestamp       = defaults.get('show_timestamp',       True)
+    show_logger_name     = defaults.get('show_logger_name',     True)
     unmatched_tag        = defaults.get('unmatched_tag') or None
     raw_unmatched        = defaults.get('unmatched_color') or None
     if not raw_unmatched and defaults.get('dim_unmatched', False):
@@ -266,6 +270,11 @@ def main():
 
             if code is None and unmatched_color:
                 code, label = str(unmatched_color), unmatched_tag
+
+            if not show_timestamp or not show_logger_name:
+                line = strip_log_metadata(line, m.end(), show_timestamp, show_logger_name)
+                rest = line[m.end():]
+                content = rest[1:] if rest.startswith(' ') else rest
 
             if (tc._traceback_color != 'off' and
                     (tc._in_traceback or tc._TB_START_RE.match(content) or tc._TB_DURING_RE.match(content))):

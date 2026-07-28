@@ -94,6 +94,8 @@ class TestLoadGlobalConfig:
             "param_change_alert": True,
             "param_change_alert_scope": "all",
             "param_change_alert_style": "inverted",
+            "show_timestamp": False,
+            "show_logger_name": False,
         }
         with open(tmp_config, "w") as f:
             yaml.dump(data, f)
@@ -180,6 +182,8 @@ class TestSaveGlobalConfig:
             "param_change_alert": True,
             "param_change_alert_scope": "all",
             "param_change_alert_style": "inverted",
+            "show_timestamp": False,
+            "show_logger_name": False,
         }
         save_global_config(custom)
         result = load_global_config()
@@ -397,6 +401,29 @@ class TestCrashAlertConfig:
         assert "crash_alert" in _DESCS
         assert "crash_alert_color" in _DESCS
         assert "crash_alert_corner" not in _DESCS
+
+
+# ── show_timestamp / show_logger_name config keys ─────────────────────────────
+
+class TestLogMetadataConfig:
+    def test_defaults_show_both_by_default(self):
+        assert _DEFAULTS["show_timestamp"] is True
+        assert _DEFAULTS["show_logger_name"] is True
+
+    def test_fields_include_both_keys(self):
+        keys = [f[0] for f in _FIELDS]
+        assert "show_timestamp" in keys
+        assert "show_logger_name" in keys
+
+    def test_both_are_cycle_fields(self):
+        for key in ("show_timestamp", "show_logger_name"):
+            field = next(f for f in _FIELDS if f[0] == key)
+            assert field[2] == "cycle"
+            assert True in field[3] and False in field[3]
+
+    def test_descs_present(self):
+        assert "show_timestamp" in _DESCS
+        assert "show_logger_name" in _DESCS
 
     def test_load_crash_alert_true(self, tmp_config):
         with open(tmp_config, "w") as f:

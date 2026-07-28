@@ -56,6 +56,8 @@ Settings are written to `~/.config/dendROS/defaults.yaml` and apply across all p
 | **Tag position** | `after` / `before` | Badge position: `after` → `[node-N] [TAG] …` · `before` → `[TAG] [node-N] …`. |
 | **Tag style** | `normal` / `inverted` | `normal` = colored text on default background. `inverted` = colored background with empty letters (like crash alert banners). Overridable per-group with `tag_style:`. |
 | **Colorize launch msgs** | `on` / `off` | When off, `[INFO] [node-N]: process started …` lines pass through unchanged. |
+| **Show timestamp** | `on` / `off` | Show the `[timestamp]` bracket in node log lines (`[node-N] [INFO] [timestamp] [logger]: msg`). Off strips it. |
+| **Show logger name** | `on` / `off` | Show the `[logger_name]` bracket — the ROS graph name registered via `get_logger()`, which can differ from the `[node-N]` launch process name. Off strips it. |
 
 ### CLI commands
 
@@ -131,6 +133,8 @@ topic_sort: default
 debug: false
 config_merge: true
 colorize_launch_msgs: true
+show_timestamp: true
+show_logger_name: true
 crash_alert: true
 crash_alert_color: node
 crash_alert_interval: 30

@@ -35,6 +35,8 @@ _FIELDS = [
     ("debug",                "Debug mode",            "cycle", [False, True]),
     ("config_merge",         "Config merge",          "cycle", [True, False]),
     ("colorize_launch_msgs", "Colorize launch msgs",  "cycle", [True, False]),
+    ("show_timestamp",       "Show timestamp",        "cycle", [True, False]),
+    ("show_logger_name",     "Show logger name",      "cycle", [True, False]),
     ("unmatched_tag",        "Unmatched tag",         "text",  None),
     ("dim_unmatched",         "Dim unmatched",           "cycle", [False, True]),
     ("show_default_services", "Show default services",   "cycle", [True, False]),
@@ -102,6 +104,16 @@ _DESCS = {
         "on  — color the [node-N] bracket in launch-framework lines"
         " ([INFO] [node-N]: process started …)",
         "off — leave launch-framework lifecycle lines untouched (pass through unchanged)",
+    ),
+    "show_timestamp": (
+        "on  — show the [timestamp] bracket in node log lines"
+        " ([node-N] [INFO] [timestamp] [logger]: msg)",
+        "off — strip the timestamp bracket for a shorter log line",
+    ),
+    "show_logger_name": (
+        "on  — show the [logger_name] bracket (the ROS graph name registered via"
+        " get_logger(); can differ from the [node-N] launch process name)",
+        "off — strip the logger name bracket for a shorter log line",
     ),
     "unmatched_tag": (
         "Badge shown for nodes not listed in any group when unmatched_color is set.",

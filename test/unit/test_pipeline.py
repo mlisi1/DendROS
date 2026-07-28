@@ -1180,3 +1180,76 @@ class TestKeywordHighlightPipeline:
         plain = strip_ansi(out)
         assert 'important' in plain
         assert 'update here' in plain
+
+
+# ── show_timestamp / show_logger_name ─────────────────────────────────────────
+
+class TestLogMetadataPipeline:
+    """show_timestamp / show_logger_name strip the [ts]/[logger] brackets from node lines."""
+
+    PKG = 'test_pkg'
+    NODE_LINE = "[talker-1] [INFO] [1234.567890] [/talker]: Publishing: 'Hello World'\n"
+
+    def _run_with_cfg(self, tmp_path, **cfg):
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('basic.yaml'))
+        _write_global_cfg(prefix, **cfg)
+        stdout, _, rc = run_pipe(prefix, self.PKG, [self.NODE_LINE])
+        assert rc == 0
+        return stdout
+
+    def test_defaults_show_both(self, tmp_path):
+        out = self._run_with_cfg(tmp_path)
+        plain = strip_ansi(out)
+        assert '[1234.567890]' in plain
+        assert '[/talker]' in plain
+
+    def test_show_timestamp_false_hides_timestamp(self, tmp_path):
+        out = self._run_with_cfg(tmp_path, show_timestamp=False)
+        plain = strip_ansi(out)
+        assert '[1234.567890]' not in plain
+        assert '[/talker]' in plain
+        assert '[INFO] [/talker]:' in plain
+
+    def test_show_logger_name_false_hides_logger(self, tmp_path):
+        out = self._run_with_cfg(tmp_path, show_logger_name=False)
+        plain = strip_ansi(out)
+        assert '[/talker]' not in plain
+        assert '[1234.567890]' in plain
+        assert '[INFO] [1234.567890]:' in plain
+
+    def test_both_false_hides_both(self, tmp_path):
+        out = self._run_with_cfg(tmp_path, show_timestamp=False, show_logger_name=False)
+        plain = strip_ansi(out)
+        assert '[1234.567890]' not in plain
+        assert '[/talker]' not in plain
+        assert '[INFO]:' in plain
+
+    def test_message_text_preserved(self, tmp_path):
+        out = self._run_with_cfg(tmp_path, show_timestamp=False, show_logger_name=False)
+        assert "Publishing: 'Hello World'" in strip_ansi(out)
+
+    def test_node_prefix_still_colored_when_stripped(self, tmp_path):
+        from lib.colors import _resolve_color
+        out = self._run_with_cfg(tmp_path, show_timestamp=False, show_logger_name=False)
+        talk_code = _resolve_color('blue')
+        assert_segment_colored(out, '[talker-1]', talk_code)
+
+    def test_per_package_override(self, tmp_path):
+        # Package-level `defaults: show_timestamp: false` should also work.
+        config = """\
+groups:
+  talk:
+    color: blue
+    label: "TALK"
+    nodes:
+      - talker
+defaults:
+  show_timestamp: false
+"""
+        prefix_dir = tmp_path / 'share' / self.PKG / 'config'
+        prefix_dir.mkdir(parents=True)
+        (prefix_dir / 'dendROS.yaml').write_text(config)
+        out, _, _ = run_pipe(str(tmp_path), self.PKG, [self.NODE_LINE])
+        plain = strip_ansi(out)
+        assert '[1234.567890]' not in plain
+        assert '[/talker]' in plain
