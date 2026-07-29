@@ -49,6 +49,31 @@ class TestQuantizeRgbTo256:
     def test_clamps_out_of_range_input(self):
         assert quantize_rgb_to_256(-10, 300, 128) == quantize_rgb_to_256(0, 255, 128)
 
+    def test_dark_grey_maps_to_grayscale_ramp_not_a_hued_cube_color(self):
+        # Regression: naive linear-rounding to 6 cube steps picked cube level 1 (value 95,
+        # a distinctly blue-tinted color) for a neutral dark grey like (24, 24, 26) instead
+        # of the much closer grayscale-ramp entry — the header background bug this caught.
+        idx = quantize_rgb_to_256(24, 24, 26)
+        assert 232 <= idx <= 255, f"expected a grayscale-ramp index, got {idx}"
+
+    def test_mid_grey_maps_to_grayscale_ramp(self):
+        idx = quantize_rgb_to_256(128, 128, 130)
+        assert 232 <= idx <= 255
+
+    def test_saturated_colors_still_use_cube_not_grayscale(self):
+        for r, g, b in [(224, 127, 0), (0, 75, 107), (255, 0, 0)]:
+            idx = quantize_rgb_to_256(r, g, b)
+            assert 16 <= idx <= 231, f"expected a cube index for a saturated color, got {idx}"
+
+    def test_cube_uses_real_xterm_levels_not_linear_steps(self):
+        # A value roughly midway between cube levels 0 (0) and 1 (95) should NOT round up
+        # to level 1 just because naive linear rounding (round(v/255*5)) would put it in
+        # the "second sixth" of the 0-255 range.
+        idx = quantize_rgb_to_256(30, 30, 30)
+        # 30 is much closer to grayscale ramp (nearest ~28) than to cube level 0 (0) or
+        # level 1 (95) -- either way it must not silently become a saturated color.
+        assert idx != (16 + 36 * 1 + 6 * 1 + 1)  # would be the wrong naive "level 1" cube cell
+
 
 # ── segments_from_ansi ──────────────────────────────────────────────────────────
 
@@ -111,6 +136,23 @@ class TestSegmentsFromAnsi:
         texts = [s[0] for s in segs]
         assert texts == ["a", " ", "b"]
 
+    def test_erase_to_eol_stripped_not_literal(self):
+        # param_watcher's inverted style ends lines with '\033[K' (erase-to-EOL) to pad
+        # the background — not an SGR color code, so it must be stripped rather than
+        # showing up as literal garbage text (this was a real bug: '^[[K' appeared
+        # visibly at the end of param-change notifications in the TUI).
+        line = "\033[107;30m value \033[K\033[0m"
+        segs = segments_from_ansi(line)
+        combined = ''.join(s[0] for s in segs)
+        assert '\033[K' not in combined
+        assert 'K' not in combined.replace(' value ', '')
+
+    def test_erase_to_eol_does_not_disturb_surrounding_color(self):
+        line = "\033[31mred\033[K\033[0m plain"
+        segs = segments_from_ansi(line)
+        assert segs[0] == ("red", 31 - 30, None, False)
+        assert segs[1] == (" plain", None, None, False)
+
     def test_dendros_tag_split(self):
         # Same shape as lib.colors.DENDROS_TAG: two colored runs, no plain text between.
         line = '\033[38;2;0;75;107;1m[dend\033[38;2;224;127;0;1mROS]\033[0m'
@@ -123,6 +165,24 @@ class TestSegmentsFromAnsi:
     def test_256_direct_code(self):
         segs = segments_from_ansi("\033[38;5;196mtext\033[0m")
         assert segs[0][1] == 196
+
+    def test_reverse_video_swaps_fg_into_bg(self):
+        # tag_style: inverted -> colorizers.py emits ansi_code + ';7' (e.g. "34;7").
+        # DendROS's inverted convention is colored bg + black hollow text (matching
+        # param_watcher's _fg_to_bg-built inverted style), not curses' "default" fg.
+        segs = segments_from_ansi("\033[34;7m[TAG]\033[0m")
+        text, fg, bg, bold = segs[0]
+        assert text == "[TAG]"
+        assert fg == 0  # explicit black, not None/default
+        assert bg == 34 - 30
+
+    def test_reverse_video_with_truecolor_and_bold(self):
+        line = "\033[38;2;0;75;107;1;7m[LOC]\033[0m"
+        segs = segments_from_ansi(line)
+        text, fg, bg, bold = segs[0]
+        assert fg == 0
+        assert bg == quantize_rgb_to_256(0, 75, 107)
+        assert bold is True
 
     def test_fg_reset_39(self):
         segs = segments_from_ansi("\033[31mred\033[39mplain\033[0m")
@@ -299,6 +359,17 @@ class TestRingLog:
         text = pad.addstr_calls[-1][2]
         assert len(text) <= 4
 
+    def test_append_never_writes_to_last_column(self):
+        # Regression: writing all the way to a pad's last column makes ncurses
+        # auto-wrap the cursor, which — with scrollok(True) and the cursor already on
+        # the pad's last row — triggers an extra implicit scroll (a spurious blank row
+        # after every line that exactly fills the terminal width).
+        pad = FakePad(height=5, width=10)
+        ring = RingLog(maxlen=100, pad=pad)
+        ring.append([("0123456789", None, None, False)], "0123456789")  # exactly pad width
+        col, text = pad.addstr_calls[-1][1], pad.addstr_calls[-1][2]
+        assert col + len(text) <= pad.width - 1
+
     def test_append_uses_pair_cache_for_colored_segments(self):
         fc = FakeCurses()
         cache = PairCache(fc)
@@ -323,6 +394,47 @@ class TestRingLog:
             ring.append([(f"line{i}", None, None, False)], f"line{i}")
         assert len(ring) == 3 == len(ring.plain_lines())
         assert ring.plain_lines() == ['line7', 'line8', 'line9']
+
+    # ── reattach()/detach() — surviving a mid-run disable/re-enable cycle ────────
+
+    def test_detach_stops_drawing_but_keeps_history(self):
+        pad = FakePad()
+        ring = RingLog(maxlen=100, pad=pad)
+        ring.append([("a", None, None, False)], "a")
+        ring.detach()
+        calls_before = len(pad.addstr_calls)
+        ring.append([("b", None, None, False)], "b")  # pad detached -- must not touch it
+        assert len(pad.addstr_calls) == calls_before
+        assert ring.plain_lines() == ["a", "b"]
+
+    def test_reattach_replays_full_history_onto_new_pad(self):
+        ring = RingLog(maxlen=100)  # no pad yet
+        ring.append([("a", None, None, False)], "a")
+        ring.append([("b", None, None, False)], "b")
+        new_pad = FakePad(height=5, width=40)
+        ring.reattach(new_pad, None)
+        # both prior lines got replayed (scrolled+written) onto the fresh pad
+        assert new_pad.scroll_calls == 2
+        texts = [call[2] for call in new_pad.addstr_calls]
+        assert texts == ["a", "b"]
+
+    def test_reattach_with_none_pad_is_a_no_op(self):
+        ring = RingLog(maxlen=100)
+        ring.append([("a", None, None, False)], "a")
+        ring.reattach(None, None)  # must not raise
+        assert ring.plain_lines() == ["a"]
+
+    def test_detach_then_reattach_preserves_history_across_two_pads(self):
+        pad1 = FakePad(height=5, width=40)
+        ring = RingLog(maxlen=100, pad=pad1)
+        ring.append([("first", None, None, False)], "first")
+        ring.detach()
+        ring.append([("during-gap", None, None, False)], "during-gap")  # recorded, not drawn
+        pad2 = FakePad(height=5, width=40)
+        ring.reattach(pad2, None)
+        assert ring.plain_lines() == ["first", "during-gap"]
+        assert [c[2] for c in pad2.addstr_calls] == ["first", "during-gap"]
+        assert pad1.addstr_calls == [(pad1.height - 1, 0, "first", 0)]  # pad1 never saw the gap line
 
 
 # ── crash_alert.set_sink() — TUI banner redirection ─────────────────────────────

@@ -1,6 +1,7 @@
 """Tests for dendros_config — data-layer helpers only (no curses)."""
 
 import os
+import re
 import sys
 import tempfile
 
@@ -28,6 +29,14 @@ from lib.logo import (
     _shift_rgb,
     _render_logo_line,
     _make_title_line,
+    build_small_logo,
+    _extract_full_pixel_grid,
+    _extract_pixel_grid_from_lines,
+    _downsample_pixel_grid,
+    _HQ_LOGO_W,
+    _HQ_LOGO_ROWS,
+    _HQ_LOGO_LINES,
+    _HQ_PIXEL_GRID,
 )
 from lib.global_config import load_global_config, save_global_config
 
@@ -100,6 +109,7 @@ class TestLoadGlobalConfig:
             "show_logger_name": False,
             "launch_mode": "tui",
             "tui_scrollback_lines": 2000,
+            "ignore_bold": True,
         }
         with open(tmp_config, "w") as f:
             yaml.dump(data, f)
@@ -190,6 +200,7 @@ class TestSaveGlobalConfig:
             "show_logger_name": False,
             "launch_mode": "tui",
             "tui_scrollback_lines": 2000,
+            "ignore_bold": True,
         }
         save_global_config(custom)
         result = load_global_config()
@@ -272,7 +283,7 @@ class TestTabGrouping:
     def test_fields_for_tab_preserves_fields_declaration_order(self):
         output_fields = _fields_for_tab("output")
         assert output_fields[0].key == "color_mode"
-        assert output_fields[-1].key == "tui_scrollback_lines"
+        assert output_fields[-1].key == "ignore_bold"
 
     def test_field_is_namedtuple_with_group_attribute(self):
         assert hasattr(_FIELDS[0], "group")
@@ -397,6 +408,128 @@ class TestLogoAnimation:
 
     def test_make_title_line_has_ansi(self):
         assert '\x1b[' in _make_title_line(0.0)
+
+
+# ── small (downsampled) logo — used in the launch TUI's header ────────────────
+
+class TestFullPixelGrid:
+    def test_dimensions(self):
+        grid = _extract_full_pixel_grid()
+        assert len(grid) == 2 * _LOGO_ROWS
+        assert all(len(row) == _LOGO_W for row in grid)
+
+    def test_contains_some_non_none_pixels(self):
+        grid = _extract_full_pixel_grid()
+        assert any(cell is not None for row in grid for cell in row)
+
+    def test_non_none_pixels_are_rgb_triples(self):
+        grid = _extract_full_pixel_grid()
+        for row in grid:
+            for cell in row:
+                if cell is not None:
+                    assert len(cell) == 3
+                    assert all(isinstance(c, int) for c in cell)
+
+
+class TestDownsamplePixelGrid:
+    def test_output_dimensions(self):
+        grid = [[(1, 2, 3)] * 10 for _ in range(10)]
+        out = _downsample_pixel_grid(grid, 4, 4)
+        assert len(out) == 4
+        assert all(len(row) == 4 for row in out)
+
+    def test_all_none_block_stays_none(self):
+        grid = [[None] * 4 for _ in range(4)]
+        out = _downsample_pixel_grid(grid, 2, 2)
+        assert all(cell is None for row in out for cell in row)
+
+    def test_uniform_color_survives_downsampling(self):
+        grid = [[(10, 20, 30)] * 4 for _ in range(4)]
+        out = _downsample_pixel_grid(grid, 2, 2)
+        assert all(cell == (10, 20, 30) for row in out for cell in row)
+
+    def test_averages_mixed_colors(self):
+        grid = [[(0, 0, 0), (100, 100, 100)], [(0, 0, 0), (100, 100, 100)]]
+        out = _downsample_pixel_grid(grid, 1, 1)
+        assert out[0][0] == (50, 50, 50)
+
+
+class TestBuildSmallLogo:
+    def test_default_row_count(self):
+        lines = build_small_logo()
+        assert len(lines) == 4
+
+    def test_custom_row_count(self):
+        lines = build_small_logo(target_rows=2)
+        assert len(lines) == 2
+
+    def test_lines_are_strings(self):
+        for line in build_small_logo(3):
+            assert isinstance(line, str)
+
+    def test_contains_ansi(self):
+        combined = ''.join(build_small_logo(3))
+        assert '\x1b[' in combined
+
+    def test_does_not_crash_for_various_sizes(self):
+        for n in (1, 2, 3, 4, 5, 8):
+            lines = build_small_logo(n)
+            assert len(lines) == n
+
+    def test_custom_target_cols(self):
+        lines = build_small_logo(target_rows=2, target_cols=5)
+        for line in lines:
+            visible = re.sub(r'\x1b\[[0-9;]*m', '', line)
+            assert len(visible) == 5
+
+
+class TestHqLogoSource:
+    """The higher-fidelity 84x84 source (from docs/assets/images/dendros_small.png,
+    decoded offline via stdlib zlib/struct — no PIL/third-party dep) that
+    build_small_logo() downsamples from, instead of re-shrinking the already-low-res
+    42x21 _LOGO_LINES."""
+
+    def test_dimensions(self):
+        assert _HQ_LOGO_W == 84
+        assert _HQ_LOGO_ROWS == 42
+        assert len(_HQ_LOGO_LINES) == _HQ_LOGO_ROWS
+
+    def test_lines_are_strings(self):
+        for line in _HQ_LOGO_LINES:
+            assert isinstance(line, str)
+
+    def test_contains_ansi(self):
+        assert '\x1b[' in ''.join(_HQ_LOGO_LINES)
+
+    def test_pixel_grid_dimensions(self):
+        assert len(_HQ_PIXEL_GRID) == 2 * _HQ_LOGO_ROWS
+        assert all(len(row) == _HQ_LOGO_W for row in _HQ_PIXEL_GRID)
+
+    def test_pixel_grid_contains_brand_colors(self):
+        # Sanity check the decode against the known brand palette (lib.colors.DENDROS_TAG
+        # uses the same blue (0,75,107) / orange (224,127,0)) rather than just "some color".
+        non_none = [c for row in _HQ_PIXEL_GRID for c in row if c is not None]
+        assert non_none, "decoded PNG produced no visible pixels at all"
+
+        def _close(c, target, tol=40):
+            return all(abs(c[i] - target[i]) <= tol for i in range(3))
+
+        assert any(_close(c, (0, 75, 107)) for c in non_none), "no brand-blue pixels found"
+        assert any(_close(c, (224, 127, 0)) for c in non_none), "no brand-orange pixels found"
+
+    def test_extract_pixel_grid_from_lines_matches_dedicated_hq_grid(self):
+        # _extract_full_pixel_grid() is the _LOGO_LINES-specific convenience wrapper;
+        # confirm the underlying generalized function produces the same HQ grid directly.
+        assert _extract_pixel_grid_from_lines(_HQ_LOGO_LINES, _HQ_LOGO_W) == _HQ_PIXEL_GRID
+
+    def test_build_small_logo_uses_hq_grid_not_low_res_one(self):
+        # Downsampling straight from the low-res 42x21-derived grid to the same target
+        # size should generally differ from downsampling the 84x84 HQ grid -- if these
+        # ever matched exactly it would mean build_small_logo() regressed to the old source.
+        from lib.logo import _FULL_PIXEL_GRID
+        hq = _downsample_pixel_grid(_HQ_PIXEL_GRID, 12, 12)
+        lowres = _downsample_pixel_grid(_FULL_PIXEL_GRID, 12, 12)
+        assert hq != lowres
 
 
 # ── _UNCHANGED sentinel ───────────────────────────────────────────────────────

@@ -1253,3 +1253,40 @@ defaults:
         plain = strip_ansi(out)
         assert '[1234.567890]' not in plain
         assert '[/talker]' in plain
+
+
+class TestIgnoreBoldPipeline:
+    """ignore_bold: compatibility workaround (some terminals brighten bold foreground
+    text but never brighten backgrounds, so a group's bold color can look like two
+    different shades between plain text and an inverted [TAG] badge). Strips the bold
+    SGR modifier everywhere colors are resolved, end-to-end through the real pipe."""
+
+    PKG = 'multi_group_pkg'
+    NODE_LINE = "[amcl-1] [INFO] [1234.5] [/amcl]: localizing\n"
+
+    def _run_with_cfg(self, tmp_path, **cfg):
+        prefix = make_prefix(tmp_path, self.PKG, fixture_config('multi_group.yaml'))
+        _write_global_cfg(prefix, **cfg)
+        stdout, _, rc = run_pipe(prefix, self.PKG, [self.NODE_LINE])
+        assert rc == 0
+        return stdout
+
+    def test_default_keeps_bold(self, tmp_path):
+        out = self._run_with_cfg(tmp_path)
+        # 'bold blue' resolves to '34;1' -- the bold token must survive by default
+        assert_segment_colored(out, '[amcl-1]', '34;1')
+
+    def test_ignore_bold_strips_bold_token(self, tmp_path):
+        out = self._run_with_cfg(tmp_path, ignore_bold=True)
+        assert_segment_colored(out, '[amcl-1]', '34')
+        assert '34;1' not in out
+
+    def test_ignore_bold_also_applies_to_inverted_tag(self, tmp_path):
+        out = self._run_with_cfg(tmp_path, ignore_bold=True, tag_style='inverted')
+        # inverted tag would normally be '34;1;7' -- bold must be stripped there too
+        assert '34;1;7' not in out
+        assert '34;7' in out
+
+    def test_ignore_bold_false_is_a_no_op(self, tmp_path):
+        out = self._run_with_cfg(tmp_path, ignore_bold=False)
+        assert_segment_colored(out, '[amcl-1]', '34;1')

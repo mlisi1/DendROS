@@ -1,6 +1,7 @@
 """Tests for _resolve_color and _hex_to_ansi — all color format combinations."""
 import pytest
-from lib.colors import _resolve_color, _hex_to_ansi
+import lib.colors as colors
+from lib.colors import _resolve_color, _hex_to_ansi, set_ignore_bold
 
 
 # ── _hex_to_ansi ─────────────────────────────────────────────────────────────
@@ -307,3 +308,69 @@ class TestEdgeCases:
     def test_integer_input_coerced(self):
         # _resolve_color does str(value) first
         assert _resolve_color(34) == '34'
+
+
+# ── ignore_bold — compatibility workaround for terminals that brighten bold ───
+# foreground text but never brighten backgrounds (see lib/colors.py docstring) ─
+
+@pytest.fixture(autouse=True)
+def _reset_ignore_bold():
+    """Module-level global state — must not leak between tests."""
+    set_ignore_bold(False)
+    yield
+    set_ignore_bold(False)
+
+
+class TestIgnoreBold:
+    def test_default_is_off(self):
+        assert colors._IGNORE_BOLD is False
+
+    def test_strips_bold_from_named_color(self):
+        set_ignore_bold(True)
+        assert _resolve_color('bold blue') == '34'
+
+    def test_strips_bold_from_hex(self):
+        set_ignore_bold(True)
+        assert _resolve_color('@#FF6600') == '38;2;255;102;0'
+
+    def test_strips_bold_from_bold_prefix_word(self):
+        set_ignore_bold(True)
+        assert _resolve_color('bold #FF6600') == '38;2;255;102;0'
+
+    def test_strips_bold_from_extended_named_color(self):
+        set_ignore_bold(True)
+        # 'bold orange' -> normally '1;38;2;255;165;0'
+        assert _resolve_color('bold orange') == '38;2;255;165;0'
+
+    def test_strips_bold_from_raw_ansi_code(self):
+        set_ignore_bold(True)
+        assert _resolve_color('34;1') == '34'
+
+    def test_strips_bold_regardless_of_param_order(self):
+        set_ignore_bold(True)
+        assert _resolve_color('1;34') == '34'
+
+    def test_does_not_strip_other_modifiers(self):
+        set_ignore_bold(True)
+        # light blue -> '94' (bright variant), no bold involved -- untouched
+        assert _resolve_color('light blue') == '94'
+        # dark red -> '31;2' (dim), bold never entered the picture -- untouched
+        assert _resolve_color('dark red') == '31;2'
+
+    def test_light_plus_bold_strips_only_bold(self):
+        set_ignore_bold(True)
+        # 'bold light blue' would normally be '94;1'
+        assert _resolve_color('bold light blue') == '94'
+
+    def test_off_leaves_bold_intact(self):
+        set_ignore_bold(False)
+        assert _resolve_color('bold blue') == '34;1'
+
+    def test_bold_only_code_falls_back_to_reset(self):
+        set_ignore_bold(True)
+        assert _resolve_color('1') == '0'
+
+    def test_does_not_affect_unresolved_passthrough(self):
+        set_ignore_bold(True)
+        # unknown value has no '1' token to strip, returned unchanged
+        assert _resolve_color('bue') == 'bue'

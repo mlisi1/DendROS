@@ -65,6 +65,7 @@ _FIELDS = [
     Field("show_logger_name",      "Show logger name",         "cycle", [True, False],                       "output"),
     Field("launch_mode",           "Launch mode",               "cycle", ["classic", "tui"],                 "output"),
     Field("tui_scrollback_lines",  "TUI scrollback lines",      "text",  None,                                "output"),
+    Field("ignore_bold",           "Ignore bold",                "cycle", [False, True],                      "output"),
 
     # ── CLI commands ─────────────────────────────────────────────────────────
     Field("show_tag_cli",          "Show tag (CLI)",           "cycle", [True, False],                       "cli"),
@@ -179,6 +180,15 @@ _DESCS = {
     "tui_scrollback_lines": (
         "Number of lines kept in the TUI's scrollback buffer (PageUp/PageDown to navigate).",
         "Only used when launch_mode is tui. Default: 5000.",
+    ),
+    "ignore_bold": (
+        "off — bold text renders as configured (default)",
+        "on  — compatibility fix: some terminals brighten bold *foreground* text but never"
+        " brighten backgrounds, so a group's bold color can look like two different shades"
+        " between a node's regular text and its inverted [TAG] badge (or between classic-mode"
+        " output and a CLI command's output). Enable this if colors look inconsistent in your"
+        " terminal — strips the bold modifier everywhere colors are resolved, launch/run,"
+        " the TUI, and all `ros2 node/service/action/param/topic` commands alike.",
     ),
     "unmatched_tag": (
         "Badge shown for nodes not listed in any group when unmatched_color is set.",

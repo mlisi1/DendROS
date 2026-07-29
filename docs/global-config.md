@@ -14,9 +14,6 @@ Settings are grouped into tabs — **Output**, **CLI**, **Unmatched**, **System*
 
 ## Interface
 
-!!! note
-    Screenshot below predates the tabbed layout — pending a refresh.
-
 <div class="term">
   <div class="term-bar">
     <div class="term-dots">
@@ -65,6 +62,7 @@ Settings are grouped into tabs — **Output**, **CLI**, **Unmatched**, **System*
 | **Colorize launch msgs** | `on` / `off` | When off, `[INFO] [node-N]: process started …` lines pass through unchanged. |
 | **Show timestamp** | `on` / `off` | Show the `[timestamp]` bracket in node log lines (`[node-N] [INFO] [timestamp] [logger]: msg`). Off strips it. |
 | **Show logger name** | `on` / `off` | Show the `[logger_name]` bracket — the ROS graph name registered via `get_logger()`, which can differ from the `[node-N]` launch process name. Off strips it. |
+| **Ignore bold** | `on` / `off` | Compatibility fix: some terminals brighten bold *foreground* text but never brighten backgrounds, so a group's bold color can look like two different shades between a node's regular text and its inverted `[TAG]` badge. Turn on if colors look inconsistent in your terminal. Applies everywhere colors are resolved — `ros2 launch`/`run`, the TUI, and all CLI commands. See [Troubleshooting](quickstart.md#troubleshooting). |
 
 ### CLI commands
 

@@ -41,6 +41,7 @@ DEFAULTS = {
     "show_logger_name":         True,
     "launch_mode":              "classic",
     "tui_scrollback_lines":     5000,
+    "ignore_bold":              False,
 }
 
 

@@ -23,7 +23,7 @@ except ImportError:
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib.colors import make_dim, DENDROS_TAG
+from lib.colors import make_dim, DENDROS_TAG, set_ignore_bold
 from lib.colorizers import PREFIX_RE, LAUNCH_RE, _LOG_LEVELS, colorize_line, colorize_launch_msg, strip_log_metadata
 from lib.config_loader import load_config, merge_color_maps, resolve_node, resolve_node_mode, resolve_node_style
 from lib.keywords import build_keyword_highlights, resolve_node_keywords, apply_keyword_highlights
@@ -89,6 +89,7 @@ def main():
     if global_cfg.get('debug', False):
         _DEBUG = True
 
+    set_ignore_bold(global_cfg.get('ignore_bold', False))
     tc.set_mode(global_cfg.get('traceback_color', 'fancy'))
 
     try:

@@ -54,6 +54,7 @@ Stored in `~/.config/dendROS/defaults.yaml`, managed via `dendros config`:
 | `colorize_launch_msgs` | `true` | Colorize lifecycle lines globally. |
 | `show_timestamp` | `true` | Show the `[timestamp]` bracket in node log lines globally. |
 | `show_logger_name` | `true` | Show the `[logger_name]` bracket in node log lines globally. |
+| `ignore_bold` | `false` | Strip the bold modifier everywhere colors are resolved (launch/run, TUI, all CLI commands). Compatibility fix for terminals that brighten bold foreground text but not backgrounds — see [Troubleshooting](quickstart.md#troubleshooting). |
 | `crash_alert` | `true` | Print an inline banner when a node dies unexpectedly. |
 | `crash_alert_color` | `node` | `node` = use group color; `red` = always bold red. |
 | `crash_alert_interval` | `30` | Seconds between periodic banner reprints. `0` = only on new crashes. |

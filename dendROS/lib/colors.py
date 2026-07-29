@@ -59,6 +59,30 @@ _HEX_ALIASES = {
 }
 
 
+# Compatibility workaround: some terminals brighten bold *foreground* text but never
+# brighten backgrounds, so a group's bold color can look like two different shades between
+# a node's regular (bold fg) text and its inverted [TAG] badge (bold-as-bg after the
+# reverse-video swap) — or even between classic-mode output and a CLI command's output.
+# Since curses/terminfo has no way to ask a terminal whether it does this, `ignore_bold`
+# is a manual global-config escape hatch: set_ignore_bold() is called once at each
+# entry-point's startup from its own global config read, and _resolve_color() strips the
+# bold modifier from its result for the rest of that process's lifetime — covering every
+# caller (classic launch/run, the TUI, and all `ros2 node/service/action/param/topic`
+# CLI colorizers) uniformly, since they all funnel through this one function.
+_IGNORE_BOLD = False
+
+
+def set_ignore_bold(value):
+    global _IGNORE_BOLD
+    _IGNORE_BOLD = bool(value)
+
+
+def _strip_bold_token(code):
+    """Remove a bare '1' (bold) SGR parameter from a ';'-joined code string."""
+    parts = [p for p in code.split(';') if p != '1']
+    return ';'.join(parts) if parts else '0'
+
+
 def _ansi(code):
     return f'\033[{code}m'
 
@@ -82,7 +106,15 @@ def _resolve_color(value):
                             "bold #FF6600"       (same as @#FF6600)
       Named colors:         "yellow", "light blue", "dark red", "bold green"
                             "bold light cyan"
+
+    When the `ignore_bold` global config is enabled (set_ignore_bold(True)), the bold
+    modifier is stripped from the result regardless of how it was requested.
     """
+    code = _resolve_color_impl(value)
+    return _strip_bold_token(code) if _IGNORE_BOLD else code
+
+
+def _resolve_color_impl(value):
     s = str(value).strip()
     sl = s.lower()
 

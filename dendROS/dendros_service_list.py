@@ -12,7 +12,7 @@ except ImportError:
     yaml = None
 
 from lib.config_loader import load_config, merge_color_maps, resolve_node, resolve_node_style
-from lib.colors import RESET, _resolve_color
+from lib.colors import RESET, _resolve_color, set_ignore_bold
 from lib.global_config import load_global_config, get_node_colors_path
 
 # Standard ROS 2 services auto-created on every node — shown dimmed
@@ -98,6 +98,7 @@ def _dim_type(type_str):
 
 def main():
     cfg = load_global_config()
+    set_ignore_bold(cfg.get('ignore_bold', False))
     show_tag             = cfg['show_tag_cli']
     tag_style            = cfg['tag_style']
     unmatched_clr        = cfg['unmatched_color']
