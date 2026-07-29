@@ -98,6 +98,8 @@ class TestLoadGlobalConfig:
             "param_change_alert_style": "inverted",
             "show_timestamp": False,
             "show_logger_name": False,
+            "launch_mode": "tui",
+            "tui_scrollback_lines": 2000,
         }
         with open(tmp_config, "w") as f:
             yaml.dump(data, f)
@@ -186,6 +188,8 @@ class TestSaveGlobalConfig:
             "param_change_alert_style": "inverted",
             "show_timestamp": False,
             "show_logger_name": False,
+            "launch_mode": "tui",
+            "tui_scrollback_lines": 2000,
         }
         save_global_config(custom)
         result = load_global_config()
@@ -268,7 +272,7 @@ class TestTabGrouping:
     def test_fields_for_tab_preserves_fields_declaration_order(self):
         output_fields = _fields_for_tab("output")
         assert output_fields[0].key == "color_mode"
-        assert output_fields[-1].key == "show_logger_name"
+        assert output_fields[-1].key == "tui_scrollback_lines"
 
     def test_field_is_namedtuple_with_group_attribute(self):
         assert hasattr(_FIELDS[0], "group")

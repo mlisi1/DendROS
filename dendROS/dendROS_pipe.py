@@ -321,12 +321,18 @@ def main():
                     return apply_keyword_highlights(launch_colored, all_kws) if all_kws else launch_colored
         return tc.colorize_traceback(line)
 
-    def _iter_stdin():
+    def _iter_stdin(raw=None):
         """Yield lines from stdin, treating \\r, \\n, and \\r\\n as line terminators.
 
         Using the raw binary stream bypasses Python's internal readline buffer so
         \\r-terminated updates (e.g. teleop_twist_keyboard speed display) are
         yielded and passed through immediately, not held until the next \\n.
+
+        `raw` defaults to sys.stdin.buffer.raw. TUI mode passes in a duplicate of the
+        original stdin fd instead: curses.wrapper() reopens fd 0/1 against /dev/tty for
+        keyboard/screen control (fd 0 here is the piped ros2 launch output, not the
+        keyboard), so the reader must keep reading the launch output from a preserved fd
+        rather than from sys.stdin, which after that swap points at the terminal instead.
 
         When Ctrl+C is pressed, SIGINT interrupts the blocking read() syscall and
         Python raises KeyboardInterrupt *inside the generator*.  A generator that
@@ -334,9 +340,14 @@ def main():
         except-KeyboardInterrupt handler then has nothing left to drain.  Fix: catch
         the first interrupt and continue so node-shutdown tracebacks still appear.
         A second interrupt (or any I/O error) ends the generator immediately.
+
+        (In TUI mode this KeyboardInterrupt handling never actually triggers here — SIGINT
+        is only ever delivered to the main thread, and this generator is driven from a
+        background reader thread there. See lib/launch_tui.py's module docstring.)
         """
         buf = b''
-        raw = sys.stdin.buffer.raw
+        if raw is None:
+            raw = sys.stdin.buffer.raw
         _sigint_seen = False
         while True:
             try:
@@ -371,7 +382,57 @@ def main():
                     yield buf[:end].decode('utf-8', errors='replace')
                     buf = buf[end:]
 
-    stdin_lines = _iter_stdin()
+    launch_mode = global_cfg.get('launch_mode', 'classic')
+    use_tui = bool(argv) and argv[0] == 'launch' and launch_mode == 'tui' and _stdout_tty
+
+    tui_stdin_raw = None
+    if use_tui:
+        # curses needs the real controlling terminal for keyboard/screen I/O, but fd 0
+        # here is the piped `ros2 launch` output, not the keyboard — reopening /dev/tty
+        # onto fds 0/1 (what curses.wrapper() uses by default) would otherwise steal the
+        # log stream out from under our own reader. Preserve a duplicate of the original
+        # stdin fd first so the reader can keep consuming launch output from it directly.
+        preserved_fd = None
+        try:
+            preserved_fd = os.dup(0)
+            tty_fd = os.open('/dev/tty', os.O_RDWR)
+            os.dup2(tty_fd, 0)
+            os.dup2(tty_fd, 1)
+            os.close(tty_fd)
+            tui_stdin_raw = os.fdopen(preserved_fd, 'rb', buffering=0)
+        except OSError as e:
+            if preserved_fd is not None:
+                try:
+                    os.close(preserved_fd)
+                except OSError:
+                    pass
+            if _DEBUG:
+                _dbg(f'TUI unavailable, no controlling terminal ({e}), falling back to classic mode')
+            use_tui = False
+
+    stdin_lines = _iter_stdin(tui_stdin_raw)
+
+    if use_tui:
+        try:
+            from lib.launch_tui import run_tui
+        except Exception as e:
+            if _DEBUG:
+                _dbg(f'TUI unavailable ({e}), falling back to classic mode')
+            use_tui = False
+
+    if use_tui:
+        try:
+            run_tui(
+                stdin_lines, _colorize, ca, pw,
+                param_alert, param_alert_style,
+                color_map, tag_map, style_map, tag_style, show_tag,
+                global_cfg,
+            )
+            return
+        except Exception as e:
+            if _DEBUG:
+                _dbg(f'TUI crashed ({e}), falling back to classic passthrough for the rest of this run')
+            # stdin_lines is the same generator — classic loop below picks up where the TUI left off
 
     try:
         for line in stdin_lines:

@@ -63,6 +63,8 @@ _FIELDS = [
     Field("colorize_launch_msgs",  "Colorize launch msgs",     "cycle", [True, False],                       "output"),
     Field("show_timestamp",        "Show timestamp",           "cycle", [True, False],                       "output"),
     Field("show_logger_name",      "Show logger name",         "cycle", [True, False],                       "output"),
+    Field("launch_mode",           "Launch mode",               "cycle", ["classic", "tui"],                 "output"),
+    Field("tui_scrollback_lines",  "TUI scrollback lines",      "text",  None,                                "output"),
 
     # ── CLI commands ─────────────────────────────────────────────────────────
     Field("show_tag_cli",          "Show tag (CLI)",           "cycle", [True, False],                       "cli"),
@@ -168,6 +170,15 @@ _DESCS = {
         "on  — show the [logger_name] bracket (the ROS graph name registered via"
         " get_logger(); can differ from the [node-N] launch process name)",
         "off — strip the logger name bracket for a shorter log line",
+    ),
+    "launch_mode": (
+        "classic — pipe ros2 launch output straight to the terminal, colorized inline (default)",
+        "tui     — open a full-screen scrollback view with a pinned crash/param alert banner."
+        " ros2 launch only; automatically falls back to classic for ros2 run or non-interactive stdout",
+    ),
+    "tui_scrollback_lines": (
+        "Number of lines kept in the TUI's scrollback buffer (PageUp/PageDown to navigate).",
+        "Only used when launch_mode is tui. Default: 5000.",
     ),
     "unmatched_tag": (
         "Badge shown for nodes not listed in any group when unmatched_color is set.",

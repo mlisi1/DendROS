@@ -29,6 +29,7 @@ _death_counts         = {}   # {node_name: int} — cumulative crashes, never re
 _last_alert_time      = 0.0
 _traceback_nodes      = set()  # nodes that printed a traceback this session
 _shutdown_mode        = False  # True after SIGINT — cascade deaths are expected
+_sink                 = None   # None = default sys.stdout.write; else fn(banner_text)
 
 
 def setup(enabled, color, interval):
@@ -40,6 +41,17 @@ def setup(enabled, color, interval):
     _crash_alert_interval = interval
     _traceback_nodes      = set()
     _shutdown_mode        = False
+
+
+def set_sink(fn):
+    """Redirect print_alert_banner() output to fn(banner_text) instead of sys.stdout.
+
+    Used by the TUI render path to route the banner into a pinned screen region instead of
+    printing it inline into the scrolling log. None restores the default stdout write —
+    classic mode never calls this, so its output stays byte-identical.
+    """
+    global _sink
+    _sink = fn
 
 
 def mark_traceback(node_name):
@@ -132,6 +144,10 @@ def print_alert_banner():
         parts.append(f'{nc}{node_name}{RST}{DIM}{count_str}{ec}{RST}')
 
     nodes = f'{DIM}  ·  {RST}'.join(parts)
-    sys.stdout.write(f'{HDR} !! CRASH ALERT {RST}  {nodes}\n')
-    sys.stdout.flush()
+    banner = f'{HDR} !! CRASH ALERT {RST}  {nodes}'
+    if _sink is not None:
+        _sink(banner)
+    else:
+        sys.stdout.write(banner + '\n')
+        sys.stdout.flush()
     _last_alert_time = time.monotonic()
