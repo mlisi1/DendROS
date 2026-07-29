@@ -8,10 +8,14 @@ dendros config
 
 Settings are written to `~/.config/dendROS/defaults.yaml` and apply across all packages as a baseline. Per-package `dendROS.yaml` `defaults:` sections override them.
 
+Settings are grouped into tabs — **Output**, **CLI**, **Unmatched**, **System**, **Diagnostics**, **Param Alerts**, **Init** — matching the section headers below.
+
 ---
 
 ## Interface
 
+!!! note
+    Screenshot below predates the tabbed layout — pending a refresh.
 
 <div class="term">
   <div class="term-bar">
@@ -35,8 +39,11 @@ Settings are written to `~/.config/dendROS/defaults.yaml` and apply across all p
 
 | Key | Action |
 |---|---|
-| ++up++ / ++k++ | Move to previous field |
-| ++down++ / ++j++ | Move to next field |
+| ++tab++ / ++l++ | Next tab |
+| ++shift+tab++ / ++h++ | Previous tab (Shift+Tab isn't sent by every terminal — use `h` if it doesn't respond) |
+| ++1++ – ++9++ | Jump directly to tab N |
+| ++up++ / ++k++ | Move to previous field (within the current tab) |
+| ++down++ / ++j++ | Move to next field (within the current tab) |
 | ++right++ / ++space++ / ++enter++ | Cycle option forward |
 | ++left++ | Cycle option backward |
 | ++e++ | Open inline text editor for the current field |
@@ -82,18 +89,15 @@ Settings are written to `~/.config/dendROS/defaults.yaml` and apply across all p
 | **Debug mode** | `on` / `off` | Print config summary to stderr on startup. Equivalent to `DENDROS_DEBUG=1`. |
 | **Config merge** | `on` / `off` | Parse launch files for referenced packages and merge their configs. |
 
-### Crash alert
+### Diagnostics
+
+Crash alert and traceback highlighting — how node failures surface in the terminal.
 
 | Setting | Values | Description |
 |---|---|---|
 | **Crash alert** | `on` / `off` | Print an inline banner when a node dies unexpectedly. See [Crash Alert](crash-alert.md). |
 | **Crash alert color** | `node` / `red` | `node` uses the group color; `red` always uses bold red. |
 | **Crash alert interval** | integer (seconds) | Seconds between periodic banner reprints. `0` = only on new crash events. |
-
-### Traceback
-
-| Setting | Values | Description |
-|---|---|---|
 | **Traceback color** | `fancy` / `red` / `off` | `fancy` = bold red header + dim red frames; `red` = all bold red; `off` = passthrough. See [Traceback Highlighting](traceback-highlighting.md). |
 
 ### Parameter change alert
