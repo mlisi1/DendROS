@@ -1238,21 +1238,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#crash-alert" class="md-nav__link">
+  <a href="#diagnostics" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Crash alert
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#traceback" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Traceback
+        Diagnostics
       
     </span>
   </a>
@@ -1445,21 +1434,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#crash-alert" class="md-nav__link">
+  <a href="#diagnostics" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Crash alert
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#traceback" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Traceback
+        Diagnostics
       
     </span>
   </a>
@@ -1534,8 +1512,13 @@
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>dendros<span class="w"> </span>config
 </span></code></pre></div>
 <p>Settings are written to <code>~/.config/dendROS/defaults.yaml</code> and apply across all packages as a baseline. Per-package <code>dendROS.yaml</code> <code>defaults:</code> sections override them.</p>
+<p>Settings are grouped into tabs — <strong>Output</strong>, <strong>CLI</strong>, <strong>Unmatched</strong>, <strong>System</strong>, <strong>Diagnostics</strong>, <strong>Param Alerts</strong>, <strong>Init</strong> — matching the section headers below.</p>
 <hr />
 <h2 id="interface">Interface</h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Screenshot below predates the tabbed layout — pending a refresh.</p>
+</div>
 <div class="term">
   <div class="term-bar">
     <div class="term-dots">
@@ -1563,12 +1546,24 @@
 </thead>
 <tbody>
 <tr>
+<td><span class="keys"><kbd class="key-tab">Tab</kbd></span> / <span class="keys"><kbd class="key-l">L</kbd></span></td>
+<td>Next tab</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-shift">Shift</kbd><span>+</span><kbd class="key-tab">Tab</kbd></span> / <span class="keys"><kbd class="key-h">H</kbd></span></td>
+<td>Previous tab (Shift+Tab isn't sent by every terminal — use <code>h</code> if it doesn't respond)</td>
+</tr>
+<tr>
+<td><span class="keys"><kbd class="key-1">1</kbd></span> – <span class="keys"><kbd class="key-9">9</kbd></span></td>
+<td>Jump directly to tab N</td>
+</tr>
+<tr>
 <td><span class="keys"><kbd class="key-arrow-up">Up</kbd></span> / <span class="keys"><kbd class="key-k">K</kbd></span></td>
-<td>Move to previous field</td>
+<td>Move to previous field (within the current tab)</td>
 </tr>
 <tr>
 <td><span class="keys"><kbd class="key-arrow-down">Down</kbd></span> / <span class="keys"><kbd class="key-j">J</kbd></span></td>
-<td>Move to next field</td>
+<td>Move to next field (within the current tab)</td>
 </tr>
 <tr>
 <td><span class="keys"><kbd class="key-arrow-right">Right</kbd></span> / <span class="keys"><kbd class="key-space">Space</kbd></span> / <span class="keys"><kbd class="key-enter">Enter</kbd></span></td>
@@ -1717,7 +1712,8 @@
 </tr>
 </tbody>
 </table>
-<h3 id="crash-alert">Crash alert</h3>
+<h3 id="diagnostics">Diagnostics</h3>
+<p>Crash alert and traceback highlighting — how node failures surface in the terminal.</p>
 <table>
 <thead>
 <tr>
@@ -1742,18 +1738,6 @@
 <td>integer (seconds)</td>
 <td>Seconds between periodic banner reprints. <code>0</code> = only on new crash events.</td>
 </tr>
-</tbody>
-</table>
-<h3 id="traceback">Traceback</h3>
-<table>
-<thead>
-<tr>
-<th>Setting</th>
-<th>Values</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
 <tr>
 <td><strong>Traceback color</strong></td>
 <td><code>fancy</code> / <code>red</code> / <code>off</code></td>
