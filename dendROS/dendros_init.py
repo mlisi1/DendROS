@@ -6,13 +6,15 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from lib.colors import DENDROS_TAG
+
 try:
     import yaml
 except ImportError:
-    print("[dendROS] PyYAML required: pip3 install pyyaml", file=sys.stderr)
+    print(f'{DENDROS_TAG} PyYAML required: pip3 install pyyaml', file=sys.stderr)
     sys.exit(1)
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lib.config_writer import make_label, write_config, merge_config
 from lib.build_modifier import modify_cmake, modify_setup_py, modify_setup_cfg
@@ -27,13 +29,13 @@ from lib.node_extractor import scan_launch_file
 # ── output ────────────────────────────────────────────────────────────────────
 
 def _info(msg):
-    print(f'\033[35;1m[dendROS]\033[0m {msg}')
+    print(f'{DENDROS_TAG} {msg}')
 
 def _warn(msg):
-    print(f'\033[33;1m[dendROS]\033[0m {msg}', file=sys.stderr)
+    print(f'{DENDROS_TAG} {msg}', file=sys.stderr)
 
 def _error(msg):
-    print(f'\033[31;1m[dendROS]\033[0m {msg}', file=sys.stderr)
+    print(f'{DENDROS_TAG} {msg}', file=sys.stderr)
 
 
 # ── package detection ─────────────────────────────────────────────────────────

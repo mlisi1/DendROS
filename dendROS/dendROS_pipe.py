@@ -23,7 +23,7 @@ except ImportError:
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib.colors import make_dim
+from lib.colors import make_dim, DENDROS_TAG
 from lib.colorizers import PREFIX_RE, LAUNCH_RE, _LOG_LEVELS, colorize_line, colorize_launch_msg, strip_log_metadata
 from lib.config_loader import load_config, merge_color_maps, resolve_node, resolve_node_mode, resolve_node_style
 from lib.keywords import build_keyword_highlights, resolve_node_keywords, apply_keyword_highlights
@@ -52,7 +52,7 @@ _LOGGER_RE = re.compile(
 
 
 def _dbg(msg):
-    print(f'\033[35;1m[dendROS]\033[0m {msg}', file=sys.stderr, flush=True)
+    print(f'{DENDROS_TAG} {msg}', file=sys.stderr, flush=True)
 
 
 def _save_node_colors(color_map, tag_map, style_map):
@@ -123,7 +123,7 @@ def main():
             color_map, tag_map, mode_map, style_map, keyword_map, pkg_defaults = load_config(config_path)
             defaults = {**base, **pkg_defaults}
         except Exception as e:
-            print(f'\033[35;1m[dendROS]\033[0m config error ({config_path}): {e}',
+            print(f'{DENDROS_TAG} config error ({config_path}): {e}',
                   file=sys.stderr, flush=True)
 
     config_merge = global_cfg.get('config_merge', True)
@@ -147,7 +147,7 @@ def main():
                     if _DEBUG:
                         _dbg(f'merged: {inc_pkg} ({inc_config_path})  +{len(inc_color)} node{"s" if len(inc_color) != 1 else ""}')
                 except Exception as e:
-                    print(f'\033[35;1m[dendROS]\033[0m config error ({inc_config_path}): {e}',
+                    print(f'{DENDROS_TAG} config error ({inc_config_path}): {e}',
                           file=sys.stderr, flush=True)
 
     if config_path:

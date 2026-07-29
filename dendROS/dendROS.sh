@@ -1,5 +1,8 @@
 _DENDROS_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 _DENDROS_PIPE="${_DENDROS_DIR}/dendROS_pipe.py"
+# Official DendROS brand colors — "[dend" in brand blue, "ROS]" in brand orange.
+# Must stay in sync with lib.colors.DENDROS_TAG.
+_DENDROS_TAG=$'\033[38;2;0;75;107;1m[dend\033[38;2;224;127;0;1mROS]\033[0m'
 
 dendros() {
     case "${1:-}" in
@@ -12,7 +15,7 @@ import sys; sys.path.insert(0, '${_DENDROS_DIR}')
 from lib.global_config import set_disable_flag
 set_disable_flag(True)
 "
-            echo "[dendROS] colorization disabled system-wide (all terminals)"
+            echo "${_DENDROS_TAG} colorization disabled system-wide (all terminals)"
             ;;
         enable)
             unset DENDROS_DISABLE
@@ -21,7 +24,7 @@ import sys; sys.path.insert(0, '${_DENDROS_DIR}')
 from lib.global_config import set_disable_flag
 set_disable_flag(False)
 "
-            echo "[dendROS] colorization enabled system-wide (all terminals)"
+            echo "${_DENDROS_TAG} colorization enabled system-wide (all terminals)"
             ;;
         *)
             echo "Usage: dendros <command>"

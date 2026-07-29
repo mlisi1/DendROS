@@ -10,6 +10,9 @@ GREEN='\033[32;1m'
 YELLOW='\033[33;1m'
 RED='\033[31;1m'
 RESET='\033[0m'
+# Official DendROS brand colors — "[dend" in brand blue, "ROS]" in brand orange.
+# Must stay in sync with lib.colors.DENDROS_TAG.
+DENDROS_TAG='\033[38;2;0;75;107;1m[dend\033[38;2;224;127;0;1mROS]\033[0m'
 
 # -y / --yes flag or CI env skips all interactive prompts
 YES=false
@@ -25,11 +28,11 @@ else
     SUDO=''
 fi
 
-echo -e "${GREEN}[DendROS] Installing to ${INSTALL_DIR}${RESET}"
+echo -e "${DENDROS_TAG} ${GREEN}Installing to ${INSTALL_DIR}${RESET}"
 
 # Check for PyYAML
 if ! python3 -c "import yaml" 2>/dev/null; then
-    echo -e "${YELLOW}[DendROS] PyYAML not found.${RESET}"
+    echo -e "${DENDROS_TAG} ${YELLOW}PyYAML not found.${RESET}"
     if [[ "$YES" == true ]]; then
         pip3 install pyyaml
     else
@@ -37,7 +40,7 @@ if ! python3 -c "import yaml" 2>/dev/null; then
         if [[ "${yn:-}" =~ ^[Yy]$ ]]; then
             pip3 install pyyaml
         else
-            echo -e "${RED}[DendROS] PyYAML is required. Install it manually: pip3 install pyyaml${RESET}"
+            echo -e "${DENDROS_TAG} ${RED}PyYAML is required. Install it manually: pip3 install pyyaml${RESET}"
             exit 1
         fi
     fi
@@ -69,26 +72,26 @@ $SUDO chmod +x "$INSTALL_DIR/dendros_param_list.py"
 $SUDO chmod +x "$INSTALL_DIR/dendros_param_describe.py"
 $SUDO chmod 644 "$INSTALL_DIR/dendROS.sh"
 
-echo -e "${GREEN}[DendROS] Files installed to ${INSTALL_DIR}${RESET}"
+echo -e "${DENDROS_TAG} ${GREEN}Files installed to ${INSTALL_DIR}${RESET}"
 
 # Patch .bashrc
 if grep -qF "$SOURCE_LINE" "$BASHRC" 2>/dev/null; then
-    echo -e "${YELLOW}[DendROS] .bashrc already patched — skipping${RESET}"
+    echo -e "${DENDROS_TAG} ${YELLOW}.bashrc already patched — skipping${RESET}"
 else
     if [[ "$YES" == true ]]; then
         printf '\n# DendROS — colorized ROS 2 terminal output\n%s\n' "$SOURCE_LINE" >> "$BASHRC"
-        echo -e "${GREEN}[DendROS] Added to ~/.bashrc${RESET}"
+        echo -e "${DENDROS_TAG} ${GREEN}Added to ~/.bashrc${RESET}"
     else
         read -r -p "Add source line to ~/.bashrc? [Y/n] " yn
         if [[ ! "${yn:-}" =~ ^[Nn]$ ]]; then
             printf '\n# DendROS — colorized ROS 2 terminal output\n%s\n' "$SOURCE_LINE" >> "$BASHRC"
-            echo -e "${GREEN}[DendROS] Added to ~/.bashrc${RESET}"
-            echo -e "${YELLOW}[DendROS] Run: source ~/.bashrc${RESET}"
+            echo -e "${DENDROS_TAG} ${GREEN}Added to ~/.bashrc${RESET}"
+            echo -e "${DENDROS_TAG} ${YELLOW}Run: source ~/.bashrc${RESET}"
         else
-            echo -e "${YELLOW}[DendROS] Skipped. Add manually to ~/.bashrc:${RESET}"
+            echo -e "${DENDROS_TAG} ${YELLOW}Skipped. Add manually to ~/.bashrc:${RESET}"
             echo "  $SOURCE_LINE"
         fi
     fi
 fi
 
-echo -e "${GREEN}[DendROS] Done!${RESET}"
+echo -e "${DENDROS_TAG} ${GREEN}Done!${RESET}"

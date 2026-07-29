@@ -6,6 +6,18 @@ RESET = '\033[0m'
 _ANSI_RE = re.compile(r'\033\[[0-9;]*m')
 _HEX_RE = re.compile(r'^(@?)#([0-9a-fA-F]{6})$')
 
+# Official DendROS brand colors — must stay in sync with lib.logo._TITLE_BLUE/_TITLE_ORANGE.
+_DENDROS_BLUE = (0, 75, 107)
+_DENDROS_ORANGE = (224, 127, 0)
+
+# Canonical "[dendROS]" tag: "[dend" in brand blue, "ROS]" in brand orange, both bold.
+# Every place that prints the [dendROS] tag should use this instead of an ad-hoc color.
+DENDROS_TAG = (
+    f'\033[38;2;{_DENDROS_BLUE[0]};{_DENDROS_BLUE[1]};{_DENDROS_BLUE[2]};1m[dend'
+    f'\033[38;2;{_DENDROS_ORANGE[0]};{_DENDROS_ORANGE[1]};{_DENDROS_ORANGE[2]};1mROS]'
+    f'{RESET}'
+)
+
 _COLOR_CODES = {
     'black': 30, 'red': 31, 'green': 32, 'yellow': 33,
     'blue':  34, 'magenta': 35, 'cyan': 36, 'white':  37,

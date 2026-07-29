@@ -8,13 +8,15 @@ import textwrap
 import time
 from typing import List, NamedTuple, Optional
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from lib.colors import DENDROS_TAG
+
 try:
     import yaml
 except ImportError:
-    print("[dendROS] PyYAML required: pip3 install pyyaml", file=sys.stderr)
+    print(f'{DENDROS_TAG} PyYAML required: pip3 install pyyaml', file=sys.stderr)
     sys.exit(1)
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lib.global_config import get_global_config_path, DEFAULTS, load_global_config, save_global_config
 from lib.logo import (
