@@ -1,28 +1,5 @@
 # Reference
 
-## Environment variables
-
-| Variable | Effect |
-|---|---|
-| `DENDROS_DEBUG=1` | Print config summary, color map, and group list to stderr on startup |
-| `DENDROS_DISABLE=1` | Bypass DendROS entirely; call the real `ros2` binary directly |
-
-```bash
-# Confirm DendROS found your config and matched your node names
-DENDROS_DEBUG=1 ros2 launch my_pkg my_launch.py
-
-# Disable for a single invocation (env prefix, not persistent)
-DENDROS_DISABLE=1 ros2 launch my_pkg my_launch.py
-
-# Toggle for the entire shell session
-dendros disable    # sets DENDROS_DISABLE=1 in the current shell
-dendros enable     # unsets DENDROS_DISABLE
-```
-
-!!! note
-    `DENDROS_DEBUG=1` always overrides the `debug` setting in `defaults.yaml`.
-
----
 
 ## dendROS.yaml — group keys
 
@@ -117,8 +94,8 @@ The `ros2()` shell wrapper intercepts specific subcommands; everything else call
 |---|---|
 | `dendros config` | Open the interactive global-settings TUI. |
 | `dendros init` | Scaffold `config/dendROS.yaml` from launch files. See flags below. |
-| `dendros disable` | Set `DENDROS_DISABLE=1` in the current shell — colorization off until re-enabled. |
-| `dendros enable` | Unset `DENDROS_DISABLE` — restore colorization in the current shell. |
+| `dendros disable` | Disable colorization **system-wide** — every terminal, including an already-running `ros2 launch`, switches to plain passthrough within about a second. Also sets `DENDROS_DISABLE=1` in the current shell. |
+| `dendros enable` | Re-enable colorization **system-wide**. Also unsets `DENDROS_DISABLE` in the current shell. |
 
 Tab completion is available for all subcommands and `dendros init` flags after sourcing `dendROS.sh`.
 

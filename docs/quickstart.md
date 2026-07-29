@@ -108,6 +108,16 @@ ros2 launch my_bringup main.launch.py
 </div>
 </div>
 
+If you ever want to turn colorization off, run `dendros disable` (and `dendros enable` to turn it
+back on). This takes effect everywhere — every terminal, including a `ros2 launch` that's already
+running elsewhere.
+
+!!! note
+    For just one shell/invocation instead of system-wide, prefix the command with
+    `DENDROS_DISABLE=1` instead:
+    ```bash
+    DENDROS_DISABLE=1 ros2 launch my_bringup main.launch.py
+    ```
 
 ---
 
@@ -132,14 +142,3 @@ ros2 launch my_bringup main.launch.py
     DENDROS_DISABLE=1 ros2 launch my_bringup main.launch.py 2>&1 | grep '^\['
     ```
     Node names are matched after stripping the `-N` suffix. Use wildcards (`nav2_*`) for nodes you don't know in advance.
-
-??? note "Temporarily disable"
-    For a single invocation, prefix the command:
-    ```bash
-    DENDROS_DISABLE=1 ros2 launch my_bringup main.launch.py
-    ```
-    To toggle colorization for the whole shell session:
-    ```bash
-    dendros disable   # off until you run dendros enable
-    dendros enable
-    ```
