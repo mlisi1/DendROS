@@ -52,6 +52,38 @@ def get_node_colors_path():
     return os.path.join(os.path.dirname(get_global_config_path()), 'node_colors.yaml')
 
 
+def get_disable_flag_path():
+    """Return path to the system-wide disable flag, shared across all terminals."""
+    return os.path.join(os.path.dirname(get_global_config_path()), 'disable.flag')
+
+
+def is_disable_flag_set():
+    """Check whether colorization is disabled system-wide (cheap: single stat call)."""
+    return os.path.isfile(get_disable_flag_path())
+
+
+def set_disable_flag(enabled):
+    """Set or clear the system-wide disable flag (atomic; safe for concurrent readers)."""
+    path = get_disable_flag_path()
+    if enabled:
+        import tempfile
+        cfg_dir = os.path.dirname(path)
+        try:
+            os.makedirs(cfg_dir, exist_ok=True)
+            fd, tmp = tempfile.mkstemp(dir=cfg_dir, suffix='.tmp')
+            os.close(fd)
+            os.replace(tmp, path)
+        except Exception:
+            pass
+    else:
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        except Exception:
+            pass
+
+
 def load_global_config():
     """Load the global config file, filling missing keys from DEFAULTS."""
     path = get_global_config_path()

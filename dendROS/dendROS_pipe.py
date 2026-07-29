@@ -31,7 +31,7 @@ from lib.discovery import (
     extract_package_name, extract_launch_file, find_config,
     find_launch_file, extract_included_packages,
 )
-from lib.global_config import load_global_config, get_node_colors_path
+from lib.global_config import load_global_config, get_node_colors_path, is_disable_flag_set
 import lib.crash_alert as ca
 import lib.traceback_color as tc
 import lib.param_watcher as pw
@@ -207,6 +207,16 @@ def main():
     _stdout_tty = sys.stdout.isatty()
     _stdout_fd  = sys.stdout.fileno() if _stdout_tty else -1
 
+    _disable_state = {'passthrough': False, 'last_check': 0.0}
+
+    def _refresh_disabled_state():
+        """Poll the system-wide disable flag at most once/sec (cheap stat, rate-limited)."""
+        now = time.monotonic()
+        if now - _disable_state['last_check'] < 1.0:
+            return
+        _disable_state['last_check'] = now
+        _disable_state['passthrough'] = is_disable_flag_set()
+
     def _emit(text):
         if _stdout_tty and _termios is not None:
             try:
@@ -365,6 +375,11 @@ def main():
 
     try:
         for line in stdin_lines:
+            _refresh_disabled_state()
+            if _disable_state['passthrough']:
+                _emit(line)
+                continue
+
             new_death = False
 
             if ca._crash_alert_enabled:
@@ -395,7 +410,7 @@ def main():
     except KeyboardInterrupt:
         try:
             for line in stdin_lines:  # same generator — continues from where interrupted
-                _emit(_colorize(line))
+                _emit(line if _disable_state['passthrough'] else _colorize(line))
         except Exception:
             pass
     except BrokenPipeError:

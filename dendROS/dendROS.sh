@@ -7,11 +7,21 @@ dendros() {
         init)    python3 "${_DENDROS_DIR}/dendros_init.py" "${@:2}" ;;
         disable)
             export DENDROS_DISABLE=1
-            echo "[dendROS] colorization disabled (DENDROS_DISABLE=1)"
+            python3 -c "
+import sys; sys.path.insert(0, '${_DENDROS_DIR}')
+from lib.global_config import set_disable_flag
+set_disable_flag(True)
+"
+            echo "[dendROS] colorization disabled system-wide (all terminals)"
             ;;
         enable)
             unset DENDROS_DISABLE
-            echo "[dendROS] colorization enabled"
+            python3 -c "
+import sys; sys.path.insert(0, '${_DENDROS_DIR}')
+from lib.global_config import set_disable_flag
+set_disable_flag(False)
+"
+            echo "[dendROS] colorization enabled system-wide (all terminals)"
             ;;
         *)
             echo "Usage: dendros <command>"
@@ -21,8 +31,8 @@ dendros() {
             echo "  init      Generate a stock dendROS.yaml from the package's launch files"
             echo "            Options: --recursive/-r  also scan included packages"
             echo "                     --labels/-l     auto-generate group labels"
-            echo "  disable   Disable colorization in this shell (sets DENDROS_DISABLE=1)"
-            echo "  enable    Re-enable colorization in this shell (unsets DENDROS_DISABLE)"
+            echo "  disable   Disable colorization system-wide (all terminals, incl. already-running launches)"
+            echo "  enable    Re-enable colorization system-wide (all terminals)"
             ;;
     esac
 }
@@ -47,8 +57,10 @@ _dendros_complete() {
 complete -F _dendros_complete dendros
 
 ros2() {
-    # Set DENDROS_DISABLE=1 to bypass colorization and use the real ros2 directly
-    if [[ -n "${DENDROS_DISABLE:-}" && "${DENDROS_DISABLE}" != "0" ]]; then
+    # Set DENDROS_DISABLE=1 (local to this shell) or run `dendros disable`
+    # (system-wide, all terminals) to bypass colorization and use the real ros2 directly.
+    if [[ -n "${DENDROS_DISABLE:-}" && "${DENDROS_DISABLE}" != "0" ]] \
+       || [[ -f "$HOME/.config/dendROS/disable.flag" ]]; then
         local _BIN
         _BIN="$(type -P ros2 2>/dev/null)"
         [[ -z "$_BIN" && -n "${ROS_DISTRO:-}" ]] && _BIN="/opt/ros/${ROS_DISTRO}/bin/ros2"
