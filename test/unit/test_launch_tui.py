@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'dendROS'
 from lib.launch_tui import (
     quantize_rgb_to_256,
     segments_from_ansi,
+    wrap_line,
     PairCache,
     RingLog,
 )
@@ -278,38 +279,42 @@ class TestPairCache:
         assert attr == fc.color_pair(pair)
 
 
+# ── wrap_line ────────────────────────────────────────────────────────────────
+
+class TestWrapLine:
+    def test_short_line_is_one_row(self):
+        rows = wrap_line([("hello", None, None, False)], 20)
+        assert rows == [[("hello", None, None, False)]]
+
+    def test_exact_width_line_is_one_row_no_phantom_row(self):
+        rows = wrap_line([("abcde", None, None, False)], 5)
+        assert rows == [[("abcde", None, None, False)]]
+
+    def test_one_char_over_width_wraps_to_two_rows(self):
+        rows = wrap_line([("abcdef", None, None, False)], 5)
+        assert rows == [[("abcde", None, None, False)], [("f", None, None, False)]]
+
+    def test_color_preserved_across_wrap_boundary(self):
+        rows = wrap_line([("abc", 1, None, False), ("defgh", 2, None, False)], 5)
+        assert rows == [
+            [("abc", 1, None, False), ("de", 2, None, False)],
+            [("fgh", 2, None, False)],
+        ]
+
+    def test_empty_line_yields_one_empty_row(self):
+        assert wrap_line([], 10) == [[]]
+
+    def test_non_positive_width_is_guarded_not_infinite(self):
+        rows = wrap_line([("ab", None, None, False)], 0)
+        # guarded to width=1 -- must terminate and split one char per row
+        assert rows == [[("a", None, None, False)], [("b", None, None, False)]]
+
+    def test_multiple_lines_worth_of_wraps(self):
+        rows = wrap_line([("0123456789", None, None, False)], 3)
+        assert [r[0][0] for r in rows] == ["012", "345", "678", "9"]
+
+
 # ── RingLog ──────────────────────────────────────────────────────────────────
-
-class FakePad:
-    """Minimal curses pad double: just what RingLog._render_last actually touches."""
-
-    def __init__(self, height=5, width=40):
-        self.height = height
-        self.width = width
-        self.scroll_calls = 0
-        self.addstr_calls = []  # (row, col, text, attr)
-        self.rows = [''] * height
-
-    def getmaxyx(self):
-        return (self.height, self.width)
-
-    def scroll(self, n):
-        self.scroll_calls += n
-        self.rows.pop(0)
-        self.rows.append('')
-
-    def move(self, row, col):
-        pass
-
-    def clrtoeol(self):
-        pass
-
-    def addstr(self, row, col, text, attr=0):
-        self.addstr_calls.append((row, col, text, attr))
-        line = self.rows[row]
-        line = line.ljust(col) + text
-        self.rows[row] = line
-
 
 class TestRingLog:
     def test_bounded_length(self):
@@ -326,115 +331,97 @@ class TestRingLog:
         assert ring.plain_lines() == ["a", "b"]
         assert ring[0][0] == [("a", None, None, False)]
 
-    def test_append_without_pad_does_not_crash(self):
+    def test_append_without_width_set_does_not_crash(self):
         ring = RingLog(maxlen=5)
-        ring.append([("x", None, None, False)], "x")  # no pad attached
+        ring.append([("x", None, None, False)], "x")  # set_width() never called
         assert len(ring) == 1
 
-    def test_append_scrolls_pad_once_per_line(self):
-        pad = FakePad(height=5, width=40)
-        ring = RingLog(maxlen=100, pad=pad)
-        ring.append([("first", None, None, False)], "first")
-        ring.append([("second", None, None, False)], "second")
-        assert pad.scroll_calls == 2
+    # ── set_width() / total_rows() ───────────────────────────────────────────
 
-    def test_append_writes_to_last_row(self):
-        pad = FakePad(height=5, width=40)
-        ring = RingLog(maxlen=100, pad=pad)
-        ring.append([("hello", None, None, False)], "hello")
-        assert pad.addstr_calls[-1][0] == pad.height - 1
-        assert pad.addstr_calls[-1][2] == "hello"
-
-    def test_append_writes_segments_at_increasing_columns(self):
-        pad = FakePad(height=5, width=40)
-        ring = RingLog(maxlen=100, pad=pad)
-        ring.append([("ab", None, None, False), ("cd", None, None, False)], "abcd")
-        cols = [call[1] for call in pad.addstr_calls[-2:]]
-        assert cols == [0, 2]
-
-    def test_append_truncates_at_pad_width(self):
-        pad = FakePad(height=5, width=4)
-        ring = RingLog(maxlen=100, pad=pad)
-        ring.append([("this is way too long", None, None, False)], "this is way too long")
-        text = pad.addstr_calls[-1][2]
-        assert len(text) <= 4
-
-    def test_append_never_writes_to_last_column(self):
-        # Regression: writing all the way to a pad's last column makes ncurses
-        # auto-wrap the cursor, which — with scrollok(True) and the cursor already on
-        # the pad's last row — triggers an extra implicit scroll (a spurious blank row
-        # after every line that exactly fills the terminal width).
-        pad = FakePad(height=5, width=10)
-        ring = RingLog(maxlen=100, pad=pad)
-        ring.append([("0123456789", None, None, False)], "0123456789")  # exactly pad width
-        col, text = pad.addstr_calls[-1][1], pad.addstr_calls[-1][2]
-        assert col + len(text) <= pad.width - 1
-
-    def test_append_uses_pair_cache_for_colored_segments(self):
-        fc = FakeCurses()
-        cache = PairCache(fc)
-        pad = FakePad()
-        ring = RingLog(maxlen=100, pad=pad, pair_cache=cache)
-        ring.append([("red", 1, None, False)], "red")
-        attr = pad.addstr_calls[-1][3]
-        assert attr == cache.attr_for(1, None, False)
-
-    def test_append_plain_segment_has_zero_attr(self):
-        fc = FakeCurses()
-        cache = PairCache(fc)
-        pad = FakePad()
-        ring = RingLog(maxlen=100, pad=pad, pair_cache=cache)
-        ring.append([("plain", None, None, False)], "plain")
-        assert pad.addstr_calls[-1][3] == 0
-
-    def test_pad_and_plain_text_stay_1to1_aligned_over_many_lines(self):
-        pad = FakePad(height=5, width=40)
-        ring = RingLog(maxlen=3, pad=pad)
-        for i in range(10):
-            ring.append([(f"line{i}", None, None, False)], f"line{i}")
-        assert len(ring) == 3 == len(ring.plain_lines())
-        assert ring.plain_lines() == ['line7', 'line8', 'line9']
-
-    # ── reattach()/detach() — surviving a mid-run disable/re-enable cycle ────────
-
-    def test_detach_stops_drawing_but_keeps_history(self):
-        pad = FakePad()
-        ring = RingLog(maxlen=100, pad=pad)
-        ring.append([("a", None, None, False)], "a")
-        ring.detach()
-        calls_before = len(pad.addstr_calls)
-        ring.append([("b", None, None, False)], "b")  # pad detached -- must not touch it
-        assert len(pad.addstr_calls) == calls_before
-        assert ring.plain_lines() == ["a", "b"]
-
-    def test_reattach_replays_full_history_onto_new_pad(self):
-        ring = RingLog(maxlen=100)  # no pad yet
-        ring.append([("a", None, None, False)], "a")
-        ring.append([("b", None, None, False)], "b")
-        new_pad = FakePad(height=5, width=40)
-        ring.reattach(new_pad, None)
-        # both prior lines got replayed (scrolled+written) onto the fresh pad
-        assert new_pad.scroll_calls == 2
-        texts = [call[2] for call in new_pad.addstr_calls]
-        assert texts == ["a", "b"]
-
-    def test_reattach_with_none_pad_is_a_no_op(self):
+    def test_total_rows_matches_line_count_when_nothing_wraps(self):
         ring = RingLog(maxlen=100)
-        ring.append([("a", None, None, False)], "a")
-        ring.reattach(None, None)  # must not raise
-        assert ring.plain_lines() == ["a"]
+        ring.set_width(40)
+        for i in range(3):
+            ring.append([(f"line{i}", None, None, False)], f"line{i}")
+        assert ring.total_rows() == 3
 
-    def test_detach_then_reattach_preserves_history_across_two_pads(self):
-        pad1 = FakePad(height=5, width=40)
-        ring = RingLog(maxlen=100, pad=pad1)
-        ring.append([("first", None, None, False)], "first")
-        ring.detach()
-        ring.append([("during-gap", None, None, False)], "during-gap")  # recorded, not drawn
-        pad2 = FakePad(height=5, width=40)
-        ring.reattach(pad2, None)
-        assert ring.plain_lines() == ["first", "during-gap"]
-        assert [c[2] for c in pad2.addstr_calls] == ["first", "during-gap"]
-        assert pad1.addstr_calls == [(pad1.height - 1, 0, "first", 0)]  # pad1 never saw the gap line
+    def test_total_rows_counts_wrapped_rows(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(5)
+        ring.append([("abcdefghij", None, None, False)], "abcdefghij")  # 10 chars / 5 = 2 rows
+        assert ring.total_rows() == 2
+
+    def test_set_width_is_a_noop_when_unchanged(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(10)
+        ring.append([("hello world", None, None, False)], "hello world")
+        before = ring.total_rows()
+        ring.set_width(10)  # same width again
+        assert ring.total_rows() == before
+
+    def test_set_width_reflows_existing_history(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(5)
+        ring.append([("abcdefghij", None, None, False)], "abcdefghij")
+        assert ring.total_rows() == 2  # wraps at width 5
+        ring.set_width(40)
+        assert ring.total_rows() == 1  # fits on one row at width 40
+
+    def test_append_after_width_set_updates_total_incrementally(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(5)
+        ring.append([("abcde", None, None, False)], "abcde")  # 1 row
+        ring.append([("abcdefghij", None, None, False)], "abcdefghij")  # 2 rows
+        assert ring.total_rows() == 3
+
+    def test_eviction_reduces_total_rows_by_evicted_line(self):
+        ring = RingLog(maxlen=2)
+        ring.set_width(5)
+        ring.append([("abcdefghij", None, None, False)], "abcdefghij")  # 2 rows, will be evicted
+        ring.append([("short", None, None, False)], "short")  # 1 row
+        assert ring.total_rows() == 3
+        ring.append([("x", None, None, False)], "x")  # 1 row -- evicts the first (2-row) line
+        assert len(ring) == 2
+        assert ring.total_rows() == 2  # "short" (1) + "x" (1), the 2-row line is gone
+
+    # ── visible_rows() ────────────────────────────────────────────────────────
+
+    def test_visible_rows_tail_window_single_row_lines(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(40)
+        for i in range(5):
+            ring.append([(f"line{i}", None, None, False)], f"line{i}")
+        rows = ring.visible_rows(0, 2)
+        assert [r[0][0] for r in rows] == ["line3", "line4"]
+
+    def test_visible_rows_spans_a_wrapped_multi_row_line(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(5)
+        ring.append([("a", None, None, False)], "a")
+        ring.append([("bcdefghij", None, None, False)], "bcdefghij")  # wraps to 2 rows: "bcdef","ghij"
+        ring.append([("k", None, None, False)], "k")
+        rows = ring.visible_rows(0, 3)
+        assert [r[0][0] for r in rows] == ["bcdef", "ghij", "k"]
+
+    def test_visible_rows_scrolled_back(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(40)
+        for i in range(5):
+            ring.append([(f"line{i}", None, None, False)], f"line{i}")
+        rows = ring.visible_rows(2, 2)  # 2 rows back from the tail, 2 rows tall
+        assert [r[0][0] for r in rows] == ["line1", "line2"]
+
+    def test_visible_rows_near_start_of_short_history(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(40)
+        ring.append([("only", None, None, False)], "only")
+        rows = ring.visible_rows(0, 5)  # asking for more rows than exist
+        assert [r[0][0] for r in rows] == ["only"]
+
+    def test_visible_rows_empty_history(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(40)
+        assert ring.visible_rows(0, 5) == []
 
 
 # ── crash_alert.set_sink() — TUI banner redirection ─────────────────────────────

@@ -4,13 +4,18 @@ Architecture
 ------------
 Pure layer (importable and unit-testable without a real curses/tty):
   - quantize_rgb_to_256 / segments_from_ansi : ANSI SGR -> (text, fg256, bg256, bold) runs.
+  - wrap_line   : hard-wraps one line's colored segments into rows of at most N columns,
+                  splitting mid-segment so color survives a wrap boundary.
   - PairCache   : lazily allocates/reuses curses color-pair slots, LRU-evicted when exhausted.
-  - RingLog     : bounded scrollback (collections.deque) that also projects each appended line
-                  onto a curses pad (or a fake pad double, for tests) via a single append() call,
-                  keeping pad content and a parallel plain-text index 1:1 aligned (ready for a
-                  future `/` search without a data-model change). Its pad/pair_cache are
-                  session-scoped (reattach()/detach()) but the deque itself survives a mid-run
-                  disable/re-enable cycle — see below.
+  - RingLog     : bounded scrollback (collections.deque of (segments, plain_text)) — the sole
+                  source of truth for history. Nothing is projected onto a persistent curses
+                  pad; rendering is computed on demand for whatever window is actually visible
+                  (visible_rows()), wrapped at the current terminal width (set_width()). A
+                  resize is therefore just "wrap differently on the next redraw", and a mid-run
+                  disable/re-enable cycle needs no explicit replay step — a freshly reopened
+                  session just reads RingLog again. A future `/` search is a scan of the
+                  plain-text index translated back into a wrapped row; no data-model change
+                  needed.
 
 Curses-owning layer (manual-testing only — same accepted gap as dendros_config.py's own curses
 interaction, which is likewise untested by the unit suite):
@@ -19,9 +24,9 @@ interaction, which is likewise untested by the unit suite):
     session is open it does the existing per-line work (crash-alert detection, colorize,
     param-watcher drain) and pushes tagged data onto that session's queue.Queue() — it never
     touches curses objects directly. run_tui() then loops calling curses.wrapper(_tui_main, ...):
-    each call is one TUI "session" (fresh pad/PairCache/queue), and _tui_main returns 'disabled'
+    each call is one TUI "session" (fresh PairCache/queue), and _tui_main returns 'disabled'
     when `dendros disable` fires mid-run from another terminal, at which point run_tui() waits
-    (polling the same shared flag) for either a re-enable — reopening a fresh session that replays
+    (polling the same shared flag) for either a re-enable — reopening a fresh session that reads
     the *entire* persisted RingLog, including lines recorded during the passthrough gap, so nothing
     is fragmented — or the launch process ending while still disabled, in which case it just
     returns (waiting around for a re-enable after the process already exited would look like a
@@ -31,10 +36,15 @@ interaction, which is likewise untested by the unit suite):
     on a fixed dark background so the bar visually stands out from the scrolling content —
     curses/terminfo can't introspect the terminal's actual background color, so this is a fixed
     shade rather than a computed offset from it; crash/param alerts via ca.set_sink() shifted right
-    of the tag+version so nothing overlaps) and the scrollback pad, and handles keyboard navigation
-    (PageUp/PageDown/Home/End). 'q' only quits once the launch process has exited (eof) — quitting
-    early would leave it running with no visible output and no way back in; Ctrl-C is still the way
-    to actually stop it, same as classic mode.
+    of the tag+version so nothing overlaps) and the scrollback body — each redraw asks RingLog to
+    rewrap at the current width and hand back exactly the wrapped rows needed for the viewport,
+    drawn straight onto the main window (no pad) — and handles keyboard navigation
+    (PageUp/PageDown/Home/End, now paging by wrapped rows rather than logical lines) and
+    KEY_RESIZE (clears stale content; the next tick's redraw picks up the new size and rewraps).
+    'q' only quits once the launch process has exited (eof) — quitting early would leave it
+    running with no visible output and no way back in; Ctrl-C is still the way to actually stop
+    it, same as classic mode. A redraw is skipped on ticks where nothing changed (no new queued
+    content, no key that moved the view) to avoid needless rewrapping work at the 20Hz tick rate.
 
 Ctrl-C handling is intentionally different from the classic loop: SIGINT is only ever delivered to
 the main thread, so the background reader thread's blocking read() never sees it and _iter_stdin()'s
@@ -213,6 +223,35 @@ def segments_from_ansi(line, quantize=quantize_rgb_to_256):
     return segments
 
 
+def wrap_line(segments, width):
+    """Hard-wrap one line's colored segments into rows of at most `width` columns.
+
+    Splits mid-segment where needed so color survives a wrap boundary. Character-wrap
+    (not word-wrap) — matches how classic passthrough / less / vim already wrap raw
+    terminal output, and log content (stack traces, JSON, URLs) has no reliable "word"
+    unit to break on anyway. Always returns at least one row: an empty line yields a
+    single empty row, so blank log lines still occupy a row like a real terminal.
+    """
+    width = max(1, width)
+    rows = []
+    current = []
+    col = 0
+    for text, fg, bg, bold in segments:
+        while text:
+            remaining = width - col
+            if remaining <= 0:
+                rows.append(current)
+                current = []
+                col = 0
+                remaining = width
+            chunk, text = text[:remaining], text[remaining:]
+            if chunk:
+                current.append((chunk, fg, bg, bold))
+                col += len(chunk)
+    rows.append(current)
+    return rows
+
+
 class PairCache:
     """Lazily allocates/reuses curses color-pair slots, LRU-evicted when COLOR_PAIRS is exhausted.
 
@@ -262,26 +301,25 @@ class PairCache:
 class RingLog:
     """Bounded scrollback: (segments, plain_text) pairs, 1:1 aligned by construction.
 
-    Each append() both stores the line and (if a pad is attached) projects it onto the pad —
-    scroll(1) then addstr the new line at the pad's fixed last row — so the pad and the
-    plain-text index can never drift apart. A future `/` search is a scan of the plain-text
-    side translated back into a pad row; no data-model change needed.
+    `_lines` is the sole source of truth — nothing is projected onto a persistent curses
+    pad. Rendering is computed on demand for whatever window is actually visible (see
+    visible_rows()), wrapped at the current terminal width (see set_width()). This means
+    a resize is just "wrap differently next redraw", and a mid-run system-wide
+    disable/re-enable cycle needs no explicit replay step: a freshly reopened TUI session
+    just reads `_lines` again on its next redraw, including whatever passthrough-gap lines
+    the reader thread appended directly while curses was torn down.
 
-    Survives a mid-run system-wide disable/re-enable cycle: the TUI can tear down curses
-    (detach()) and later reopen a fresh session (reattach()) without losing scrollback —
-    only the pad/pair_cache are session-scoped, the deque itself is not. append() is also
-    called directly by the background reader thread while curses is torn down (recording
-    plain-text passthrough lines for later replay), so every mutating method takes a lock —
-    detach()/reattach() run on the main thread exactly at the moment the reader thread's
-    policy (queue vs. call append() directly) flips, and this guards against the two ever
-    touching `_pad`/`_lines` concurrently.
+    append() is called both from the main thread (draining the session queue) and directly
+    by the background reader thread during a disable gap, so every mutating method takes a
+    lock.
     """
 
-    def __init__(self, maxlen, pad=None, pair_cache=None):
+    def __init__(self, maxlen):
         self.maxlen = maxlen
         self._lines = collections.deque(maxlen=maxlen)
-        self._pad = pad
-        self._pair_cache = pair_cache
+        self._row_counts = collections.deque(maxlen=maxlen)
+        self._wrap_width = None
+        self._total_rows = 0
         self._lock = threading.Lock()
 
     def __len__(self):
@@ -295,61 +333,50 @@ class RingLog:
 
     def append(self, segments, plain_text):
         with self._lock:
+            evicted_rows = 0
+            if self.maxlen is not None and len(self._lines) == self.maxlen:
+                evicted_rows = self._row_counts[0]
             self._lines.append((segments, plain_text))
-            if self._pad is not None:
-                self._render_last(segments)
+            row_count = len(wrap_line(segments, self._wrap_width)) if self._wrap_width else 1
+            self._row_counts.append(row_count)
+            self._total_rows += row_count - evicted_rows
 
-    def reattach(self, pad, pair_cache):
-        """Attach a fresh pad/pair_cache and replay all stored history onto it — used when
-        the TUI reopens after a disable/re-enable cycle; the scrollback was never lost,
-        only the curses session was torn down."""
+    def set_width(self, width):
+        """Rewrap the entire retained history at a new width. No-op if unchanged — this
+        is the only O(history) operation, and it only runs once per actual resize, never
+        once per redraw tick."""
+        width = max(1, width)
         with self._lock:
-            self._pad = pad
-            self._pair_cache = pair_cache
-            if pad is None:
+            if width == self._wrap_width:
                 return
-            for segments, _ in self._lines:
-                self._render_last(segments)
+            self._wrap_width = width
+            self._row_counts = collections.deque(
+                (len(wrap_line(segments, width)) for segments, _ in self._lines),
+                maxlen=self.maxlen,
+            )
+            self._total_rows = sum(self._row_counts)
 
-    def detach(self):
-        """Detach from the (about-to-be-destroyed) pad, e.g. right before curses tears down.
-        Safe to keep calling append() afterward — it'll just store lines without drawing
-        until reattach() is called again."""
+    def total_rows(self):
+        return self._total_rows
+
+    def visible_rows(self, view_offset, height):
+        """Return up to `height` wrapped rows, ending `view_offset` rows back from the
+        tail. Only wraps as many lines as needed to cover the request — cost scales with
+        how far back the view is scrolled plus the viewport height, not total history."""
         with self._lock:
-            self._pad = None
-            self._pair_cache = None
-
-    def _render_last(self, segments):
-        pad = self._pad
-        try:
-            max_y, max_x = pad.getmaxyx()
-        except Exception:
-            return
-        # Never write all the way to the last column: ncurses auto-wraps the cursor to
-        # the next row once a write reaches a window/pad's final cell, which (with
-        # scrollok(True) and the cursor already on the pad's last row) triggers an
-        # *extra* implicit scroll — producing a spurious blank row after every line
-        # that happens to exactly fill the terminal width.
-        usable_x = max(0, max_x - 1)
-        pad.scroll(1)
-        row = max(0, max_y - 1)
-        try:
-            pad.move(row, 0)
-            pad.clrtoeol()
-        except Exception:
-            pass
-        col = 0
-        for text, fg, bg, bold in segments:
-            if col >= usable_x:
-                break
-            attr = 0
-            if self._pair_cache is not None and (fg is not None or bg is not None or bold):
-                attr = self._pair_cache.attr_for(fg, bg, bold)
-            try:
-                pad.addstr(row, col, text[:max(0, usable_x - col)], attr)
-            except Exception:
-                pass
-            col += len(text)
+            width = self._wrap_width or 1
+            height = max(0, height)
+            view_offset = max(0, view_offset)
+            need = view_offset + height
+            collected_rev = []  # rows in reverse (newest-first) order while accumulating
+            for segments, _ in reversed(self._lines):
+                if len(collected_rev) >= need:
+                    break
+                collected_rev.extend(reversed(wrap_line(segments, width)))
+            collected_rev.reverse()
+            end = max(0, len(collected_rev) - view_offset)
+            start = max(0, end - height)
+            return collected_rev[start:end]
 
 
 # ── Curses-owning layer (manual-testing only) ──────────────────────────────────
@@ -362,8 +389,9 @@ def run_tui(stdin_lines, colorize_fn, ca_module, pw_module, param_alert, param_a
     RingLog scrollback it feeds, both persist across a mid-run `dendros disable` /
     `dendros enable` cycle: disabling tears down curses and switches the reader to direct
     passthrough printing (recording those plain-text lines into the same RingLog rather
-    than discarding them), and re-enabling reopens curses with the *entire* history —
-    including the passthrough gap — replayed into a fresh pad. No fragmented logs.
+    than discarding them), and re-enabling reopens curses, which reads the *entire*
+    history — including the passthrough gap — straight from RingLog on its next redraw.
+    No fragmented logs, and no explicit replay step needed (RingLog isn't pad-backed).
 
     Returns once the whole run is genuinely over: either a normal quit ('q', only
     available once the launch process has exited) or the process ending while disabled.
@@ -377,7 +405,7 @@ def run_tui(stdin_lines, colorize_fn, ca_module, pw_module, param_alert, param_a
         scrollback = 5000
     scrollback = max(1, scrollback)
 
-    ring = RingLog(maxlen=scrollback)  # pad attached per-session via reattach()/detach()
+    ring = RingLog(maxlen=scrollback)  # width set per-redraw via set_width(); survives resizes
     passthrough_event = threading.Event()  # set = no curses right now, reader prints raw
     stop_event = threading.Event()  # set once = stdin_lines is exhausted, for good
     session = {'q': None}  # current session's queue.Queue(), or None while disabled
@@ -463,11 +491,6 @@ def _tui_main(scr, ring, session, passthrough_event, stop_event, ca_module):
     _header_segments = segments_from_ansi(DENDROS_TAG)
     _version_text = f' v{__version__} '
 
-    pad = curses.newpad(ring.maxlen, max(1, max_x))
-    pad.scrollok(True)
-    pad.idlok(True)
-    ring.reattach(pad, pair_cache)  # first-ever open: no-op replay. Reopen: full history.
-
     q = queue.Queue()
     session['q'] = q
     # A valid queue must be in place *before* the reader is told it's safe to use it —
@@ -508,8 +531,8 @@ def _tui_main(scr, ring, session, passthrough_event, stop_event, ca_module):
             if kind == 'line':
                 # Lines still carry their trailing \r/\n from _iter_stdin(); curses'
                 # addstr() treats an embedded newline as a real cursor action (an extra
-                # implicit line-advance on top of our own pad.scroll(1)), producing a
-                # spurious blank row between every entry if left in.
+                # implicit line-advance), producing a spurious blank row between every
+                # entry if left in.
                 segments = segments_from_ansi(payload.rstrip('\r\n'))
                 plain = ''.join(seg[0] for seg in segments)
                 ring.append(segments, plain)
@@ -537,7 +560,7 @@ def _tui_main(scr, ring, session, passthrough_event, stop_event, ca_module):
         return col
 
     def _draw_banner(width):
-        usable_width = max(0, width - 1)  # never write to the last column — see RingLog._render_last
+        usable_width = max(0, width - 1)  # never write to the last column — see _redraw()
         row = 0
 
         header_attr = pair_cache.attr_for(None, _header_bg, False)
@@ -568,34 +591,68 @@ def _tui_main(scr, ring, session, passthrough_event, stop_event, ca_module):
             _draw_segments(row, alert_col, usable_width, segments_from_ansi(text), default_bg=_header_bg)
 
     def _redraw():
+        nonlocal view_offset
         max_y, max_x = scr.getmaxyx()
         log_h = max(1, max_y - banner_h)
+        usable_width = max(1, max_x - 1)  # never write to the last column — see below
+
+        ring.set_width(usable_width)  # no-op unless the terminal was actually resized
+        max_offset = max(0, ring.total_rows() - log_h)
+        view_offset = min(view_offset, max_offset)
+
         _draw_banner(max_x)
-        scr.noutrefresh()
-        pad_h, pad_w = pad.getmaxyx()
-        top = max(0, pad_h - log_h - view_offset)
+        # _draw_banner() left scr's window-wide background set to the header's dark
+        # fill (bkgdset() applies to the whole window, not just row 0 — harmless when
+        # the body lived on a separate pad, but body rows are drawn directly on `scr`
+        # now, so leaving it set would paint every blank body cell black instead of
+        # the terminal's actual default background). Reset before touching the body.
         try:
-            pad.noutrefresh(top, 0, banner_h, 0, max_y - 1, max_x - 1)
+            scr.bkgdset(' ', 0)
         except curses.error:
             pass
+
+        rows = ring.visible_rows(view_offset, log_h)
+        row_i = 0
+        for wrapped_row in rows:
+            scr_row = banner_h + row_i
+            try:
+                scr.move(scr_row, 0)
+                scr.clrtoeol()
+            except curses.error:
+                pass
+            _draw_segments(scr_row, 0, usable_width, wrapped_row)
+            row_i += 1
+        # Blank out any rows below the last one drawn (e.g. early in a run, before
+        # there's enough history to fill the screen, or after the window grew).
+        while row_i < log_h:
+            scr_row = banner_h + row_i
+            try:
+                scr.move(scr_row, 0)
+                scr.clrtoeol()
+            except curses.error:
+                pass
+            row_i += 1
+
+        scr.noutrefresh()
         curses.doupdate()
 
+    needs_redraw = True  # always draw once before the first getch()
     try:
         while True:
             if _disabled_system_wide():
                 # `dendros disable` from another terminal — tear the TUI down cleanly
-                # (curses.wrapper's own finally still restores the terminal). Detach the
-                # ring *before* the reader is allowed to touch it directly (the ordering
-                # here, plus RingLog's own lock, is what keeps this race-free), then
-                # switch the reader to passthrough printing and let run_tui() decide
-                # whether to wait for a re-enable or give up (see run_tui's own loop).
+                # (curses.wrapper's own finally still restores the terminal), switch the
+                # reader to passthrough printing, and let run_tui() decide whether to
+                # wait for a re-enable or give up (see run_tui's own loop). No pad to
+                # detach from — a freshly reopened session just reads `ring` again.
                 passthrough_event.set()
                 session['q'] = None
-                ring.detach()
                 return 'disabled'
 
-            _drain_queue()
-            _redraw()
+            drained = _drain_queue()
+            if needs_redraw or drained:
+                _redraw()
+                needs_redraw = False
 
             try:
                 ch = scr.getch()
@@ -612,18 +669,25 @@ def _tui_main(scr, ring, session, passthrough_event, stop_event, ca_module):
                 # terminal doesn't vanish just because the foreground process ended.
                 continue
 
-            pad_h, _ = pad.getmaxyx()
-            _, max_x = scr.getmaxyx()
-            log_h = max(1, scr.getmaxyx()[0] - banner_h)
-            max_offset = max(0, pad_h - log_h)
-            if ch in (curses.KEY_PPAGE,):
-                view_offset = min(max_offset, view_offset + log_h)
-            elif ch in (curses.KEY_NPAGE,):
-                view_offset = max(0, view_offset - log_h)
-            elif ch == curses.KEY_HOME:
-                view_offset = max_offset
-            elif ch == curses.KEY_END:
-                view_offset = 0
+            needs_redraw = True
+
+            if ch == curses.KEY_RESIZE:
+                # Wipe stale content from a shrink; the next _redraw() recomputes
+                # everything fresh from scr.getmaxyx() (same "just re-read the size and
+                # redraw fully every tick" approach dendros_config.py already relies on
+                # — no resize_term()/update_lines_cols() dance needed on this platform).
+                scr.clear()
+            elif ch in (curses.KEY_PPAGE, curses.KEY_NPAGE, curses.KEY_HOME, curses.KEY_END):
+                log_h = max(1, scr.getmaxyx()[0] - banner_h)
+                max_offset = max(0, ring.total_rows() - log_h)
+                if ch == curses.KEY_PPAGE:
+                    view_offset = min(max_offset, view_offset + log_h)
+                elif ch == curses.KEY_NPAGE:
+                    view_offset = max(0, view_offset - log_h)
+                elif ch == curses.KEY_HOME:
+                    view_offset = max_offset
+                elif ch == curses.KEY_END:
+                    view_offset = 0
             elif ch == ord('q') and eof:
                 # Only quit once the launch process has actually exited — quitting the
                 # TUI while it's still running would leave it alive with no visible
