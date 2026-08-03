@@ -18,9 +18,19 @@ from lib.launch_tui import (
     quantize_rgb_to_256,
     segments_from_ansi,
     wrap_line,
+    selection_span_for_row,
+    extract_selection_text,
+    build_osc52_sequence,
+    screen_row_to_tail_offset,
+    compute_scrollbar_thumb,
+    decode_sgr_mouse,
+    decode_navigation_key,
+    find_clipboard_tool,
+    copy_via_system_clipboard_tool,
     PairCache,
     RingLog,
 )
+import base64
 import lib.crash_alert as ca
 
 
@@ -386,13 +396,17 @@ class TestRingLog:
 
     # ── visible_rows() ────────────────────────────────────────────────────────
 
+    @staticmethod
+    def _texts(rows):
+        return [''.join(seg[0] for seg in segments) for segments, _ in rows]
+
     def test_visible_rows_tail_window_single_row_lines(self):
         ring = RingLog(maxlen=100)
         ring.set_width(40)
         for i in range(5):
             ring.append([(f"line{i}", None, None, False)], f"line{i}")
         rows = ring.visible_rows(0, 2)
-        assert [r[0][0] for r in rows] == ["line3", "line4"]
+        assert self._texts(rows) == ["line3", "line4"]
 
     def test_visible_rows_spans_a_wrapped_multi_row_line(self):
         ring = RingLog(maxlen=100)
@@ -401,7 +415,7 @@ class TestRingLog:
         ring.append([("bcdefghij", None, None, False)], "bcdefghij")  # wraps to 2 rows: "bcdef","ghij"
         ring.append([("k", None, None, False)], "k")
         rows = ring.visible_rows(0, 3)
-        assert [r[0][0] for r in rows] == ["bcdef", "ghij", "k"]
+        assert self._texts(rows) == ["bcdef", "ghij", "k"]
 
     def test_visible_rows_scrolled_back(self):
         ring = RingLog(maxlen=100)
@@ -409,19 +423,41 @@ class TestRingLog:
         for i in range(5):
             ring.append([(f"line{i}", None, None, False)], f"line{i}")
         rows = ring.visible_rows(2, 2)  # 2 rows back from the tail, 2 rows tall
-        assert [r[0][0] for r in rows] == ["line1", "line2"]
+        assert self._texts(rows) == ["line1", "line2"]
 
     def test_visible_rows_near_start_of_short_history(self):
         ring = RingLog(maxlen=100)
         ring.set_width(40)
         ring.append([("only", None, None, False)], "only")
         rows = ring.visible_rows(0, 5)  # asking for more rows than exist
-        assert [r[0][0] for r in rows] == ["only"]
+        assert self._texts(rows) == ["only"]
 
     def test_visible_rows_empty_history(self):
         ring = RingLog(maxlen=100)
         ring.set_width(40)
         assert ring.visible_rows(0, 5) == []
+
+    def test_visible_rows_is_continuation_flags_wrap_boundaries(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(5)
+        ring.append([("a", None, None, False)], "a")  # 1 row: not a continuation
+        ring.append([("bcdefghij", None, None, False)], "bcdefghij")  # 2 rows: "bcdef","ghij"
+        ring.append([("k", None, None, False)], "k")  # 1 row: not a continuation
+        rows = ring.visible_rows(0, 4)
+        flags = [is_cont for _, is_cont in rows]
+        assert flags == [False, False, True, False]
+
+    def test_visible_rows_arbitrary_historical_range(self):
+        # visible_rows() is also used to fetch a range that isn't the live viewport at
+        # all (e.g. a yank spanning an old selection) — view_offset=min(a,b),
+        # height=abs(a-b)+1 should return exactly the rows between two tail offsets.
+        ring = RingLog(maxlen=100)
+        ring.set_width(40)
+        for i in range(5):
+            ring.append([(f"line{i}", None, None, False)], f"line{i}")
+        # offsets: line4=0, line3=1, line2=2, line1=3, line0=4
+        rows = ring.visible_rows(1, 3 - 1 + 1)  # range from offset 1 (line3) to offset 3 (line1)
+        assert self._texts(rows) == ["line1", "line2", "line3"]
 
 
 # ── crash_alert.set_sink() — TUI banner redirection ─────────────────────────────
@@ -463,3 +499,326 @@ class TestCrashAlertSink:
         ca.record_death('talker', '1', None)
         ca.print_alert_banner()
         assert not captured[0].endswith('\n')
+
+
+# ── text-selection logic (selection_span_for_row / extract_selection_text) ──────────
+
+class TestSelectionSpanForRow:
+    def test_no_anchor_means_no_selection(self):
+        assert selection_span_for_row(0, 10, None, (0, 0)) is None
+
+    def test_single_row_selection_span_is_inclusive(self):
+        # anchor and cursor on the same row (offset 0), cursor ahead of anchor
+        span = selection_span_for_row(0, 10, anchor=(0, 2), cursor=(0, 5))
+        assert span == (2, 5)
+
+    def test_single_row_selection_is_order_independent(self):
+        forward = selection_span_for_row(0, 10, anchor=(0, 2), cursor=(0, 5))
+        backward = selection_span_for_row(0, 10, anchor=(0, 5), cursor=(0, 2))
+        assert forward == backward == (2, 5)
+
+    def test_row_outside_range_is_not_selected(self):
+        # selection spans offsets 0..2; offset 5 is untouched
+        assert selection_span_for_row(5, 10, anchor=(2, 0), cursor=(0, 0)) is None
+
+    def test_older_endpoint_row_selected_from_its_column_to_end(self):
+        # anchor is the older (higher-offset) endpoint at col 3; that row should be
+        # selected from col 3 to the end of the row.
+        span = selection_span_for_row(2, 10, anchor=(2, 3), cursor=(0, 1))
+        assert span == (3, 9)
+
+    def test_newer_endpoint_row_selected_from_start_to_its_column(self):
+        span = selection_span_for_row(0, 10, anchor=(2, 3), cursor=(0, 1))
+        assert span == (0, 1)
+
+    def test_middle_row_is_selected_whole(self):
+        span = selection_span_for_row(1, 10, anchor=(2, 3), cursor=(0, 1))
+        assert span == (0, 9)
+
+    def test_order_independence_for_multi_row_selection(self):
+        # swapping which endpoint is "anchor" vs "cursor" must not change the result
+        a = selection_span_for_row(2, 10, anchor=(2, 3), cursor=(0, 1))
+        b = selection_span_for_row(2, 10, anchor=(0, 1), cursor=(2, 3))
+        assert a == b == (3, 9)
+
+
+class TestExtractSelectionText:
+    def _row(self, text, is_continuation=False):
+        return ([(text, None, None, False)], is_continuation)
+
+    def test_no_anchor_returns_empty(self):
+        assert extract_selection_text([self._row("hello")], None, (0, 0)) == ''
+
+    def test_no_rows_returns_empty(self):
+        assert extract_selection_text([], (0, 0), (0, 3)) == ''
+
+    def test_single_row_slice_is_inclusive(self):
+        rows = [self._row("hello world")]
+        text = extract_selection_text(rows, anchor=(0, 0), cursor=(0, 4))
+        assert text == "hello"
+
+    def test_multi_row_distinct_lines_get_real_newline(self):
+        rows = [self._row("first"), self._row("second")]
+        # anchor at start of "first" (offset 1, the older row), cursor at end of
+        # "second" (offset 0, the newer row) -- both rows taken whole here.
+        text = extract_selection_text(rows, anchor=(1, 0), cursor=(0, 5))
+        assert text == "first\nsecond"
+
+    def test_wrap_continuation_gets_no_separator(self):
+        # "second" here is a wrap continuation of "first" -- one flowed logical line,
+        # should join with no newline in between.
+        rows = [self._row("first"), self._row("second", is_continuation=True)]
+        text = extract_selection_text(rows, anchor=(1, 0), cursor=(0, 5))
+        assert text == "firstsecond"
+
+    def test_trims_first_and_last_row_to_selection_columns(self):
+        rows = [self._row("abcdef"), self._row("ghijkl"), self._row("mnopqr")]
+        # anchor on the oldest row (offset 2) at col 3 -> "def"; cursor on the newest
+        # row (offset 0) at col 2 -> "mno"; middle row taken whole.
+        text = extract_selection_text(rows, anchor=(2, 3), cursor=(0, 2))
+        assert text == "def\nghijkl\nmno"
+
+
+class TestBuildOsc52Sequence:
+    def test_wraps_base64_payload_in_osc52_escape(self):
+        seq = build_osc52_sequence("hello")
+        assert seq.startswith(b'\033]52;c;')
+        assert seq.endswith(b'\a')
+
+    def test_payload_round_trips_through_base64(self):
+        seq = build_osc52_sequence("hello world")
+        b64 = seq[len(b'\033]52;c;'):-1]
+        assert base64.b64decode(b64) == b"hello world"
+
+    def test_unicode_round_trips_as_utf8(self):
+        seq = build_osc52_sequence("café")
+        b64 = seq[len(b'\033]52;c;'):-1]
+        assert base64.b64decode(b64) == "café".encode('utf-8')
+
+    def test_truncates_past_max_bytes(self):
+        seq = build_osc52_sequence("abcdefghij", max_bytes=5)
+        b64 = seq[len(b'\033]52;c;'):-1]
+        assert base64.b64decode(b64) == b"abcde"
+
+
+# ── find_clipboard_tool / copy_via_system_clipboard_tool ──────────────────────────
+
+class TestFindClipboardTool:
+    def test_none_found_returns_none(self):
+        assert find_clipboard_tool(which_fn=lambda name: None) is None
+
+    def test_first_available_tool_wins(self):
+        # xclip is tried before xsel/wl-copy -- even if a later one would also be found,
+        # the first match in priority order should be returned.
+        found = {'xclip', 'xsel', 'wl-copy'}
+        cmd = find_clipboard_tool(which_fn=lambda name: f'/usr/bin/{name}' if name in found else None)
+        assert cmd[0] == 'xclip'
+
+    def test_falls_through_to_second_tool_when_first_missing(self):
+        cmd = find_clipboard_tool(which_fn=lambda name: '/usr/bin/xsel' if name == 'xsel' else None)
+        assert cmd[0] == 'xsel'
+
+    def test_falls_through_to_third_tool(self):
+        cmd = find_clipboard_tool(which_fn=lambda name: '/usr/bin/wl-copy' if name == 'wl-copy' else None)
+        assert cmd[0] == 'wl-copy'
+
+
+class TestCopyViaSystemClipboardTool:
+    def test_returns_false_when_no_tool_found(self):
+        calls = []
+        result = copy_via_system_clipboard_tool(
+            "hello", which_fn=lambda name: None, run_fn=lambda *a, **k: calls.append((a, k)))
+        assert result is False
+        assert calls == []
+
+    def test_runs_found_tool_with_text_as_stdin(self):
+        calls = []
+        result = copy_via_system_clipboard_tool(
+            "hello world",
+            which_fn=lambda name: f'/usr/bin/{name}' if name == 'xclip' else None,
+            run_fn=lambda *a, **k: calls.append((a, k)))
+        assert result is True
+        assert len(calls) == 1
+        (cmd,), kwargs = calls[0]
+        assert cmd[0] == 'xclip'
+        assert kwargs['input'] == b'hello world'
+
+    def test_run_exception_is_swallowed_and_still_returns_true(self):
+        def raising_run(*a, **k):
+            raise OSError("no DISPLAY")
+        result = copy_via_system_clipboard_tool(
+            "hello", which_fn=lambda name: '/usr/bin/xclip' if name == 'xclip' else None,
+            run_fn=raising_run)
+        assert result is True  # a tool was found and an attempt was made
+
+
+# ── screen_row_to_tail_offset ────────────────────────────────────────────────────
+
+class TestScreenRowToTailOffset:
+    def test_top_row_of_full_viewport_is_the_oldest_offset(self):
+        # n_rows=5, view_offset=0: body_row 0 (top) is the oldest of the 5 visible rows.
+        assert screen_row_to_tail_offset(0, 5, 0) == 4
+
+    def test_bottom_row_of_full_viewport_is_the_newest_offset(self):
+        assert screen_row_to_tail_offset(4, 5, 0) == 0
+
+    def test_middle_row(self):
+        assert screen_row_to_tail_offset(2, 5, 0) == 2
+
+    def test_scrolled_back_view_offset_shifts_every_row_older(self):
+        # Scrolled back 3 rows: the same body_row now maps to an offset 3 further back.
+        assert screen_row_to_tail_offset(4, 5, 3) == 3
+        assert screen_row_to_tail_offset(0, 5, 3) == 7
+
+    def test_negative_body_row_is_out_of_range(self):
+        assert screen_row_to_tail_offset(-1, 5, 0) is None
+
+    def test_body_row_at_or_past_n_rows_is_out_of_range(self):
+        assert screen_row_to_tail_offset(5, 5, 0) is None
+        assert screen_row_to_tail_offset(10, 5, 0) is None
+
+
+# ── compute_scrollbar_thumb ────────────────────────────────────────────────────────
+
+class TestComputeScrollbarThumb:
+    def test_nothing_to_scroll_no_thumb(self):
+        # max_offset <= 0 -- everything fits, no thumb, just an empty track.
+        assert compute_scrollbar_thumb(20, 0, 0, 15) == (0, 0)
+
+    def test_total_rows_not_exceeding_track_height_no_thumb(self):
+        assert compute_scrollbar_thumb(20, 0, 0, 20) == (0, 0)
+
+    def test_zero_track_height(self):
+        assert compute_scrollbar_thumb(0, 0, 0, 100) == (0, 0)
+
+    def test_at_tail_thumb_sits_at_bottom(self):
+        # view_offset=0 (following the tail) -> thumb should be at the bottom of the track.
+        start, height = compute_scrollbar_thumb(10, 0, 90, 100)
+        assert start + height == 10  # flush with the bottom edge
+
+    def test_fully_scrolled_back_thumb_sits_at_top(self):
+        start, height = compute_scrollbar_thumb(10, 90, 90, 100)
+        assert start == 0  # flush with the top edge
+
+    def test_midpoint_thumb_is_roughly_centered(self):
+        start, height = compute_scrollbar_thumb(10, 45, 90, 100)
+        # Not pinned to either edge.
+        assert start > 0
+        assert start + height < 10
+
+    def test_thumb_height_proportional_to_visible_fraction(self):
+        # Viewport shows track_height (10) rows out of 20 total -> half visible -> thumb
+        # roughly half the track.
+        _, height = compute_scrollbar_thumb(10, 0, 10, 20)
+        assert height == 5
+
+    def test_thumb_height_at_least_one_for_huge_scrollback(self):
+        _, height = compute_scrollbar_thumb(10, 0, 999990, 1000000)
+        assert height >= 1
+
+    def test_thumb_height_never_exceeds_track_height(self):
+        _, height = compute_scrollbar_thumb(10, 0, 1, 11)
+        assert height <= 10
+
+    def test_out_of_range_view_offset_is_clamped(self):
+        # view_offset beyond max_offset shouldn't push the thumb past the top.
+        start, _ = compute_scrollbar_thumb(10, 999, 90, 100)
+        assert start == 0
+
+
+# ── decode_sgr_mouse ──────────────────────────────────────────────────────────────
+
+class TestDecodeSgrMouse:
+    def test_left_button_press(self):
+        ev = decode_sgr_mouse(0, 10, 5, 'M')
+        assert ev == {
+            'button': 0, 'is_motion': False, 'is_wheel': False, 'is_release': False,
+            'wheel_dir': None, 'col': 9, 'row': 4,
+        }
+
+    def test_release_terminator_sets_is_release(self):
+        ev = decode_sgr_mouse(0, 1, 1, 'm')
+        assert ev['is_release'] is True
+
+    def test_press_terminator_is_not_release(self):
+        ev = decode_sgr_mouse(0, 1, 1, 'M')
+        assert ev['is_release'] is False
+
+    def test_motion_flag_bit_32(self):
+        # Cb=32 -> button 0 (left) + motion bit set, no wheel.
+        ev = decode_sgr_mouse(32, 1, 1, 'M')
+        assert ev['is_motion'] is True
+        assert ev['button'] == 0
+        assert ev['is_wheel'] is False
+
+    def test_plain_press_has_no_motion_flag(self):
+        ev = decode_sgr_mouse(0, 1, 1, 'M')
+        assert ev['is_motion'] is False
+
+    def test_wheel_up(self):
+        ev = decode_sgr_mouse(64, 1, 1, 'M')
+        assert ev['is_wheel'] is True
+        assert ev['wheel_dir'] == 'up'
+
+    def test_wheel_down(self):
+        ev = decode_sgr_mouse(65, 1, 1, 'M')
+        assert ev['is_wheel'] is True
+        assert ev['wheel_dir'] == 'down'
+
+    def test_non_wheel_event_has_no_wheel_dir(self):
+        ev = decode_sgr_mouse(1, 1, 1, 'M')  # middle-button press
+        assert ev['wheel_dir'] is None
+
+    def test_button_codes(self):
+        assert decode_sgr_mouse(0, 1, 1, 'M')['button'] == 0  # left
+        assert decode_sgr_mouse(1, 1, 1, 'M')['button'] == 1  # middle
+        assert decode_sgr_mouse(2, 1, 1, 'M')['button'] == 2  # right
+
+    def test_coordinates_convert_1_based_to_0_based(self):
+        ev = decode_sgr_mouse(0, 1, 1, 'M')
+        assert ev['col'] == 0
+        assert ev['row'] == 0
+
+    def test_modifier_bits_do_not_corrupt_button_or_motion_decode(self):
+        # Shift (4) + left-button motion (32) held together: modifier bits are ignored,
+        # not accidentally interpreted as part of the button/motion/wheel encoding.
+        ev = decode_sgr_mouse(32 | 4, 1, 1, 'M')
+        assert ev['button'] == 0
+        assert ev['is_motion'] is True
+        assert ev['is_wheel'] is False
+
+    def test_modifier_bits_do_not_corrupt_wheel_decode(self):
+        ev = decode_sgr_mouse(64 | 8, 1, 1, 'M')  # wheel-up + Meta
+        assert ev['is_wheel'] is True
+        assert ev['wheel_dir'] == 'up'
+
+
+# ── decode_navigation_key ─────────────────────────────────────────────────────────
+
+class TestDecodeNavigationKey:
+    def test_letter_forms(self):
+        assert decode_navigation_key('A') == 'up'
+        assert decode_navigation_key('B') == 'down'
+        assert decode_navigation_key('C') == 'right'
+        assert decode_navigation_key('D') == 'left'
+        assert decode_navigation_key('H') == 'home'
+        assert decode_navigation_key('F') == 'end'
+
+    def test_unrecognized_letter_is_none(self):
+        assert decode_navigation_key('Z') is None
+
+    def test_tilde_forms(self):
+        assert decode_navigation_key('~', '5') == 'page_up'
+        assert decode_navigation_key('~', '6') == 'page_down'
+        assert decode_navigation_key('~', '1') == 'home'
+        assert decode_navigation_key('~', '7') == 'home'
+        assert decode_navigation_key('~', '4') == 'end'
+        assert decode_navigation_key('~', '8') == 'end'
+
+    def test_unrecognized_tilde_digits_is_none(self):
+        assert decode_navigation_key('~', '99') is None
+
+    def test_letter_form_with_digits_is_none(self):
+        # A letter final byte should never be paired with a nonempty digit string --
+        # the two encodings are mutually exclusive.
+        assert decode_navigation_key('A', '5') is None
