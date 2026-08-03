@@ -16,7 +16,7 @@ except ImportError:
     print(f'{DENDROS_TAG} PyYAML required: pip3 install pyyaml', file=sys.stderr)
     sys.exit(1)
 
-from lib.config_writer import make_label, write_config, merge_config
+from lib.config_writer import write_config, merge_config
 from lib.build_modifier import modify_cmake, modify_setup_py, modify_setup_cfg
 from lib.discovery import (
     list_launch_files, extract_included_packages,

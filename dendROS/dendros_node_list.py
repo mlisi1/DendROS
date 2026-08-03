@@ -84,7 +84,7 @@ def main():
         # Fallback: scan AMENT_PREFIX_PATH for installed configs
         config_paths = _scan_configs()
         if debug:
-            print(f'[dendROS node list] no shared colors found, scanning AMENT_PREFIX_PATH',
+            print('[dendROS node list] no shared colors found, scanning AMENT_PREFIX_PATH',
                   file=sys.stderr)
             print(f'[dendROS node list] AMENT_PREFIX_PATH={os.environ.get("AMENT_PREFIX_PATH", "<not set>")}',
                   file=sys.stderr)

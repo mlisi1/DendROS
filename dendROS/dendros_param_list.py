@@ -103,7 +103,6 @@ def main():
             )
 
     current_ansi = None   # color code of the most recent node header
-    current_style = None  # tag_style of the most recent node header
 
     # Pre-seed color from the node argument so bare output (no header line) is colored.
     # When a node header IS in the output the header parser will simply overwrite this.
@@ -112,10 +111,8 @@ def main():
         _ansi, _label = resolve_node(node_arg, color_map, tag_map)
         if _ansi:
             current_ansi = _ansi
-            current_style = resolve_node_style(node_arg, style_map) or tag_style
         elif unmatched_ansi:
             current_ansi = unmatched_ansi
-            current_style = tag_style
 
     for line in sys.stdin:
         raw = line.rstrip('\n')
@@ -135,7 +132,6 @@ def main():
             if ansi_code:
                 current_ansi = ansi_code
                 node_style = resolve_node_style(node_name, style_map) or tag_style
-                current_style = node_style
                 colored_name = f'\033[{ansi_code}m{node_name}:{RESET}'
                 if show_tag and label:
                     badge = _badge(label, ansi_code, node_style)
@@ -144,7 +140,6 @@ def main():
                     out = colored_name
             elif unmatched_ansi:
                 current_ansi = unmatched_ansi
-                current_style = tag_style
                 colored_name = f'\033[{unmatched_ansi}m{node_name}:{RESET}'
                 if show_tag and unmatched_tag:
                     badge = _badge(unmatched_tag, unmatched_ansi, tag_style)
@@ -153,11 +148,9 @@ def main():
                     out = colored_name
             elif dim_unmatched:
                 current_ansi = None
-                current_style = None
                 out = f'\033[2m{node_name}:{RESET}'
             else:
                 current_ansi = None
-                current_style = None
                 out = raw
 
             sys.stdout.write(out + '\n')

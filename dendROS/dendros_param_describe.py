@@ -88,7 +88,7 @@ def _colorize_line(raw, ansi_code, label, node_style,
     m = _PARAM_NAME_RE.match(raw)
     if m:
         param_name = m.group(2).strip()
-        dim_label = f'\033[2mParameter name:\033[0m'
+        dim_label = '\033[2mParameter name:\033[0m'
 
         if ansi_code:
             colored = f'\033[{ansi_code};1m{param_name}\033[0m'

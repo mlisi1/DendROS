@@ -1,10 +1,11 @@
-"""Tests for lib/launch_tui.py — the pure/testable layer only.
+"""Tests for lib/tui_pure.py — the pure/testable layer backing the TUI launch mode.
 
-The curses-owning layer (run_tui/_tui_main) needs a real controlling terminal and is
-manual-testing only, same accepted gap as dendros_config.py's own curses interaction.
-These tests cover: ANSI SGR parsing, 256-color quantization, PairCache allocation/eviction
-(via a fake curses double), and RingLog's ring-buffer + pad-projection behavior (via a fake
-pad double) — no real curses or threads involved.
+The curses-owning layer (lib/launch_tui.py's run_tui/_tui_main) needs a real controlling
+terminal and is manual-testing only, same accepted gap as dendros_config.py's own curses
+interaction. These tests cover: ANSI SGR parsing, 256-color quantization, PairCache
+allocation/eviction (via a fake curses double), RingLog's on-demand wrap/scrollback
+behavior, selection math, and mouse/keyboard escape-sequence decoding — no real curses or
+threads involved.
 """
 
 import os
@@ -14,7 +15,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'dendROS'))
 
-from lib.launch_tui import (
+from lib.tui_pure import (
     quantize_rgb_to_256,
     segments_from_ansi,
     wrap_line,

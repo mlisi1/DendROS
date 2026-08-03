@@ -3,21 +3,21 @@
 import os
 import re
 import sys
-import tempfile
 
 import pytest
 import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'dendROS'))
 
-import dendros_config as cfg_mod
 import lib.global_config as gc_mod
 from dendros_config import (
     _DEFAULTS,
-    _FIELDS,
-    _DESCS,
     _UNCHANGED,
     _val_str,
+)
+from lib.config_fields import (
+    _FIELDS,
+    _DESCS,
     _TAB_ORDER,
     _fields_for_tab,
 )
