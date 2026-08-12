@@ -3,7 +3,9 @@
 Curses-owning layer — manual-testing only, same accepted gap as dendros_config.py's own
 curses interaction. Pure/testable logic (ANSI parsing, wrapping, selection math, escape-
 sequence decoding, clipboard encoding) lives in lib/tui_pure.py; drawing methods live in
-lib/launch_tui_render.py's `_TuiRenderMixin`; this module owns session state/event handling
+lib/launch_tui_render.py's `_TuiRenderMixin`; console command handling (the backslash-key
+command bar, `focus`/`clear`, cross-process command mailbox) lives in lib/launch_tui_console.py's
+`_TuiConsoleMixin` and lib/console_commands.py; this module owns session state/event handling
 and drives it all from real screen/keyboard/mouse events.
 
 Threading: run_tui() spawns one long-lived background reader thread consuming the same
@@ -47,21 +49,17 @@ import time
 from lib import __version__
 from lib.colors import DENDROS_TAG
 from lib.config_loader import resolve_node
+from lib.console_commands import node_identity_names
 from lib.global_config import is_disable_flag_set
+from lib.launch_tui_console import _TuiConsoleMixin, _CONSOLE_ERROR_DIM_UNTIL
+from lib.launch_tui_input import _TuiInputMixin, read_escape_sequence
 from lib.launch_tui_render import _TuiRenderMixin, _COPY_TOAST_DIM_UNTIL
 from lib.tui_pure import (
     quantize_rgb_to_256,
     segments_from_ansi,
     PairCache,
     RingLog,
-    _selection_bounds,
-    screen_row_to_tail_offset,
-    extract_selection_text,
-    decode_sgr_mouse,
-    decode_navigation_key,
-    build_osc52_sequence,
     find_clipboard_tool,
-    copy_via_system_clipboard_tool,
 )
 
 # True black: terminfo can't read back the terminal's real background, and most dark themes
@@ -111,14 +109,17 @@ def run_tui(stdin_lines, colorize_fn, ca_module, pw_module, param_alert, param_a
                         restarted = ca_module.detect_restart(line)
                         if restarted:
                             ca_module.handle_restart(restarted)
-                colored = colorize_fn(line)
+                colored, node_name, logger_name = colorize_fn(line)
                 q = session['q']
                 if q is not None:
-                    q.put(('line', colored))
+                    q.put(('line', (colored, node_name, logger_name)))
                     if param_alert:
                         for notif in pw_module.drain(color_map, tag_map, style_map, tag_style,
                                                       show_tag, param_alert_style):
-                            q.put(('line', notif))
+                            # Param-change notifications aren't tied to a specific line's
+                            # node identity (see lib/launch_tui_console.py's known-nodes
+                            # tracking) -- no node_name/logger_name to thread through.
+                            q.put(('line', (notif, None, None)))
         except Exception:
             pass
         finally:
@@ -141,62 +142,6 @@ def run_tui(stdin_lines, colorize_fn, ca_module, pw_module, param_alert, param_a
         if stop_event.is_set():
             return
         # else: flag cleared while still running — loop back and reopen curses
-
-
-_MAX_SGR_PROBE_BYTES = 32  # generous for "Cb;Cx;Cy" decimal digits; bounds a malformed burst
-
-
-def _read_escape_sequence(scr, curses):
-    # Called after getch() returns 27 (ESC). Decodes an SGR mouse report or a nav key off
-    # the raw byte stream; returns ('mouse', event_dict), ('nav', action), or None (bare
-    # Escape/unrecognized — probe byte pushed back via ungetch() so a standalone Escape
-    # isn't lost).
-    scr.timeout(5)  # bytes should already be buffered (one pty write) -- brief poll
-    try:
-        c1 = scr.getch()
-        if c1 != ord('['):
-            if c1 != -1:
-                curses.ungetch(c1)
-            return None
-        c2 = scr.getch()
-        if c2 == ord('<'):
-            digits = []
-            terminator = None
-            for _ in range(_MAX_SGR_PROBE_BYTES):
-                c = scr.getch()
-                if c == -1:
-                    break
-                if c in (ord('M'), ord('m')):
-                    terminator = chr(c)
-                    break
-                digits.append(chr(c))
-            if terminator is None:
-                return None  # incomplete/malformed -- drop silently
-            try:
-                cb_str, cx_str, cy_str = ''.join(digits).split(';')
-                cb, cx, cy = int(cb_str), int(cx_str), int(cy_str)
-            except ValueError:
-                return None
-            return ('mouse', decode_sgr_mouse(cb, cx, cy, terminator))
-        if c2 in (ord('A'), ord('B'), ord('C'), ord('D'), ord('H'), ord('F')):
-            action = decode_navigation_key(chr(c2))
-            return ('nav', action) if action else None
-        digits = []
-        c = c2
-        for _ in range(4):  # generous; real tilde sequences are 1-2 digits
-            if c == -1:
-                return None
-            if ord('0') <= c <= ord('9'):
-                digits.append(chr(c))
-                c = scr.getch()
-                continue
-            if c == ord('~'):
-                action = decode_navigation_key('~', ''.join(digits))
-                return ('nav', action) if action else None
-            return None
-        return None
-    finally:
-        scr.timeout(50)
 
 
 def _tui_main(scr, ring, session, passthrough_event, stop_event, ca_module):
@@ -233,11 +178,16 @@ def _tui_main(scr, ring, session, passthrough_event, stop_event, ca_module):
             pass
 
 
-class _TuiSession(_TuiRenderMixin):
+class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiInputMixin):
     """One curses.wrapper() session's worth of state and event handling. Drawing methods
-    (_draw_segments/_draw_banner/_draw_scrollbar/_redraw) come from _TuiRenderMixin in
-    lib/launch_tui_render.py — split out purely to keep this file's session/event-loop
-    logic and the rendering code separately sized, not because either is reusable alone.
+    (_draw_segments/_draw_banner/_draw_scrollbar/_redraw/_draw_console) come from
+    _TuiRenderMixin in lib/launch_tui_render.py; console command handling (_cmd_focus/
+    _cmd_clear/_apply_console_command/_check_remote_command/...) comes from
+    _TuiConsoleMixin in lib/launch_tui_console.py; mouse/nav input handling
+    (_screen_to_content/_handle_mouse/_handle_nav) comes from _TuiInputMixin in
+    lib/launch_tui_input.py — all three split out purely to keep this file's core
+    session/event-loop logic and the other concerns separately sized, not because any of
+    them is reusable alone.
     """
 
     def __init__(self, scr, ring, session, passthrough_event, stop_event, ca_module, curses):
@@ -277,6 +227,16 @@ class _TuiSession(_TuiRenderMixin):
         self.mouse_down = False  # True between a left-button press and its matching release
         self.clipboard_tool_missing = find_clipboard_tool() is None  # checked once per session
 
+        # `\`-console: see lib/launch_tui_console.py's _TuiConsoleMixin for command handling.
+        self.console_active = False       # True while capturing local keystrokes
+        self.console_buffer = ''
+        self.console_error = None         # last error message text, or None
+        self.console_error_at = None      # monotonic() timestamp, mirrors copy_toast_at's fade
+        self.filter_node = None           # currently focused node name, or None (unfiltered)
+        self.known_nodes = self._build_known_nodes_from_ring()
+        self.last_command_check = 0.0     # 1x/sec poll gate for the remote command mailbox
+        self._init_console_colors()       # sets self.console_fg/console_bg
+
     def _disabled_system_wide(self):
         now = time.monotonic()
         if now - self.last_disable_check < 1.0:
@@ -293,11 +253,13 @@ class _TuiSession(_TuiRenderMixin):
                 break
             drained = True
             if kind == 'line':
+                colored, node_name, logger_name = payload
                 # Strip \r/\n: curses' addstr() treats an embedded newline as a real
                 # cursor action, producing a spurious blank row otherwise.
-                segments = segments_from_ansi(payload.rstrip('\r\n'))
+                segments = segments_from_ansi(colored.rstrip('\r\n'))
                 plain = ''.join(seg[0] for seg in segments)
-                self.ring.append(segments, plain)
+                self.ring.append(segments, plain, node_name, logger_name)
+                self.known_nodes |= node_identity_names(node_name, logger_name)
             elif kind == 'banner':
                 self.banner_text = payload
             elif kind == 'eof':
@@ -321,96 +283,6 @@ class _TuiSession(_TuiRenderMixin):
         self.view_offset = max(0, min(self.view_offset, max_offset))
         return max_offset
 
-    def _screen_to_content(self, mouse_row, mouse_col):
-        # Maps a clicked/dragged screen cell to a content-relative (offset, col), mirroring
-        # _redraw()'s row loop. Caller must have just called _sync_pin().
-        max_y, max_x = self.scr.getmaxyx()
-        log_h = max(1, max_y - self.banner_h)
-        usable_width = max(1, max_x - 2)  # scrollbar column + one reserved buffer — see _redraw()
-        body_row = mouse_row - self.banner_h
-        if body_row < 0:
-            return None  # click landed on the header row
-        rows = self.ring.visible_rows(self.view_offset, log_h)
-        n_rows = len(rows)
-        if n_rows == 0:
-            return None
-        if body_row >= n_rows:
-            body_row = n_rows - 1  # clicked in blank padding below content
-        row_tail_offset = screen_row_to_tail_offset(body_row, n_rows, self.view_offset)
-        segments, _is_continuation = rows[body_row]
-        row_len = sum(len(seg[0]) for seg in segments)
-        col = max(0, min(mouse_col, usable_width - 1))
-        col = min(col, max(0, row_len - 1) if row_len else 0)
-        return (row_tail_offset, col)
-
-    def _handle_mouse(self, ev):
-        log_h = max(1, self.scr.getmaxyx()[0] - self.banner_h)
-        if ev['is_wheel']:
-            max_offset = self._sync_pin(log_h)
-            step = 3
-            if ev['wheel_dir'] == 'up':
-                self.view_offset = min(max_offset, self.view_offset + step)
-            else:
-                self.view_offset = max(0, self.view_offset - step)
-        elif ev['button'] == 0 and not ev['is_motion'] and not ev['is_release']:
-            # Left-button press: starts a new selection (native "click elsewhere
-            # deselects" is handled on release below).
-            self._sync_pin(log_h)
-            pos = self._screen_to_content(ev['row'], ev['col'])
-            if pos is not None:
-                self.sel_anchor = pos
-                self.sel_cursor = pos
-                self.mouse_down = True
-            else:
-                self.sel_anchor = None
-                self.sel_cursor = None
-                self.mouse_down = False
-        elif ev['is_motion']:
-            if self.mouse_down:
-                self._sync_pin(log_h)
-                pos = self._screen_to_content(ev['row'], ev['col'])
-                if pos is not None:
-                    self.sel_cursor = pos
-        elif ev['is_release']:
-            if self.mouse_down:
-                self.mouse_down = False
-                self._sync_pin(log_h)
-                if self.sel_anchor is not None and self.sel_cursor is not None and self.sel_anchor != self.sel_cursor:
-                    # Real drag: auto-copy on release via both OSC 52 and a local
-                    # clipboard tool (see module docstring).
-                    lo_offset, _, hi_offset, _ = _selection_bounds(self.sel_anchor, self.sel_cursor)
-                    sel_rows = self.ring.visible_rows(lo_offset, hi_offset - lo_offset + 1)
-                    text = extract_selection_text(sel_rows, self.sel_anchor, self.sel_cursor)
-                    if text:
-                        copy_via_system_clipboard_tool(text)
-                        try:
-                            os.write(1, build_osc52_sequence(text))
-                        except OSError:
-                            pass
-                        self.copy_toast_at = time.monotonic()
-                else:
-                    self.sel_anchor = None  # plain click (no drag) — clear selection
-                    self.sel_cursor = None
-        # Middle/right-click and stray motion with no button held: no-ops.
-
-    def _handle_nav(self, action):
-        if action not in ('page_up', 'page_down', 'home', 'end', 'up', 'down'):
-            return  # 'left'/'right' intentionally unbound
-        log_h = max(1, self.scr.getmaxyx()[0] - self.banner_h)
-        max_offset = self._sync_pin(log_h)
-        if action == 'page_up':
-            self.view_offset = min(max_offset, self.view_offset + log_h)
-        elif action == 'page_down':
-            self.view_offset = max(0, self.view_offset - log_h)
-        elif action == 'home':
-            self.view_offset = max_offset
-        elif action == 'end':
-            self.view_offset = 0
-        elif action == 'up':
-            self.view_offset = min(max_offset, self.view_offset + 1)
-        elif action == 'down':
-            self.view_offset = max(0, self.view_offset - 1)
-
     def run(self):
         curses = self.curses
         scr = self.scr
@@ -418,6 +290,7 @@ class _TuiSession(_TuiRenderMixin):
         prev_banner_text = self.banner_text
         prev_eof = self.eof
         prev_copy_toast_active = False
+        prev_console_visible = False
         interrupted = False
         try:
             while True:
@@ -427,6 +300,11 @@ class _TuiSession(_TuiRenderMixin):
                     self.passthrough_event.set()
                     self.session['q'] = None
                     return 'disabled'
+
+                if self._check_remote_command():
+                    # `dendros focus`/`dendros clear` from elsewhere — nothing else marks
+                    # this tick dirty when a filter changes with no accompanying keypress.
+                    needs_redraw = True
 
                 drained = self._drain_queue()
                 # Redraw only when something visible changed. While scrolled back, new
@@ -444,15 +322,28 @@ class _TuiSession(_TuiRenderMixin):
                     else:
                         self.copy_toast_at = None  # expired; this tick's redraw erases it
                 toast_changed = copy_toast_active != prev_copy_toast_active
+                # Same wall-clock-fade treatment for the console error toast, which can be
+                # set by a remote command even while the local console bar is closed.
+                console_error_active = False
+                if self.console_error is not None:
+                    if time.monotonic() - self.console_error_at < _CONSOLE_ERROR_DIM_UNTIL:
+                        console_error_active = True
+                    else:
+                        self.console_error = None
+                        self.console_error_at = None
+                console_visible = self.console_active or console_error_active
+                console_visible_changed = console_visible != prev_console_visible
                 # An active selection always counts as "not following the tail", even at
                 # view_offset 0, so new output can't repaint it away mid-drag.
                 viewport_follows_tail = (self.sel_anchor is None) and (self.view_offset == 0)
                 if (needs_redraw or header_changed or copy_toast_active or toast_changed
+                        or console_error_active or console_visible_changed
                         or (drained and viewport_follows_tail)):
                     self._redraw()
                     prev_banner_text = self.banner_text
                     prev_eof = self.eof
                     prev_copy_toast_active = copy_toast_active
+                    prev_console_visible = console_visible
                     needs_redraw = False
                 elif drained:
                     # Body redraw was skipped for the pin, but the scrollbar has nothing
@@ -477,9 +368,33 @@ class _TuiSession(_TuiRenderMixin):
 
                 if ch == curses.KEY_RESIZE:
                     scr.clear()  # wipe stale content; next _redraw() recomputes from getmaxyx()
+                elif self.console_active:
+                    if ch in (10, 13, curses.KEY_ENTER):
+                        text = self.console_buffer
+                        self.console_buffer = ''
+                        if self._apply_console_command(text):
+                            self.console_active = False
+                    elif ch in (27, ord('\\')):
+                        # Esc and \ both cancel (symmetric with \ opening the bar). No
+                        # current or planned command syntax needs a literal backslash in
+                        # its argument (node names are restricted to [a-zA-Z0-9_./-]), so
+                        # there's nothing lost by treating it as the close key here too.
+                        if ch == 27:
+                            read_escape_sequence(scr, curses)  # drain trailing SGR bytes
+                        self.console_active = False
+                        self.console_buffer = ''
+                        self.console_error = None
+                    elif ch in (curses.KEY_BACKSPACE, 127, 8):
+                        self.console_buffer = self.console_buffer[:-1]
+                    elif 32 <= ch <= 126:
+                        self.console_buffer += chr(ch)
+                elif ch == ord('\\'):
+                    self.console_active = True
+                    self.console_buffer = ''
+                    self.console_error = None
                 elif ch == 27:
                     # keypad(False): every arrow key/nav key/mouse report arrives raw here.
-                    result = _read_escape_sequence(scr, curses)
+                    result = read_escape_sequence(scr, curses)
                     if result is None:
                         pass
                     elif result[0] == 'nav':

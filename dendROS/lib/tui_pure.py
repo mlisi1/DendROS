@@ -359,11 +359,18 @@ class PairCache:
 
 
 class RingLog:
-    """Bounded scrollback: (segments, plain_text) pairs. `_lines` is the sole source of
-    truth — nothing is projected onto a persistent curses pad; visible_rows()/set_width()
-    wrap on demand for whatever's actually visible, so a resize is just "wrap differently
-    next redraw" with no replay step. append() runs from both the main thread (queue drain)
-    and the reader thread (during a disable gap), so mutating methods take a lock.
+    """Bounded scrollback: (segments, plain_text, node_name, logger_name) tuples. `_lines`
+    is the sole source of truth — nothing is projected onto a persistent curses pad;
+    visible_rows()/set_width() wrap on demand for whatever's actually visible, so a resize
+    is just "wrap differently next redraw" with no replay step. append() runs from both the
+    main thread (queue drain) and the reader thread (during a disable gap), so mutating
+    methods take a lock.
+
+    node_name/logger_name (both optional, default None) are the launch process tag / ROS
+    graph logger name already discovered upstream by dendROS_pipe.py's own colorization
+    pipeline (see its _colorize() docstring) — RingLog just carries them alongside each
+    line so lib/console_commands.py's node-identity filtering never has to reverse-parse
+    them back out of the (config-dependent, ambiguous) rendered text.
     """
 
     def __init__(self, maxlen):
@@ -373,6 +380,9 @@ class RingLog:
         self._wrap_width = None
         self._total_rows = 0
         self._lock = threading.Lock()
+        self._filter_fn = None          # Optional[Callable[[str, str, str], bool]]:
+                                         # (plain_text, node_name, logger_name) -> bool
+        self._filtered_total_rows = 0   # maintained in parallel to _total_rows while active
 
     def __len__(self):
         return len(self._lines)
@@ -381,17 +391,47 @@ class RingLog:
         return self._lines[idx]
 
     def plain_lines(self):
-        return [plain for _, plain in self._lines]
+        return [plain for _, plain, _, _ in self._lines]
 
-    def append(self, segments, plain_text):
+    def node_identities(self):
+        """(node_name, logger_name) for every retained line, oldest-first — used to seed
+        the TUI's known-nodes set from history already in the ring (see
+        lib/launch_tui_console.py's _build_known_nodes_from_ring())."""
+        return [(node_name, logger_name) for _, _, node_name, logger_name in self._lines]
+
+    def set_filter(self, predicate):
+        """Set (or clear, with None) a presentation-only filter. `predicate(plain_text,
+        node_name, logger_name) -> bool`. Never touches _lines/_row_counts — the full
+        unfiltered history is always retained, so clearing the filter restores everything,
+        including lines appended while it was active. Recomputes _filtered_total_rows in
+        one O(history) pass, bounded by the scrollback's maxlen."""
+        with self._lock:
+            self._filter_fn = predicate
+            if predicate is None:
+                self._filtered_total_rows = 0
+                return
+            self._filtered_total_rows = sum(
+                rc for rc, (_, plain, node_name, logger_name) in zip(self._row_counts, self._lines)
+                if predicate(plain, node_name, logger_name)
+            )
+
+    def append(self, segments, plain_text, node_name=None, logger_name=None):
         with self._lock:
             evicted_rows = 0
+            evicted = None
             if self.maxlen is not None and len(self._lines) == self.maxlen:
                 evicted_rows = self._row_counts[0]
-            self._lines.append((segments, plain_text))
+                evicted = self._lines[0]
+            self._lines.append((segments, plain_text, node_name, logger_name))
             row_count = len(wrap_line(segments, self._wrap_width)) if self._wrap_width else 1
             self._row_counts.append(row_count)
             self._total_rows += row_count - evicted_rows
+
+            if self._filter_fn is not None:
+                if evicted is not None and self._filter_fn(evicted[1], evicted[2], evicted[3]):
+                    self._filtered_total_rows -= evicted_rows
+                if self._filter_fn(plain_text, node_name, logger_name):
+                    self._filtered_total_rows += row_count
 
     def set_width(self, width):
         """Rewrap all retained history at a new width. No-op if unchanged — the only
@@ -402,28 +442,38 @@ class RingLog:
                 return
             self._wrap_width = width
             self._row_counts = collections.deque(
-                (len(wrap_line(segments, width)) for segments, _ in self._lines),
+                (len(wrap_line(segments, width)) for segments, _, _, _ in self._lines),
                 maxlen=self.maxlen,
             )
             self._total_rows = sum(self._row_counts)
+            if self._filter_fn is not None:
+                self._filtered_total_rows = sum(
+                    rc for rc, (_, plain, node_name, logger_name) in zip(self._row_counts, self._lines)
+                    if self._filter_fn(plain, node_name, logger_name)
+                )
 
     def total_rows(self):
-        return self._total_rows
+        return self._filtered_total_rows if self._filter_fn is not None else self._total_rows
 
     def visible_rows(self, view_offset, height):
         """Up to `height` (segments, is_continuation) rows ending `view_offset` rows back
         from the tail. is_continuation marks a mid-line wrap (vs. a new logical line), so
         callers can rejoin text without spurious newlines. Also usable for an arbitrary
-        historical range, not just the live viewport."""
+        historical range, not just the live viewport.
+
+        When a filter is active (set_filter()), non-matching lines are skipped entirely —
+        this is presentation-only, _lines itself is never touched."""
         with self._lock:
             width = self._wrap_width or 1
             height = max(0, height)
             view_offset = max(0, view_offset)
             need = view_offset + height
             collected_rev = []  # (segments, is_continuation), newest-first while accumulating
-            for segments, _ in reversed(self._lines):
+            for segments, plain, node_name, logger_name in reversed(self._lines):
                 if len(collected_rev) >= need:
                     break
+                if self._filter_fn is not None and not self._filter_fn(plain, node_name, logger_name):
+                    continue
                 wrapped = wrap_line(segments, width)
                 tagged = [(row, i > 0) for i, row in enumerate(wrapped)]
                 collected_rev.extend(reversed(tagged))

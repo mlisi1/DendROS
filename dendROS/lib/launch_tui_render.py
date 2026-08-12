@@ -7,6 +7,11 @@ etc.) and the two are one logical unit, not a reusable component.
 
 import time
 
+from lib.launch_tui_console import (
+    _CONSOLE_ERROR_BOLD_UNTIL,
+    _CONSOLE_ERROR_NORMAL_UNTIL,
+    _CONSOLE_ERROR_DIM_UNTIL,
+)
 from lib.tui_pure import (
     segments_from_ansi,
     screen_row_to_tail_offset,
@@ -118,13 +123,60 @@ class _TuiRenderMixin:
                 except curses.error:
                     pass
 
+    def _draw_console(self, width):
+        curses = self.curses
+        scr = self.scr
+        max_y, _ = scr.getmaxyx()
+        row = max_y - 1
+        usable_width = max(0, width - 1)
+
+        console_attr = self.pair_cache.attr_for(self.console_fg, self.console_bg, True)  # bold input text
+        try:
+            scr.bkgdset(' ', self.pair_cache.attr_for(None, self.console_bg, False))
+        except curses.error:
+            pass
+        scr.move(row, 0)
+        scr.clrtoeol()
+
+        prompt = '\\ ' + self.console_buffer
+        try:
+            scr.addstr(row, 0, prompt[:usable_width], console_attr)
+        except curses.error:
+            pass
+
+        if self.console_error is not None:
+            elapsed = time.monotonic() - self.console_error_at
+            error_attr = self.pair_cache.attr_for(curses.COLOR_RED, self.console_bg, False)
+            if elapsed < _CONSOLE_ERROR_BOLD_UNTIL:
+                err_attr = error_attr | curses.A_BOLD
+            elif elapsed < _CONSOLE_ERROR_NORMAL_UNTIL:
+                err_attr = error_attr
+            elif elapsed < _CONSOLE_ERROR_DIM_UNTIL:
+                err_attr = error_attr | curses.A_DIM
+            else:
+                err_attr = None  # fully faded -- main loop clears console_error, not us
+            if err_attr is not None:
+                # Right-aligned at the far edge of the bar, clamped so it never overlaps
+                # the prompt text on a narrow terminal or a long buffer.
+                min_col = min(usable_width, len(prompt) + 2)
+                err_col = max(min_col, usable_width - len(self.console_error))
+                try:
+                    scr.addstr(row, err_col, self.console_error[:max(0, usable_width - err_col)], err_attr)
+                except curses.error:
+                    pass
+
+        try:
+            scr.bkgdset(' ', 0)
+        except curses.error:
+            pass
+
     def _draw_scrollbar(self):
         # Self-contained so it can run alone (no full _redraw()) on ticks where the body
         # redraw is skipped to protect a pinned/selected view — the scrollbar has nothing
         # of its own to protect.
         curses = self.curses
         max_y, max_x = self.scr.getmaxyx()
-        log_h = max(1, max_y - self.banner_h)
+        log_h = self._log_height(max_y)
         usable_width = max(1, max_x - 2)  # keep in sync with _redraw()/_screen_to_content()
         scrollbar_col = usable_width
         max_offset = self._sync_pin(log_h)
@@ -144,7 +196,7 @@ class _TuiRenderMixin:
         curses = self.curses
         scr = self.scr
         max_y, max_x = scr.getmaxyx()
-        log_h = max(1, max_y - self.banner_h)
+        log_h = self._log_height(max_y)
         # usable_width leaves one column for the scrollbar plus one never-written column
         # (a known curses trouble spot at the bottom-right cell).
         usable_width = max(1, max_x - 2)
@@ -185,6 +237,8 @@ class _TuiRenderMixin:
             row_i += 1
 
         self._draw_scrollbar()  # real terminal scrollbar is inert on the alt screen buffer
+        if self._console_h():
+            self._draw_console(max_x)
 
         scr.noutrefresh()
         curses.doupdate()

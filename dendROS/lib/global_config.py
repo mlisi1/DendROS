@@ -87,6 +87,54 @@ def set_disable_flag(enabled):
             pass
 
 
+def get_tui_command_path():
+    """Path to the one-shot TUI console command mailbox, shared across all terminals.
+
+    Unlike disable.flag (a persistent boolean — existence is the whole signal), this file
+    carries a text payload (e.g. 'focus talker' or 'clear') and is meant to be applied
+    exactly once: whichever running `ros2 launch` TUI session polls it first consumes
+    (reads + deletes) it via pop_tui_command(). If multiple TUI sessions are running
+    concurrently there is no session targeting — the same accepted limitation as
+    dendros disable/enable, which are also global rather than session-scoped.
+    """
+    return os.path.join(os.path.dirname(get_global_config_path()), 'tui_command.flag')
+
+
+def set_tui_command(command_text):
+    """Atomically publish a one-shot TUI console command for a running TUI session to
+    consume (e.g. from `dendros focus <node>` / `dendros clear` in another shell). Last
+    write wins if a previous command hasn't been picked up yet — no queueing, same
+    existence/overwrite model as set_disable_flag(), just with content."""
+    path = get_tui_command_path()
+    cfg_dir = os.path.dirname(path)
+    try:
+        import tempfile
+        os.makedirs(cfg_dir, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=cfg_dir, suffix='.tmp')
+        with os.fdopen(fd, 'w') as f:
+            f.write(command_text)
+        os.replace(tmp, path)
+    except Exception:
+        pass
+
+
+def pop_tui_command():
+    """Read and immediately delete the pending TUI command, if any. One-shot: applied by
+    at most one session under normal conditions and never replayed on a future launch.
+    Returns the raw command text, or None if no command is pending."""
+    path = get_tui_command_path()
+    try:
+        with open(path) as f:
+            text = f.read()
+    except (FileNotFoundError, OSError):
+        return None
+    try:
+        os.remove(path)
+    except (FileNotFoundError, OSError):
+        pass
+    return text
+
+
 def load_global_config():
     """Load the global config file, filling missing keys from DEFAULTS."""
     path = get_global_config_path()

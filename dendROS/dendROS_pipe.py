@@ -229,7 +229,17 @@ def main():
         sys.stdout.flush()
 
     def _colorize(line):
-        """Apply full colorization pipeline to one line; return the colored line."""
+        """Apply full colorization pipeline to one line; return (colored_line, node_name,
+        logger_name). node_name/logger_name are the launch process tag / ROS graph logger
+        name discovered for this line (both None when neither pattern matches at all) —
+        both are captured from the RAW pre-colorization line, so they're authoritative
+        regardless of tag_position/show_tag/show_timestamp/show_logger_name (unlike trying
+        to reverse-parse them back out of the final colorized+badged text, which is
+        ambiguous — e.g. tag_position: before puts the badge in the same leading-bracket
+        position a process tag would otherwise occupy). Consumed by the TUI's `\\` console
+        (lib/launch_tui_console.py) to filter by node identity without any such guessing."""
+        node_name = None
+        logger_name = None
         m = PREFIX_RE.match(line)
         if m and m.group(1) not in _LOG_LEVELS:
             node_name = m.group(1)
@@ -292,7 +302,7 @@ def main():
                 ca.mark_traceback(node_name)
                 dim = make_dim(code) if code else '2'
                 tb_prefix = f'\033[{dim}m{m.group(0)}\033[0m '
-                return tc.colorize_traceback(content, tb_prefix)
+                return tc.colorize_traceback(content, tb_prefix), node_name, logger_name
 
             if code:
                 effective_mode  = resolve_node_mode(node_name, mode_map) or color_mode
@@ -301,8 +311,9 @@ def main():
                 node_kws = resolve_node_keywords(node_name, keyword_map)
                 pkg_kws  = build_keyword_highlights(defaults.get('highlight') or defaults.get('highlights') or [], code)
                 all_kws  = node_kws + pkg_kws
-                return apply_keyword_highlights(colored, all_kws) if all_kws else colored
-            return line
+                colored = apply_keyword_highlights(colored, all_kws) if all_kws else colored
+                return colored, node_name, logger_name
+            return line, node_name, logger_name
         elif colorize_launch_msgs:
             # RCUTILS_COLORIZED_OUTPUT=1 (set by dendROS.sh) causes rcutils to embed
             # ANSI codes in the level bracket even when output is piped.  Strip them
@@ -319,8 +330,11 @@ def main():
                     node_kws = resolve_node_keywords(node_name, keyword_map)
                     pkg_kws  = build_keyword_highlights(defaults.get('highlight') or defaults.get('highlights') or [], code)
                     all_kws  = node_kws + pkg_kws
-                    return apply_keyword_highlights(launch_colored, all_kws) if all_kws else launch_colored
-        return tc.colorize_traceback(line)
+                    launch_colored = apply_keyword_highlights(launch_colored, all_kws) if all_kws else launch_colored
+                    return launch_colored, node_name, logger_name
+                # falls through: node_name stays set (this line is still identifiable)
+                # even though no color was resolved for it
+        return tc.colorize_traceback(line), node_name, logger_name
 
     def _iter_stdin(raw=None):
         """Yield lines from stdin, treating \\r, \\n, and \\r\\n as line terminators.
@@ -455,7 +469,8 @@ def main():
                     if restarted:
                         ca.handle_restart(restarted)
 
-            _emit(_colorize(line))
+            colored, _, _ = _colorize(line)
+            _emit(colored)
 
             if param_alert:
                 for notif in pw.drain(color_map, tag_map, style_map, tag_style, show_tag,
@@ -472,7 +487,11 @@ def main():
     except KeyboardInterrupt:
         try:
             for line in stdin_lines:  # same generator — continues from where interrupted
-                _emit(line if _disable_state['passthrough'] else _colorize(line))
+                if _disable_state['passthrough']:
+                    _emit(line)
+                else:
+                    colored, _, _ = _colorize(line)
+                    _emit(colored)
         except Exception:
             pass
     except BrokenPipeError:

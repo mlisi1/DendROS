@@ -460,6 +460,135 @@ class TestRingLog:
         rows = ring.visible_rows(1, 3 - 1 + 1)  # range from offset 1 (line3) to offset 3 (line1)
         assert self._texts(rows) == ["line1", "line2", "line3"]
 
+    # ── set_filter() — presentation-only filtering ───────────────────────────
+
+    @staticmethod
+    def _is_a_line(plain_text, node_name=None, logger_name=None):
+        return plain_text.startswith('a')
+
+    def test_filter_hides_nonmatching_lines(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(40)
+        for text in ("apple", "banana", "avocado", "cherry"):
+            ring.append([(text, None, None, False)], text)
+        ring.set_filter(self._is_a_line)
+        rows = ring.visible_rows(0, 10)
+        assert self._texts(rows) == ["apple", "avocado"]
+
+    def test_filter_total_rows_reflects_filtered_subset_only(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(40)
+        for text in ("apple", "banana", "avocado", "cherry"):
+            ring.append([(text, None, None, False)], text)
+        ring.set_filter(self._is_a_line)
+        assert ring.total_rows() == 2
+
+    def test_clear_filter_restores_full_view(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(40)
+        for text in ("apple", "banana", "avocado", "cherry"):
+            ring.append([(text, None, None, False)], text)
+        ring.set_filter(self._is_a_line)
+        ring.set_filter(None)
+        assert ring.total_rows() == 4
+        rows = ring.visible_rows(0, 10)
+        assert self._texts(rows) == ["apple", "banana", "avocado", "cherry"]
+
+    def test_filter_does_not_evict_storage(self):
+        # Presentation-only requirement: nothing is ever dropped from _lines while a
+        # filter is active, so clearing it must recover everything, including whatever
+        # was appended during the filtered window (see test below).
+        ring = RingLog(maxlen=100)
+        ring.set_width(40)
+        for text in ("apple", "banana", "avocado", "cherry"):
+            ring.append([(text, None, None, False)], text)
+        ring.set_filter(self._is_a_line)
+        assert len(ring) == 4
+        assert ring.plain_lines() == ["apple", "banana", "avocado", "cherry"]
+
+    def test_new_lines_respect_active_filter_incrementally(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(40)
+        ring.append([("apple", None, None, False)], "apple")
+        ring.set_filter(self._is_a_line)
+        ring.append([("banana", None, None, False)], "banana")  # non-matching, while filtered
+        ring.append([("avocado", None, None, False)], "avocado")  # matching, while filtered
+        assert ring.total_rows() == 2
+        assert self._texts(ring.visible_rows(0, 10)) == ["apple", "avocado"]
+        ring.set_filter(None)
+        assert ring.total_rows() == 3
+        assert ring.plain_lines() == ["apple", "banana", "avocado"]
+
+    def test_filter_survives_eviction_bookkeeping(self):
+        ring = RingLog(maxlen=2)
+        ring.set_width(40)
+        ring.append([("apple", None, None, False)], "apple")   # matches, will be evicted
+        ring.append([("banana", None, None, False)], "banana")  # non-matching
+        ring.set_filter(self._is_a_line)
+        assert ring.total_rows() == 1  # just "apple"
+        ring.append([("cherry", None, None, False)], "cherry")  # evicts "apple"
+        assert len(ring) == 2
+        assert ring.total_rows() == 0  # "apple" evicted, "banana"/"cherry" don't match
+
+    def test_set_width_recomputes_filtered_total_rows(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(3)
+        ring.append([("apple", None, None, False)], "apple")   # wraps to 2 rows at width 3
+        ring.append([("banana", None, None, False)], "banana")  # non-matching
+        ring.set_filter(self._is_a_line)
+        assert ring.total_rows() == 2
+        ring.set_width(40)  # "apple" now fits on a single row
+        assert ring.total_rows() == 1
+
+    # ── node identity (node_name/logger_name) ────────────────────────────────
+
+    def test_append_stores_node_identity_and_plain_lines_ignores_it(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(40)
+        ring.append([("hello", None, None, False)], "hello", "talker", "/talker")
+        assert ring.plain_lines() == ["hello"]
+        assert ring.node_identities() == [("talker", "/talker")]
+
+    def test_append_without_identity_defaults_to_none(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(40)
+        ring.append([("hello", None, None, False)], "hello")  # 2-arg call, pre-existing callers
+        assert ring.node_identities() == [(None, None)]
+
+    def test_node_identities_aligned_with_plain_lines_order(self):
+        ring = RingLog(maxlen=100)
+        ring.set_width(40)
+        ring.append([("a", None, None, False)], "a", "talker", None)
+        ring.append([("b", None, None, False)], "b", "listener", None)
+        assert ring.node_identities() == [("talker", None), ("listener", None)]
+
+    def test_filter_by_node_identity_ignores_plain_text_content(self):
+        # Mirrors the real focus_predicate() usage: matching is purely by node/logger
+        # identity, regardless of what the line's rendered text looks like.
+        def by_node(plain_text, node_name, logger_name):
+            return node_name == "talker" or logger_name == "talker"
+
+        ring = RingLog(maxlen=100)
+        ring.set_width(40)
+        ring.append([("hello", None, None, False)], "hello", "talker", None)
+        ring.append([("hello", None, None, False)], "hello", "listener", None)  # same text
+        ring.append([("hi", None, None, False)], "hi", "component_container", "talker")
+        ring.set_filter(by_node)
+        assert ring.total_rows() == 2
+
+    def test_filter_by_node_identity_survives_eviction(self):
+        def by_node(plain_text, node_name, logger_name):
+            return node_name == "talker"
+
+        ring = RingLog(maxlen=2)
+        ring.set_width(40)
+        ring.append([("a", None, None, False)], "a", "talker", None)   # will be evicted
+        ring.append([("b", None, None, False)], "b", "listener", None)
+        ring.set_filter(by_node)
+        assert ring.total_rows() == 1
+        ring.append([("c", None, None, False)], "c", "listener", None)  # evicts "a"
+        assert ring.total_rows() == 0
+
 
 # ── crash_alert.set_sink() — TUI banner redirection ─────────────────────────────
 

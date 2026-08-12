@@ -26,6 +26,26 @@ set_disable_flag(False)
 "
             echo "${_DENDROS_TAG} colorization enabled system-wide (all terminals)"
             ;;
+        focus)
+            if [[ -z "${2:-}" ]]; then
+                echo "Usage: dendros focus <node_name>"
+                return 1
+            fi
+            python3 -c "
+import sys; sys.path.insert(0, '${_DENDROS_DIR}')
+from lib.global_config import set_tui_command
+set_tui_command('focus ' + sys.argv[1])
+" "$2"
+            echo "${_DENDROS_TAG} focus command sent"
+            ;;
+        clear)
+            python3 -c "
+import sys; sys.path.insert(0, '${_DENDROS_DIR}')
+from lib.global_config import set_tui_command
+set_tui_command('clear')
+"
+            echo "${_DENDROS_TAG} clear command sent"
+            ;;
         *)
             echo "Usage: dendros <command>"
             echo ""
@@ -36,6 +56,9 @@ set_disable_flag(False)
             echo "                     --labels/-l     auto-generate group labels"
             echo "  disable   Disable colorization system-wide (all terminals, incl. already-running launches)"
             echo "  enable    Re-enable colorization system-wide (all terminals)"
+            echo "  focus     Filter an already-running ros2 launch TUI to one node's output"
+            echo "            (same as typing 'focus <node_name>' in the TUI's \\ console)"
+            echo "  clear     Restore the full scrollback in an already-running TUI session"
             ;;
     esac
 }
@@ -44,7 +67,7 @@ _dendros_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
 
     if [[ $COMP_CWORD -eq 1 ]]; then
-        COMPREPLY=($(compgen -W "config init disable enable" -- "$cur"))
+        COMPREPLY=($(compgen -W "config init disable enable focus clear" -- "$cur"))
         return
     fi
 
