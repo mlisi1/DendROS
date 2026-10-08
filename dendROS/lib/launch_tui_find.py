@@ -39,7 +39,8 @@ class _TuiFindMixin:
     def _find_matches(self):
         # Recomputed only when the ring's contents, the filter stack, or the query change —
         # i.e. at most once per drained tick while a find is active.
-        key = (self.ring.seq_range(), self.filter_node, self.grep_query, self.find_query)
+        key = (self.ring.seq_range(), self.filter_node, self.grep_query, self.min_level,
+               self.find_query)
         if key != self._find_cache_key:
             self._find_cache = find_matching_seqs(self.ring.visible_entries(), self.find_query)
             self._find_cache_key = key
@@ -78,7 +79,7 @@ class _TuiFindMixin:
             self.find_pinned = False
 
     def _find_after_filter_change(self):
-        # A filter change (focus/grep) re-scopes the search to the newly visible lines: stay on the
+        # A filter change (focus/level/grep) re-scopes the search to the newly visible lines: stay on the
         # current match if it's still visible, else move to the nearest older one.
         if self.find_query is None:
             return

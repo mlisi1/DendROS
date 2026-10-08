@@ -11,6 +11,8 @@ module docstring) — so these tests exercise the identity-matching functions di
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'dendROS'))
 
 from lib.console_commands import (
@@ -20,6 +22,9 @@ from lib.console_commands import (
     focus_predicate,
     format_filter_status,
     grep_predicate,
+    level_predicate,
+    line_level,
+    parse_level,
     line_matches_node,
     node_identity_names,
     parse_console_command,
@@ -227,3 +232,72 @@ class TestModeStack:
         push_mode(stack, 'grep')
         drop_mode(stack, 'focus')
         assert stack == ['focus']
+
+
+
+# ── level: parse_level() / line_level() / level_predicate() ──────────────────────
+
+class TestParseLevel:
+    @pytest.mark.parametrize('text,expected', [
+        ('debug', 'debug'), ('info', 'info'), ('warn', 'warn'), ('error', 'error'),
+        ('fatal', 'fatal'), ('WARN', 'warn'), ('warning', 'warn'), ('  Error ', 'error'),
+    ])
+    def test_valid(self, text, expected):
+        assert parse_level(text) == expected
+
+    @pytest.mark.parametrize('text', ['', 'warnn', 'critical', '3'])
+    def test_invalid(self, text):
+        assert parse_level(text) is None
+
+
+class TestLineLevel:
+    def test_node_output_full_metadata(self):
+        assert line_level('[talker-1] [WARN] [1700000000.1] [talker]: low battery') == 2
+
+    def test_node_output_metadata_stripped(self):
+        # show_timestamp/show_logger_name: false still keep the [LEVEL] bracket.
+        assert line_level('[talker-1] [ERROR]: boom') == 3
+
+    def test_tag_before_badge(self):
+        assert line_level('[LOC] [slam_node-2] [INFO]: ok') == 1
+
+    def test_launch_framework_line(self):
+        assert line_level('[ERROR] [talker-1]: process has died [pid 42, exit code 1]') == 3
+
+    def test_warning_spelling(self):
+        assert line_level('[WARNING] [launch]: something') == 2
+
+    def test_message_text_cannot_outrank_real_level(self):
+        assert line_level('[talker-1] [INFO] [t] [talker]: saw [FATAL] in a string') == 1
+
+    def test_no_level(self):
+        assert line_level('Traceback (most recent call last):') is None
+        assert line_level('  File "x.py", line 3, in <module>') is None
+        assert line_level('plain print output') is None
+
+
+class TestLevelPredicate:
+    def test_at_threshold_passes(self):
+        assert level_predicate('[a-1] [WARN]: x', None, None, 'warn')
+
+    def test_above_threshold_passes(self):
+        assert level_predicate('[a-1] [FATAL]: x', None, None, 'warn')
+
+    def test_below_threshold_hidden(self):
+        assert not level_predicate('[a-1] [INFO]: x', None, None, 'warn')
+        assert not level_predicate('[a-1] [DEBUG]: x', None, None, 'info')
+
+    def test_level_less_lines_always_pass(self):
+        # Never hide tracebacks/crash output behind a severity filter.
+        assert level_predicate('Traceback (most recent call last):', None, None, 'fatal')
+
+    def test_combined_with_focus_and_grep(self):
+        pred = build_filter('talker', 'battery', 'warn')
+        assert pred('[talker-1] [WARN]: low battery', 'talker', 'talker')
+        assert not pred('[talker-1] [INFO]: low battery', 'talker', 'talker')    # level
+        assert not pred('[talker-1] [WARN]: overheating', 'talker', 'talker')    # grep
+        assert not pred('[other-2] [WARN]: low battery', 'other', 'other')       # focus
+
+    def test_status_chip_order(self):
+        assert format_filter_status('talker', 'x', 'warn') == 'focus talker · level warn · grep "x"'
+        assert format_filter_status(None, None, 'error') == 'level error'

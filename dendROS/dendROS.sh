@@ -59,6 +59,15 @@ set_tui_command(('grep ' + sys.argv[1]).strip())
 " "${*:2}"
             echo "${_DENDROS_TAG} grep command sent"
             ;;
+        level)
+            # No level = drop the level filter, same as a bare `level` in the console.
+            python3 -c "
+import sys; sys.path.insert(0, '${_DENDROS_DIR}')
+from lib.global_config import set_tui_command
+set_tui_command(('level ' + sys.argv[1]).strip())
+" "${2:-}"
+            echo "${_DENDROS_TAG} level command sent"
+            ;;
         reopen)  DENDROS_SHELL_PID=$$ python3 "${_DENDROS_DIR}/dendros_reopen.py" ;;
         clear)
             python3 -c "
@@ -84,7 +93,9 @@ set_tui_command('clear')
             echo "            (same as typing 'find <text>' in the TUI's \\ console)"
             echo "  grep      Show only lines containing text in an already-running ros2 launch TUI"
             echo "            (combines with focus; no text = drop the grep filter)"
-            echo "  clear     Restore the full scrollback (drops focus, grep and find) in a running TUI session"
+            echo "  level     Show only lines at a severity or worse (debug|info|warn|error|fatal) in a running TUI"
+            echo "            (lines without a level, e.g. tracebacks, stay visible; no level = drop the filter)"
+            echo "  clear     Restore the full scrollback (drops focus, level, grep and find) in a running TUI session"
             echo "  reopen    Reopen this terminal's last ros2 launch TUI run (read-only scrollback)"
             ;;
     esac
@@ -94,13 +105,16 @@ _dendros_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
 
     if [[ $COMP_CWORD -eq 1 ]]; then
-        COMPREPLY=($(compgen -W "config init disable enable focus find grep clear reopen" -- "$cur"))
+        COMPREPLY=($(compgen -W "config init disable enable focus find grep level clear reopen" -- "$cur"))
         return
     fi
 
     case "${COMP_WORDS[1]}" in
         init)
             COMPREPLY=($(compgen -W "--recursive --labels -r -l" -- "$cur"))
+            ;;
+        level)
+            COMPREPLY=($(compgen -W "debug info warn error fatal" -- "$cur"))
             ;;
         *)
             COMPREPLY=()

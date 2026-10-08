@@ -23,7 +23,9 @@ from lib.console_commands import (
     drop_mode,
     format_filter_status,
     node_identity_names,
+    LEVEL_NAMES,
     parse_console_command,
+    parse_level,
     push_mode,
 )
 from lib.global_config import pop_tui_command
@@ -57,6 +59,7 @@ class _TuiConsoleMixin:
     _COMMAND_HANDLERS = {
         'focus': '_cmd_focus',
         'grep': '_cmd_grep',
+        'level': '_cmd_level',
         'clear': '_cmd_clear',
         'find': '_cmd_find',    # lives in lib/launch_tui_find.py's _TuiFindMixin
     }
@@ -171,10 +174,30 @@ class _TuiConsoleMixin:
         self._apply_filters()
         return True
 
+    def _cmd_level(self, arg):
+        # `level warn` = WARN and worse; lines without a [LEVEL] (tracebacks, prints) always
+        # stay visible. A bare `level` drops just the level filter, like a bare `grep`.
+        if not arg.strip():
+            if self.min_level is None:
+                self._show_console_error(f'level: one of {"|".join(LEVEL_NAMES)} required')
+                return False
+            self.min_level = None
+            self.mode_stack = drop_mode(self.mode_stack, 'level')
+        else:
+            level = parse_level(arg)
+            if level is None:
+                self._show_console_error(f'level: expected {"|".join(LEVEL_NAMES)}, got "{arg.strip()}"')
+                return False
+            self.min_level = level
+            self.mode_stack = push_mode(self.mode_stack, 'level')
+        self._apply_filters()
+        return True
+
     def _cmd_clear(self, arg):
-        # Back to normal view: drops every filter (focus, grep) and any active find.
+        # Back to normal view: drops every filter (focus, level, grep) and any active find.
         self.filter_node = None
         self.grep_query = None
+        self.min_level = None
         self._find_clear()
         self.mode_stack = []
         self._apply_filters()
@@ -182,7 +205,7 @@ class _TuiConsoleMixin:
 
     def _escape_mode(self):
         """Bare Esc (console closed): exit the most recently entered mode — find, grep or
-        focus — leaving any earlier ones active. No-op when no mode is active."""
+        level/focus — leaving any earlier ones active. No-op when no mode is active."""
         if not self.mode_stack:
             return
         mode = self.mode_stack[-1]
@@ -192,16 +215,18 @@ class _TuiConsoleMixin:
         self.mode_stack = self.mode_stack[:-1]
         if mode == 'grep':
             self.grep_query = None
+        elif mode == 'level':
+            self.min_level = None
         elif mode == 'focus':
             self.filter_node = None
         self._apply_filters()
 
     def _apply_filters(self):
         # Rebuild the whole filter stack from per-command state, so filters compose.
-        self.ring.set_filter(build_filter(self.filter_node, self.grep_query))
+        self.ring.set_filter(build_filter(self.filter_node, self.grep_query, self.min_level))
         self._reset_view_after_filter_change()
         self._find_after_filter_change()
         self.console_error = None
 
     def _filter_status(self):
-        return format_filter_status(self.filter_node, self.grep_query)
+        return format_filter_status(self.filter_node, self.grep_query, self.min_level)

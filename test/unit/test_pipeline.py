@@ -939,12 +939,25 @@ class TestTracebackColorModes:
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             env=env,
         )
+        early_out = b''
         try:
-            # Write an initial line and wait for the subprocess to consume it
-            # so it is blocking in raw.read() when SIGINT arrives.
+            # Write an initial line and wait until its colorized echo comes back, so the
+            # subprocess is past startup (imports, config load) and blocking in raw.read()
+            # when SIGINT arrives. A fixed sleep here was flaky under full-suite load: a
+            # SIGINT landing during startup kills the process before the loop exists.
+            import select
             proc.stdin.write(b"[talker-1] [INFO] [1.0] [t]: hello\n")
             proc.stdin.flush()
-            time.sleep(0.2)
+            deadline = time.monotonic() + 8
+            while b'hello' not in early_out and time.monotonic() < deadline:
+                ready, _, _ = select.select([proc.stdout], [], [], 0.1)
+                if ready:
+                    chunk = os.read(proc.stdout.fileno(), 65536)
+                    if not chunk:
+                        break
+                    early_out += chunk
+            assert b'hello' in early_out, 'pipe never echoed the first line'
+            time.sleep(0.05)  # echo is flushed just before the next read() — let it get there
 
             proc.send_signal(signal.SIGINT)
             time.sleep(0.2)  # give the generator time to catch and continue
@@ -976,7 +989,7 @@ class TestTracebackColorModes:
             if proc.poll() is None:
                 proc.kill()
 
-        out = stdout.decode()
+        out = (early_out + stdout).decode()
         assert 'Traceback' in out, (
             f"Traceback written after SIGINT was lost — _iter_stdin generator exhausted.\n"
             f"Output: {out!r}"

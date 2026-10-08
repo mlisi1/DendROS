@@ -19,6 +19,7 @@ lib/launch_tui.py::_drain_queue() and lib/tui_pure.py's RingLog.append()/set_fil
 """
 
 import functools
+import re
 
 from lib.tui_find import is_case_sensitive
 
@@ -69,7 +70,44 @@ def grep_predicate(plain_text, node_name, logger_name, query):
     return query.lower() in plain_text.lower()
 
 
-def build_filter(focus_node=None, grep_query=None):
+# ── `level` ──────────────────────────────────────────────────────────────────────
+# Severity ranks, lowest first. Canonical names are what `level` stores and displays.
+LEVEL_NAMES = ('debug', 'info', 'warn', 'error', 'fatal')
+_LEVEL_RANKS = {name: rank for rank, name in enumerate(LEVEL_NAMES)}
+_LEVEL_ALIASES = {'warning': 'warn'}
+# First [LEVEL] bracket in the displayed text: node output (`[node-1] [WARN] [ts] …`, any
+# tag_position/show_timestamp/show_logger_name combo keeps it) and launch-framework lines
+# (`[ERROR] [talker-1]: process has died …`) alike. Message text comes after it, so a
+# "[ERROR]" inside a message can't outrank the line's real level.
+_LINE_LEVEL_RE = re.compile(r'\[(DEBUG|INFO|WARN(?:ING)?|ERROR|FATAL)\]')
+
+
+def parse_level(text):
+    """Canonical level name for user input (case-insensitive, `warning` = `warn`), or None
+    if it isn't a level."""
+    name = text.strip().lower()
+    name = _LEVEL_ALIASES.get(name, name)
+    return name if name in _LEVEL_RANKS else None
+
+
+def line_level(plain_text):
+    """Severity rank of a displayed line, or None for lines that aren't ROS log records
+    (tracebacks, print() output, DendROS's own alert lines)."""
+    m = _LINE_LEVEL_RE.search(plain_text)
+    if m is None:
+        return None
+    return _LEVEL_RANKS[parse_level(m.group(1))]
+
+
+def level_predicate(plain_text, node_name, logger_name, min_level):
+    """RingLog.set_filter() predicate for `level <min_level>`: lines at that severity or
+    worse. Lines without a level always pass — a severity filter must never hide a
+    traceback or crash output, which carry no [LEVEL] bracket."""
+    rank = line_level(plain_text)
+    return rank is None or rank >= _LEVEL_RANKS[min_level]
+
+
+def build_filter(focus_node=None, grep_query=None, min_level=None):
     """Combine the active console filters into one RingLog.set_filter() predicate (all must
     hold), or None when none are active. Each filtering command only updates its own state
     and the caller rebuilds the whole stack through here, so filters compose (e.g. focus +
@@ -77,6 +115,8 @@ def build_filter(focus_node=None, grep_query=None):
     preds = []
     if focus_node:
         preds.append(functools.partial(focus_predicate, target=focus_node))
+    if min_level:
+        preds.append(functools.partial(level_predicate, min_level=min_level))
     if grep_query:
         preds.append(functools.partial(grep_predicate, query=grep_query))
     if not preds:
@@ -86,19 +126,21 @@ def build_filter(focus_node=None, grep_query=None):
     return lambda plain, node_name, logger_name: all(p(plain, node_name, logger_name) for p in preds)
 
 
-def format_filter_status(focus_node=None, grep_query=None):
-    """Header chip text describing the active filter stack, e.g. `focus talker · grep "x"`,
-    or None when unfiltered."""
+def format_filter_status(focus_node=None, grep_query=None, min_level=None):
+    """Header chip text describing the active filter stack, e.g.
+    `focus talker · level warn · grep "x"`, or None when unfiltered."""
     parts = []
     if focus_node:
         parts.append(f'focus {focus_node}')
+    if min_level:
+        parts.append(f'level {min_level}')
     if grep_query:
         parts.append(f'grep "{grep_query}"')
     return ' · '.join(parts) if parts else None
 
 
 # ── Esc mode stack ─────────────────────────────────────────────────────────────────
-# "Invasive" view modes (focus, grep, find) are remembered in activation order; bare Esc
+# "Invasive" view modes (focus, level, grep, find) are remembered in activation order; bare Esc
 # exits the most recent one, so stacked modes peel back one layer per press. Pure list
 # helpers so the ordering rules are unit-tested; the TUI keeps the list on _TuiSession.
 
