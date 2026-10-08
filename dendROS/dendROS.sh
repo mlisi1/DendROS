@@ -38,6 +38,18 @@ set_tui_command('focus ' + sys.argv[1])
 " "$2"
             echo "${_DENDROS_TAG} focus command sent"
             ;;
+        find)
+            if [[ -z "${2:-}" ]]; then
+                echo "Usage: dendros find <text>"
+                return 1
+            fi
+            python3 -c "
+import sys; sys.path.insert(0, '${_DENDROS_DIR}')
+from lib.global_config import set_tui_command
+set_tui_command('find ' + sys.argv[1])
+" "${*:2}"
+            echo "${_DENDROS_TAG} find command sent"
+            ;;
         clear)
             python3 -c "
 import sys; sys.path.insert(0, '${_DENDROS_DIR}')
@@ -58,7 +70,9 @@ set_tui_command('clear')
             echo "  enable    Re-enable colorization system-wide (all terminals)"
             echo "  focus     Filter an already-running ros2 launch TUI to one node's output"
             echo "            (same as typing 'focus <node_name>' in the TUI's \\ console)"
-            echo "  clear     Restore the full scrollback in an already-running TUI session"
+            echo "  find      Jump to text in an already-running ros2 launch TUI (Tab/Shift+Tab to step)"
+            echo "            (same as typing 'find <text>' in the TUI's \\ console)"
+            echo "  clear     Restore the full scrollback (drops focus and find) in a running TUI session"
             ;;
     esac
 }
@@ -67,7 +81,7 @@ _dendros_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
 
     if [[ $COMP_CWORD -eq 1 ]]; then
-        COMPREPLY=($(compgen -W "config init disable enable focus clear" -- "$cur"))
+        COMPREPLY=($(compgen -W "config init disable enable focus find clear" -- "$cur"))
         return
     fi
 

@@ -1,4 +1,4 @@
-"""Tests for lib/tui_pure.py — the pure/testable layer backing the TUI launch mode.
+"""Tests for lib/tui_pure.py (+ lib/tui_clipboard.py) — the pure/testable layer backing the TUI launch mode.
 
 The curses-owning layer (lib/launch_tui.py's run_tui/_tui_main) needs a real controlling
 terminal and is manual-testing only, same accepted gap as dendros_config.py's own curses
@@ -21,15 +21,17 @@ from lib.tui_pure import (
     wrap_line,
     selection_span_for_row,
     extract_selection_text,
-    build_osc52_sequence,
     screen_row_to_tail_offset,
     compute_scrollbar_thumb,
     decode_sgr_mouse,
     decode_navigation_key,
-    find_clipboard_tool,
-    copy_via_system_clipboard_tool,
     PairCache,
     RingLog,
+)
+from lib.tui_clipboard import (
+    build_osc52_sequence,
+    find_clipboard_tool,
+    copy_via_system_clipboard_tool,
 )
 import base64
 import lib.crash_alert as ca
@@ -592,6 +594,35 @@ class TestRingLog:
 
 # ── crash_alert.set_sink() — TUI banner redirection ─────────────────────────────
 
+class TestRingLogSeq:
+    """seq numbers / visible_entries() — the stable line identity lib/tui_find.py relies on."""
+
+    def _ring(self, *texts, maxlen=100):
+        ring = RingLog(maxlen=maxlen)
+        ring.set_width(4)
+        for t in texts:
+            ring.append([(t, None, None, False)], t, node_name=t.split()[0])
+        return ring
+
+    def test_seq_range_counts_appends(self):
+        ring = self._ring('a 1', 'b 2', 'a 3')
+        assert ring.seq_range() == (0, 3)
+
+    def test_eviction_advances_first_seq_without_renumbering(self):
+        ring = self._ring('a 1', 'b 2', 'a 3', 'b 4', maxlen=2)
+        assert ring.seq_range() == (2, 4)
+        assert [(seq, plain) for seq, _, plain in ring.visible_entries()] == [(2, 'a 3'), (3, 'b 4')]
+
+    def test_visible_entries_carry_row_counts(self):
+        ring = self._ring('a 123456789')  # 11 chars at width 4 -> 3 rows
+        assert ring.visible_entries() == [(0, 3, 'a 123456789')]
+
+    def test_visible_entries_respect_filter(self):
+        ring = self._ring('a 1', 'b 2', 'a 3')
+        ring.set_filter(lambda plain, node_name, logger_name: node_name == 'a')
+        assert [seq for seq, _, _ in ring.visible_entries()] == [0, 2]
+
+
 class TestCrashAlertSink:
     def setup_method(self):
         ca.setup(enabled=True, color='node', interval=30)
@@ -934,8 +965,12 @@ class TestDecodeNavigationKey:
         assert decode_navigation_key('H') == 'home'
         assert decode_navigation_key('F') == 'end'
 
+    def test_shift_tab_is_backtab(self):
+        # ESC[Z — Shift+Tab, steps to the previous (newer) `\find` match.
+        assert decode_navigation_key('Z') == 'backtab'
+
     def test_unrecognized_letter_is_none(self):
-        assert decode_navigation_key('Z') is None
+        assert decode_navigation_key('Q') is None
 
     def test_tilde_forms(self):
         assert decode_navigation_key('~', '5') == 'page_up'

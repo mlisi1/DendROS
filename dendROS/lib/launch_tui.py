@@ -2,7 +2,7 @@
 
 Curses-owning layer — manual-testing only, same accepted gap as dendros_config.py's own
 curses interaction. Pure/testable logic (ANSI parsing, wrapping, selection math, escape-
-sequence decoding, clipboard encoding) lives in lib/tui_pure.py; drawing methods live in
+sequence decoding) lives in lib/tui_pure.py (clipboard helpers in lib/tui_clipboard.py); drawing methods live in
 lib/launch_tui_render.py's `_TuiRenderMixin`; console command handling (the backslash-key
 command bar, `focus`/`clear`, cross-process command mailbox) lives in lib/launch_tui_console.py's
 `_TuiConsoleMixin` and lib/console_commands.py; this module owns session state/event handling
@@ -52,6 +52,7 @@ from lib.config_loader import resolve_node
 from lib.console_commands import node_identity_names
 from lib.global_config import is_disable_flag_set
 from lib.launch_tui_console import _TuiConsoleMixin, _CONSOLE_ERROR_DIM_UNTIL
+from lib.launch_tui_find import _TuiFindMixin
 from lib.launch_tui_input import _TuiInputMixin, read_escape_sequence
 from lib.launch_tui_render import _TuiRenderMixin, _COPY_TOAST_DIM_UNTIL
 from lib.tui_pure import (
@@ -59,8 +60,8 @@ from lib.tui_pure import (
     segments_from_ansi,
     PairCache,
     RingLog,
-    find_clipboard_tool,
 )
+from lib.tui_clipboard import find_clipboard_tool
 
 # True black: terminfo can't read back the terminal's real background, and most dark themes
 # use a grey close enough that a computed offset wouldn't contrast reliably.
@@ -86,7 +87,10 @@ def run_tui(stdin_lines, colorize_fn, ca_module, pw_module, param_alert, param_a
     ring = RingLog(maxlen=scrollback)
     passthrough_event = threading.Event()  # set = no curses right now, reader prints raw
     stop_event = threading.Event()  # set once = stdin_lines is exhausted, for good
-    session = {'q': None}  # current session's queue.Queue(), or None while disabled
+    # Current session's queue.Queue(), or None while disabled. Created up front (and adopted
+    # by the first _TuiSession) so lines the reader produces before curses finishes starting
+    # are buffered rather than dropped.
+    session = {'q': queue.Queue()}
 
     def _reader():
         try:
@@ -178,12 +182,13 @@ def _tui_main(scr, ring, session, passthrough_event, stop_event, ca_module):
             pass
 
 
-class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiInputMixin):
+class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiInputMixin):
     """One curses.wrapper() session's worth of state and event handling. Drawing methods
     (_draw_segments/_draw_banner/_draw_scrollbar/_redraw/_draw_console) come from
     _TuiRenderMixin in lib/launch_tui_render.py; console command handling (_cmd_focus/
     _cmd_clear/_apply_console_command/_check_remote_command/...) comes from
-    _TuiConsoleMixin in lib/launch_tui_console.py; mouse/nav input handling
+    _TuiConsoleMixin in lib/launch_tui_console.py; `\find` search (_cmd_find/_find_step/...)
+    comes from _TuiFindMixin in lib/launch_tui_find.py; mouse/nav input handling
     (_screen_to_content/_handle_mouse/_handle_nav) comes from _TuiInputMixin in
     lib/launch_tui_input.py — all three split out purely to keep this file's core
     session/event-loop logic and the other concerns separately sized, not because any of
@@ -205,7 +210,9 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiInputMixin):
         self.header_segments = segments_from_ansi(DENDROS_TAG)
         self.version_text = f' v{__version__} '
 
-        self.q = queue.Queue()
+        # Adopt the queue run_tui() pre-created (holds any lines from before curses was up);
+        # a session reopened after a disable gap gets a fresh one.
+        self.q = session['q'] if session['q'] is not None else queue.Queue()
         session['q'] = self.q
         passthrough_event.clear()  # must be set before the reader is told it's safe to use q
         self.banner_text = ''
@@ -236,6 +243,7 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiInputMixin):
         self.known_nodes = self._build_known_nodes_from_ring()
         self.last_command_check = 0.0     # 1x/sec poll gate for the remote command mailbox
         self._init_console_colors()       # sets self.console_fg/console_bg
+        self._init_find_state()           # `\find`: see lib/launch_tui_find.py
 
     def _disabled_system_wide(self):
         now = time.monotonic()
@@ -272,7 +280,7 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiInputMixin):
         # Idempotent when called twice with no intervening ring growth.
         current_total = self.ring.total_rows()
         delta = current_total - self.last_total_rows
-        if delta and (self.sel_anchor is not None or self.view_offset > 0):
+        if delta and (self.sel_anchor is not None or self.view_offset > 0 or self.find_pinned):
             self.view_offset += delta
             if self.sel_anchor is not None:
                 self.sel_anchor = (self.sel_anchor[0] + delta, self.sel_anchor[1])
@@ -291,6 +299,7 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiInputMixin):
         prev_eof = self.eof
         prev_copy_toast_active = False
         prev_console_visible = False
+        prev_find_status = None
         interrupted = False
         try:
             while True:
@@ -311,7 +320,11 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiInputMixin):
                 # tail lines land outside the pinned viewport and must NOT trigger one —
                 # most terminals clear an active selection on *any* child-process output,
                 # so not calling doupdate() at all is what actually protects it.
-                header_changed = self.banner_text != prev_banner_text or self.eof != prev_eof
+                # The find indicator's counter moves as matching lines stream in (or get
+                # evicted), even while the body itself is frozen on the current match.
+                find_status = self._find_status()
+                header_changed = (self.banner_text != prev_banner_text or self.eof != prev_eof
+                                  or find_status != prev_find_status)
                 # The toast fades on a wall-clock timer independent of any key/output
                 # activity, so it needs its own redraw trigger; safe regardless of the pin
                 # since it repaints identical content with only the header corner changing.
@@ -335,7 +348,9 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiInputMixin):
                 console_visible_changed = console_visible != prev_console_visible
                 # An active selection always counts as "not following the tail", even at
                 # view_offset 0, so new output can't repaint it away mid-drag.
-                viewport_follows_tail = (self.sel_anchor is None) and (self.view_offset == 0)
+                # Same for a find frozen on its match (find_pinned).
+                viewport_follows_tail = (self.sel_anchor is None and self.view_offset == 0
+                                         and not self.find_pinned)
                 if (needs_redraw or header_changed or copy_toast_active or toast_changed
                         or console_error_active or console_visible_changed
                         or (drained and viewport_follows_tail)):
@@ -344,6 +359,7 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiInputMixin):
                     prev_eof = self.eof
                     prev_copy_toast_active = copy_toast_active
                     prev_console_visible = console_visible
+                    prev_find_status = find_status
                     needs_redraw = False
                 elif drained:
                     # Body redraw was skipped for the pin, but the scrollbar has nothing
@@ -397,10 +413,14 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiInputMixin):
                     result = read_escape_sequence(scr, curses)
                     if result is None:
                         pass
+                    elif result[0] == 'escape':
+                        self._find_clear()  # bare Esc: end the find, keep any focus
                     elif result[0] == 'nav':
                         self._handle_nav(result[1])
                     else:  # result[0] == 'mouse'
                         self._handle_mouse(result[1])
+                elif ch == 9:  # Tab: next (older) find match; Shift+Tab arrives as nav 'backtab'
+                    self._find_step('older')
                 elif ch == ord('q') and self.eof:
                     # Only quit once the process has exited — Ctrl-C is how you stop it early.
                     break

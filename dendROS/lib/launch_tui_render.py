@@ -12,6 +12,7 @@ from lib.launch_tui_console import (
     _CONSOLE_ERROR_NORMAL_UNTIL,
     _CONSOLE_ERROR_DIM_UNTIL,
 )
+from lib.tui_find import row_highlight_spans
 from lib.tui_pure import (
     segments_from_ansi,
     screen_row_to_tail_offset,
@@ -25,14 +26,28 @@ _COPY_TOAST_BOLD_UNTIL = 1.2
 _COPY_TOAST_NORMAL_UNTIL = 1.3
 _COPY_TOAST_DIM_UNTIL = 1.4
 
+# Right-aligned header key hint, (key, description) pairs — context-dependent so the keys
+# that matter right now are the ones advertised (see _header_key_hints()).
+_HINT_IDLE = (('\\', 'open console'),)
+_HINT_CONSOLE = (('Enter', 'run'), ('Esc', 'close'))
+_HINT_FIND = (('Tab/S-Tab', 'step'), ('Esc', 'end'))
+
+
+def _hint_width(pairs):
+    # "key desc" per pair, two spaces between pairs.
+    return sum(len(k) + 1 + len(d) for k, d in pairs) + 2 * (len(pairs) - 1)
+
 
 class _TuiRenderMixin:
 
-    def _draw_segments(self, row, col, usable_width, segments, default_bg=None, sel_span=None):
+    def _draw_segments(self, row, col, usable_width, segments, default_bg=None, sel_span=None,
+                       find_spans=None, find_attr=None):
         # default_bg backfills segments with no bg of their own (e.g. header text); ones
-        # that DO carry a bg (e.g. a crash-alert banner) keep it.
+        # that DO carry a bg (e.g. a crash-alert banner) keep it. find_spans: inclusive
+        # (start, end) `\find` match columns — drawn with find_attr (the current match's
+        # brand-orange chip) when given, else reverse video.
         curses = self.curses
-        if sel_span is None:
+        if sel_span is None and not find_spans:
             # Fast path: one addstr() per same-attr run.
             for seg_text, fg, bg, bold in segments:
                 if col >= usable_width:
@@ -46,8 +61,9 @@ class _TuiRenderMixin:
                 col += len(seg_text)
             return col
 
-        # Selection path: per-character, so the highlight (A_REVERSE) can be OR'd onto
+        # Highlight path: per-character, so the selection (A_REVERSE) can be OR'd onto
         # the normal attribute rather than replacing it.
+        find_spans = find_spans or ()
         for seg_text, fg, bg, bold in segments:
             eff_bg = bg if bg is not None else default_bg
             base_attr = self.pair_cache.attr_for(fg, eff_bg, bold) if (fg is not None or eff_bg is not None or bold) else 0
@@ -55,7 +71,9 @@ class _TuiRenderMixin:
                 if col >= usable_width:
                     return col
                 attr = base_attr
-                if sel_span[0] <= col <= sel_span[1]:
+                if any(s <= col <= e for s, e in find_spans):
+                    attr = find_attr if find_attr is not None else attr | curses.A_REVERSE
+                if sel_span is not None and sel_span[0] <= col <= sel_span[1]:
                     attr |= curses.A_REVERSE
                 try:
                     self.scr.addstr(row, col, ch, attr)
@@ -85,25 +103,49 @@ class _TuiRenderMixin:
             pass
         col += len(self.version_text)
         alert_col = min(usable_width, col + 1)
+        left_end = alert_col  # first free column after the left-side content
 
         text = self.banner_text
         if not text:
             if self.eof:
                 hint = '-- process finished -- q: quit  PageUp/PageDown: scroll --'
-                try:
-                    scr.addstr(row, alert_col, hint[:max(0, usable_width - alert_col)], header_attr | curses.A_DIM)
-                except curses.error:
-                    pass
             elif self.clipboard_tool_missing:
                 # Lowest-priority, idle-only hint — surfaces the copy limitation before a
                 # drag rather than after.
                 hint = '-- copy needs xclip/xsel/wl-copy (none found) --'
+            else:
+                hint = ''
+            if hint:
                 try:
                     scr.addstr(row, alert_col, hint[:max(0, usable_width - alert_col)], header_attr | curses.A_DIM)
                 except curses.error:
                     pass
+                left_end = alert_col + len(hint)
         else:
-            self._draw_segments(row, alert_col, usable_width, segments_from_ansi(text), default_bg=self.header_bg)
+            left_end = self._draw_segments(row, alert_col, usable_width, segments_from_ansi(text),
+                                           default_bg=self.header_bg)
+
+        # Right side, right to left: key hint, then the find chip. The key hint is the
+        # lowest-priority header item — dropped rather than drawn over left-side content
+        # (crash/param alerts, the process-finished hint).
+        right_col = usable_width
+        hints = self._header_key_hints()
+        hint_w = _hint_width(hints)
+        if right_col - hint_w - 1 >= left_end:
+            right_col -= hint_w + 1
+            self._draw_key_hints(row, right_col + 1, hints, header_attr)
+
+        find_status = self._find_status()
+        if find_status is not None:
+            # Right-aligned brand chip (same colors as the console bar); the "Copied" toast
+            # briefly draws over its right end, which is fine for a 1.4s flash.
+            chip = f' {find_status} '
+            chip_col = max(alert_col, right_col - len(chip))
+            try:
+                scr.addstr(row, chip_col, chip[:max(0, right_col - chip_col)],
+                           self.pair_cache.attr_for(self.console_fg, self.console_bg, True))
+            except curses.error:
+                pass
 
         copied_at = self.copy_toast_at
         if copied_at is not None:
@@ -122,6 +164,26 @@ class _TuiRenderMixin:
                     scr.addstr(row, msg_col, _COPY_TOAST_TEXT[:max(0, usable_width - msg_col)], toast_attr)
                 except curses.error:
                     pass
+
+    def _header_key_hints(self):
+        if self.console_active:
+            return _HINT_CONSOLE
+        if self.find_query is not None:
+            return _HINT_FIND
+        return _HINT_IDLE
+
+    def _draw_key_hints(self, row, col, pairs, header_attr):
+        # Keys bold, descriptions dim — reads as "press this" at a glance.
+        curses = self.curses
+        for i, (key, desc) in enumerate(pairs):
+            for text, attr in ((key, header_attr | curses.A_BOLD), (' ' + desc, header_attr | curses.A_DIM)):
+                try:
+                    self.scr.addstr(row, col, text, attr)
+                except curses.error:
+                    pass
+                col += len(text)
+            if i < len(pairs) - 1:
+                col += 2
 
     def _draw_console(self, width):
         curses = self.curses
@@ -214,18 +276,28 @@ class _TuiRenderMixin:
 
         rows = self.ring.visible_rows(self.view_offset, log_h)
         n_rows = len(rows)
+        find_rows = self._find_render_rows(log_h)  # None unless a `\find` is active
+        current_find_attr = self.pair_cache.attr_for(0, self.console_fg, True)  # black on brand orange
         row_i = 0
         for wrapped_row, _is_continuation in rows:
             scr_row = self.banner_h + row_i
             row_tail_offset = screen_row_to_tail_offset(row_i, n_rows, self.view_offset)
             row_len = sum(len(seg[0]) for seg in wrapped_row)
             sel_span = selection_span_for_row(row_tail_offset, row_len, self.sel_anchor, self.sel_cursor)
+            find_spans = find_attr = None
+            if find_rows is not None and row_i < len(find_rows[0]):
+                seq, row_in_line = find_rows[0][row_i]
+                find_spans = row_highlight_spans(find_rows[1][seq], self.find_query, row_in_line,
+                                                 usable_width, row_len)
+                if seq == self.find_seq:
+                    find_attr = current_find_attr
             try:
                 scr.move(scr_row, 0)
                 scr.clrtoeol()
             except curses.error:
                 pass
-            self._draw_segments(scr_row, 0, usable_width, wrapped_row, sel_span=sel_span)
+            self._draw_segments(scr_row, 0, usable_width, wrapped_row, sel_span=sel_span,
+                                find_spans=find_spans, find_attr=find_attr)
             row_i += 1
         while row_i < log_h:  # blank out rows below the last one drawn
             scr_row = self.banner_h + row_i

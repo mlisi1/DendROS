@@ -55,6 +55,7 @@ class _TuiConsoleMixin:
     _COMMAND_HANDLERS = {
         'focus': '_cmd_focus',
         'clear': '_cmd_clear',
+        'find': '_cmd_find',    # lives in lib/launch_tui_find.py's _TuiFindMixin
     }
 
     def _build_known_nodes_from_ring(self):
@@ -147,12 +148,15 @@ class _TuiConsoleMixin:
         self.filter_node = node_name
         self.ring.set_filter(functools.partial(focus_predicate, target=node_name))
         self._reset_view_after_filter_change()
+        self._find_after_filter_change()
         self.console_error = None
         return True
 
     def _cmd_clear(self, arg):
+        # Back to normal view: drops both the focus filter and any active find.
         self.filter_node = None
         self.ring.set_filter(None)
+        self._find_clear()
         self._reset_view_after_filter_change()
         self.console_error = None
         return True

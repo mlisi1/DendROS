@@ -19,24 +19,24 @@ from lib.tui_pure import (
     extract_selection_text,
     decode_sgr_mouse,
     decode_navigation_key,
-    build_osc52_sequence,
-    copy_via_system_clipboard_tool,
 )
+from lib.tui_clipboard import build_osc52_sequence, copy_via_system_clipboard_tool
 
 _MAX_SGR_PROBE_BYTES = 32  # generous for "Cb;Cx;Cy" decimal digits; bounds a malformed burst
 
 
 def read_escape_sequence(scr, curses):
     # Called after getch() returns 27 (ESC). Decodes an SGR mouse report or a nav key off
-    # the raw byte stream; returns ('mouse', event_dict), ('nav', action), or None (bare
-    # Escape/unrecognized — probe byte pushed back via ungetch() so a standalone Escape
-    # isn't lost).
+    # the raw byte stream; returns ('mouse', event_dict), ('nav', action), ('escape', None)
+    # for a bare Esc keypress (nothing follows it), or None (unrecognized — a non-'[' probe
+    # byte, e.g. Alt+key, is pushed back via ungetch() so it isn't lost).
     scr.timeout(5)  # bytes should already be buffered (one pty write) -- brief poll
     try:
         c1 = scr.getch()
+        if c1 == -1:
+            return ('escape', None)
         if c1 != ord('['):
-            if c1 != -1:
-                curses.ungetch(c1)
+            curses.ungetch(c1)
             return None
         c2 = scr.getch()
         if c2 == ord('<'):
@@ -58,7 +58,7 @@ def read_escape_sequence(scr, curses):
             except ValueError:
                 return None
             return ('mouse', decode_sgr_mouse(cb, cx, cy, terminator))
-        if c2 in (ord('A'), ord('B'), ord('C'), ord('D'), ord('H'), ord('F')):
+        if c2 in (ord('A'), ord('B'), ord('C'), ord('D'), ord('H'), ord('F'), ord('Z')):
             action = decode_navigation_key(chr(c2))
             return ('nav', action) if action else None
         digits = []
@@ -112,6 +112,7 @@ class _TuiInputMixin:
                 self.view_offset = min(max_offset, self.view_offset + step)
             else:
                 self.view_offset = max(0, self.view_offset - step)
+                self._find_release_pin_if_at_tail()
         elif ev['button'] == 0 and not ev['is_motion'] and not ev['is_release']:
             # Left-button press: starts a new selection (native "click elsewhere
             # deselects" is handled on release below).
@@ -154,6 +155,9 @@ class _TuiInputMixin:
         # Middle/right-click and stray motion with no button held: no-ops.
 
     def _handle_nav(self, action):
+        if action == 'backtab':  # Shift+Tab: previous (newer) find match
+            self._find_step('newer')
+            return
         if action not in ('page_up', 'page_down', 'home', 'end', 'up', 'down'):
             return  # 'left'/'right' intentionally unbound
         log_h = self._log_height(self.scr.getmaxyx()[0])
@@ -170,3 +174,5 @@ class _TuiInputMixin:
             self.view_offset = min(max_offset, self.view_offset + 1)
         elif action == 'down':
             self.view_offset = max(0, self.view_offset - 1)
+        if action in ('page_down', 'end', 'down'):
+            self._find_release_pin_if_at_tail()

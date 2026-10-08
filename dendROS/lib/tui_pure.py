@@ -1,15 +1,12 @@
 """Pure, curses-free helpers backing the TUI launch mode (see lib/launch_tui.py).
 
 ANSI/SGR parsing, wrapping, RingLog scrollback, selection math, mouse/keyboard escape-sequence
-decoding, clipboard encoding — no curses or thread dependency, so it's unit-tested directly
+decoding — no curses or thread dependency, so it's unit-tested directly
 (test/unit/test_launch_tui.py). launch_tui.py's curses loop drives these from real events.
 """
 
-import base64
 import collections
 import re
-import shutil
-import subprocess
 import threading
 
 # Matches any CSI sequence, not just SGR color codes, so non-color codes (e.g. '\033[K') are
@@ -257,8 +254,10 @@ def decode_sgr_mouse(cb, cx, cy, terminator):
 
 
 # Two CSI encodings for the same keys (ESC[A vs ESC[5~) -- xterm/VTE use both depending on
-# the key. left/right decoded for completeness though nothing currently binds them.
-_NAV_LETTER_ACTIONS = {'A': 'up', 'B': 'down', 'C': 'right', 'D': 'left', 'H': 'home', 'F': 'end'}
+# the key. left/right decoded for completeness though nothing currently binds them. 'Z' is
+# Shift+Tab (ESC[Z, "back tab") — not a nav key strictly, but arrives in the same CSI shape.
+_NAV_LETTER_ACTIONS = {'A': 'up', 'B': 'down', 'C': 'right', 'D': 'left', 'H': 'home', 'F': 'end',
+                       'Z': 'backtab'}
 _NAV_TILDE_ACTIONS = {'1': 'home', '7': 'home', '4': 'end', '8': 'end', '5': 'page_up', '6': 'page_down'}
 
 
@@ -270,49 +269,6 @@ def decode_navigation_key(final_byte, digits=''):
     if digits:
         return None
     return _NAV_LETTER_ACTIONS.get(final_byte)
-
-
-_OSC52_MAX_BYTES = 1024 * 1024  # soft guard against a pathologically large selection
-
-
-def build_osc52_sequence(text, max_bytes=_OSC52_MAX_BYTES):
-    """Build the OSC 52 "set system clipboard" escape sequence. Not universally honored
-    (confirmed absent on some VTE-based terminals) — see copy_via_system_clipboard_tool()."""
-    data = text.encode('utf-8', errors='replace')[:max_bytes]
-    b64 = base64.b64encode(data).decode('ascii')
-    return f'\033]52;c;{b64}\a'.encode('ascii')
-
-
-# Tried in order; first found on PATH wins. xclip/xsel need X11, wl-copy needs Wayland, so
-# normally only one pair is ever installed.
-_CLIPBOARD_COMMANDS = (
-    ('xclip', '-selection', 'clipboard'),
-    ('xsel', '--clipboard', '--input'),
-    ('wl-copy',),
-)
-
-
-def find_clipboard_tool(which_fn=shutil.which):
-    """First clipboard command from _CLIPBOARD_COMMANDS found on PATH, or None."""
-    for cmd in _CLIPBOARD_COMMANDS:
-        if which_fn(cmd[0]):
-            return cmd
-    return None
-
-
-def copy_via_system_clipboard_tool(text, which_fn=shutil.which, run_fn=subprocess.run):
-    """Best-effort copy via a local xclip/xsel/wl-copy, for terminals that don't honor OSC
-    52 at all. Returns True if a tool ran (not proof it reached the clipboard), False if
-    none was found. Errors are swallowed — this is always supplementary to the OSC 52 write."""
-    cmd = find_clipboard_tool(which_fn)
-    if cmd is None:
-        return False
-    try:
-        run_fn(cmd, input=text.encode('utf-8', errors='replace'), timeout=2, check=False,
-               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except Exception:
-        pass
-    return True
 
 
 class PairCache:
@@ -383,6 +339,7 @@ class RingLog:
         self._filter_fn = None          # Optional[Callable[[str, str, str], bool]]:
                                          # (plain_text, node_name, logger_name) -> bool
         self._filtered_total_rows = 0   # maintained in parallel to _total_rows while active
+        self._seq = 0                   # lines ever appended; _lines[i]'s seq = _seq - len + i
 
     def __len__(self):
         return len(self._lines)
@@ -398,6 +355,23 @@ class RingLog:
         the TUI's known-nodes set from history already in the ring (see
         lib/launch_tui_console.py's _build_known_nodes_from_ring())."""
         return [(node_name, logger_name) for _, _, node_name, logger_name in self._lines]
+
+    def seq_range(self):
+        """(first, end) seq numbers of retained lines, end exclusive. A seq is a line's
+        permanent identity (eviction/rewrap/filtering never renumber it) — used by
+        lib/tui_find.py to keep pointing at the same match as the ring changes."""
+        return self._seq - len(self._lines), self._seq
+
+    def visible_entries(self):
+        """Snapshot of (seq, row_count, plain_text) for every line passing the active
+        filter, oldest-first — the same lines, in the same order, visible_rows() draws."""
+        with self._lock:
+            base = self._seq - len(self._lines)
+            return [
+                (base + i, rc, plain)
+                for i, (rc, (_, plain, node_name, logger_name)) in enumerate(zip(self._row_counts, self._lines))
+                if self._filter_fn is None or self._filter_fn(plain, node_name, logger_name)
+            ]
 
     def set_filter(self, predicate):
         """Set (or clear, with None) a presentation-only filter. `predicate(plain_text,
@@ -423,6 +397,7 @@ class RingLog:
                 evicted_rows = self._row_counts[0]
                 evicted = self._lines[0]
             self._lines.append((segments, plain_text, node_name, logger_name))
+            self._seq += 1
             row_count = len(wrap_line(segments, self._wrap_width)) if self._wrap_width else 1
             self._row_counts.append(row_count)
             self._total_rows += row_count - evicted_rows
