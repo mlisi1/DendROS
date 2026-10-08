@@ -127,6 +127,8 @@ class _TuiConsoleMixin:
         return getattr(self, handler_name)(arg)
 
     def _check_remote_command(self):
+        if self.review:
+            return False  # `dendros reopen` viewer: the mailbox belongs to live launches
         now = time.monotonic()
         if now - self.last_command_check < 1.0:
             return False

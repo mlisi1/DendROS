@@ -107,7 +107,9 @@ class _TuiRenderMixin:
 
         text = self.banner_text
         if not text:
-            if self.eof:
+            if self.review:
+                hint = f'-- {self.review_label} -- q: quit  PageUp/PageDown: scroll --'
+            elif self.eof:
                 hint = '-- process finished -- q: quit  PageUp/PageDown: scroll --'
             elif self.clipboard_tool_missing:
                 # Lowest-priority, idle-only hint — surfaces the copy limitation before a

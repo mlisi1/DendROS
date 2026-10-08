@@ -608,6 +608,13 @@ class TestRingLogSeq:
         ring = self._ring('a 1', 'b 2', 'a 3')
         assert ring.seq_range() == (0, 3)
 
+    def test_entries_snapshot_ignores_filter(self):
+        # entries() is what lib/tui_history.py persists for `dendros reopen` — always the
+        # full retained history, never the focus-filtered view.
+        ring = self._ring('a 1', 'b 2', 'a 3', maxlen=2)
+        ring.set_filter(lambda plain, node, logger: node == 'a')
+        assert [(plain, node) for _, plain, node, _ in ring.entries()] == [('b 2', 'b'), ('a 3', 'a')]
+
     def test_eviction_advances_first_seq_without_renumbering(self):
         ring = self._ring('a 1', 'b 2', 'a 3', 'b 4', maxlen=2)
         assert ring.seq_range() == (2, 4)

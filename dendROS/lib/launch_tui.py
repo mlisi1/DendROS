@@ -62,6 +62,7 @@ from lib.tui_pure import (
     RingLog,
 )
 from lib.tui_clipboard import find_clipboard_tool
+from lib.tui_history import save_last_run
 
 # True black: terminfo can't read back the terminal's real background, and most dark themes
 # use a grey close enough that a computed offset wouldn't contrast reliably.
@@ -71,10 +72,12 @@ _HEADER_BG_RGB = (0, 0, 0)
 # ── Curses-owning layer (manual-testing only) ──────────────────────────────────
 
 def run_tui(stdin_lines, colorize_fn, ca_module, pw_module, param_alert, param_alert_style,
-            color_map, tag_map, style_map, tag_style, show_tag, global_cfg):
+            color_map, tag_map, style_map, tag_style, show_tag, global_cfg, launch_argv=None):
     """Entry point from dendROS_pipe.py::main() when launch_mode is 'tui'. The reader
     thread and RingLog persist across a mid-run disable/enable cycle (see module docstring).
-    Returns once the run is over: a normal quit, or the process ending while disabled."""
+    Returns once the run is over: a normal quit, or the process ending while disabled.
+    On the way out the scrollback is saved as this terminal's last run, for
+    `dendros reopen` (lib/tui_history.py, lib/launch_tui_review.py)."""
     import curses
     locale.setlocale(locale.LC_ALL, '')  # required for curses to render multi-byte UTF-8
 
@@ -135,17 +138,20 @@ def run_tui(stdin_lines, colorize_fn, ca_module, pw_module, param_alert, param_a
     reader_thread = threading.Thread(target=_reader, daemon=True)
     reader_thread.start()
 
-    while True:
-        result = curses.wrapper(_tui_main, ring, session, passthrough_event, stop_event, ca_module)
-        if result != 'disabled':
-            return  # normal quit — fully done
+    try:
+        while True:
+            result = curses.wrapper(_tui_main, ring, session, passthrough_event, stop_event, ca_module)
+            if result != 'disabled':
+                return  # normal quit — fully done
 
-        # Disabled mid-run: wait for a re-enable, or give up once the process has exited.
-        while not stop_event.is_set() and is_disable_flag_set():
-            time.sleep(0.5)
-        if stop_event.is_set():
-            return
-        # else: flag cleared while still running — loop back and reopen curses
+            # Disabled mid-run: wait for a re-enable, or give up once the process has exited.
+            while not stop_event.is_set() and is_disable_flag_set():
+                time.sleep(0.5)
+            if stop_event.is_set():
+                return
+            # else: flag cleared while still running — loop back and reopen curses
+    finally:
+        save_last_run(ring.entries(), launch_argv, session.get('banner_text', ''))
 
 
 def _tui_main(scr, ring, session, passthrough_event, stop_event, ca_module):
@@ -174,7 +180,10 @@ def _tui_main(scr, ring, session, passthrough_event, stop_event, ca_module):
         pass
     try:
         session_obj = _TuiSession(scr, ring, session, passthrough_event, stop_event, ca_module, curses)
-        return session_obj.run()
+        try:
+            return session_obj.run()
+        finally:
+            session['banner_text'] = session_obj.banner_text  # persisted by run_tui()
     finally:
         try:
             os.write(1, b'\x1b[?1006l\x1b[?1002l')
@@ -215,7 +224,10 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiInputMix
         self.q = session['q'] if session['q'] is not None else queue.Queue()
         session['q'] = self.q
         passthrough_event.clear()  # must be set before the reader is told it's safe to use q
-        self.banner_text = ''
+        # Review mode (`dendros reopen`, lib/launch_tui_review.py): read-only replay of a saved run.
+        self.review = session.get('review', False)
+        self.review_label = session.get('review_label', '')
+        self.banner_text = session.get('banner_text', '') if self.review else ''
         self.copy_toast_at = None  # monotonic() timestamp of the last copy, or None
 
         ca_module.set_sink(lambda text: self.q.put(('banner', text)))
@@ -246,6 +258,8 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiInputMix
         self._init_find_state()           # `\find`: see lib/launch_tui_find.py
 
     def _disabled_system_wide(self):
+        if self.review:
+            return False
         now = time.monotonic()
         if now - self.last_disable_check < 1.0:
             return False

@@ -350,6 +350,13 @@ class RingLog:
     def plain_lines(self):
         return [plain for _, plain, _, _ in self._lines]
 
+    def entries(self):
+        """Locked snapshot of every retained (segments, plain_text, node_name, logger_name)
+        tuple, oldest-first, ignoring any filter — used to persist the run for
+        `dendros reopen` (lib/tui_history.py) while the reader thread may still append."""
+        with self._lock:
+            return list(self._lines)
+
     def node_identities(self):
         """(node_name, logger_name) for every retained line, oldest-first — used to seed
         the TUI's known-nodes set from history already in the ring (see

@@ -442,6 +442,7 @@ def main():
                 param_alert, param_alert_style,
                 color_map, tag_map, style_map, tag_style, show_tag,
                 global_cfg,
+                launch_argv=argv,
             )
             return
         except Exception as e:

@@ -50,6 +50,7 @@ set_tui_command('find ' + sys.argv[1])
 " "${*:2}"
             echo "${_DENDROS_TAG} find command sent"
             ;;
+        reopen)  DENDROS_SHELL_PID=$$ python3 "${_DENDROS_DIR}/dendros_reopen.py" ;;
         clear)
             python3 -c "
 import sys; sys.path.insert(0, '${_DENDROS_DIR}')
@@ -73,6 +74,7 @@ set_tui_command('clear')
             echo "  find      Jump to text in an already-running ros2 launch TUI (Tab/Shift+Tab to step)"
             echo "            (same as typing 'find <text>' in the TUI's \\ console)"
             echo "  clear     Restore the full scrollback (drops focus and find) in a running TUI session"
+            echo "  reopen    Reopen this terminal's last ros2 launch TUI run (read-only scrollback)"
             ;;
     esac
 }
@@ -81,7 +83,7 @@ _dendros_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
 
     if [[ $COMP_CWORD -eq 1 ]]; then
-        COMPREPLY=($(compgen -W "config init disable enable focus find clear" -- "$cur"))
+        COMPREPLY=($(compgen -W "config init disable enable focus find clear reopen" -- "$cur"))
         return
     fi
 
@@ -115,7 +117,7 @@ ros2() {
     fi
 
     if [[ "$1" == "launch" || "$1" == "run" ]]; then
-        RCUTILS_COLORIZED_OUTPUT=1 PYTHONUNBUFFERED=1 "$_ROS2_BIN" "$@" 2>&1 | python3 "$_DENDROS_PIPE" "$@"
+        RCUTILS_COLORIZED_OUTPUT=1 PYTHONUNBUFFERED=1 "$_ROS2_BIN" "$@" 2>&1 | DENDROS_SHELL_PID=$$ python3 "$_DENDROS_PIPE" "$@"
         return ${PIPESTATUS[0]}
     elif [[ "$1" == "node" && "$2" == "list" ]]; then
         "$_ROS2_BIN" "$@" | python3 "${_DENDROS_DIR}/dendros_node_list.py"
