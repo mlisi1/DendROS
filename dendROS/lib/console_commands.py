@@ -18,6 +18,10 @@ and threads them through the TUI's reader thread down to RingLog — see
 lib/launch_tui.py::_drain_queue() and lib/tui_pure.py's RingLog.append()/set_filter().
 """
 
+import functools
+
+from lib.tui_find import is_case_sensitive
+
 
 def canonical_node_name(name):
     """Normalize a node name for matching. ROS graph/logger names in the root namespace
@@ -53,6 +57,60 @@ def focus_predicate(plain_text, node_name, logger_name, target):
     line text. `plain_text` is unused but required by the predicate signature (see
     RingLog.set_filter()'s docstring in lib/tui_pure.py)."""
     return line_matches_node(node_name, logger_name, target)
+
+
+def grep_predicate(plain_text, node_name, logger_name, query):
+    """RingLog.set_filter() predicate for `grep <query>` — the counterpart to focus that
+    matches on the displayed line text rather than node identity. Substring with the same
+    smart case as `find` (lib/tui_find.py): case-insensitive unless the query has an
+    uppercase letter. node_name/logger_name are unused but required by the signature."""
+    if is_case_sensitive(query):
+        return query in plain_text
+    return query.lower() in plain_text.lower()
+
+
+def build_filter(focus_node=None, grep_query=None):
+    """Combine the active console filters into one RingLog.set_filter() predicate (all must
+    hold), or None when none are active. Each filtering command only updates its own state
+    and the caller rebuilds the whole stack through here, so filters compose (e.g. focus +
+    grep) instead of the last command overwriting the previous one's filter."""
+    preds = []
+    if focus_node:
+        preds.append(functools.partial(focus_predicate, target=focus_node))
+    if grep_query:
+        preds.append(functools.partial(grep_predicate, query=grep_query))
+    if not preds:
+        return None
+    if len(preds) == 1:
+        return preds[0]
+    return lambda plain, node_name, logger_name: all(p(plain, node_name, logger_name) for p in preds)
+
+
+def format_filter_status(focus_node=None, grep_query=None):
+    """Header chip text describing the active filter stack, e.g. `focus talker · grep "x"`,
+    or None when unfiltered."""
+    parts = []
+    if focus_node:
+        parts.append(f'focus {focus_node}')
+    if grep_query:
+        parts.append(f'grep "{grep_query}"')
+    return ' · '.join(parts) if parts else None
+
+
+# ── Esc mode stack ─────────────────────────────────────────────────────────────────
+# "Invasive" view modes (focus, grep, find) are remembered in activation order; bare Esc
+# exits the most recent one, so stacked modes peel back one layer per press. Pure list
+# helpers so the ordering rules are unit-tested; the TUI keeps the list on _TuiSession.
+
+def push_mode(stack, mode):
+    """Mark `mode` as the most recently activated. Re-activating an already-active mode
+    (e.g. a second `grep` with new text) moves it to the top instead of duplicating it."""
+    return [m for m in stack if m != mode] + [mode]
+
+
+def drop_mode(stack, mode):
+    """Remove `mode` (no-op if inactive) — when it's ended by anything other than Esc."""
+    return [m for m in stack if m != mode]
 
 
 def parse_console_command(text):

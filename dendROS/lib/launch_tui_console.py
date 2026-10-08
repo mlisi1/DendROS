@@ -14,15 +14,17 @@ lib/console_commands.py if needed, a `_cmd_<name>` method here, and one entry in
 _apply_console_command()'s dispatch logic need to change per new command.
 """
 
-import functools
 import time
 
 from lib.colors import _DENDROS_BLUE, _DENDROS_ORANGE
 from lib.console_commands import (
+    build_filter,
     canonical_node_name,
-    focus_predicate,
+    drop_mode,
+    format_filter_status,
     node_identity_names,
     parse_console_command,
+    push_mode,
 )
 from lib.global_config import pop_tui_command
 from lib.tui_pure import quantize_rgb_to_256
@@ -54,6 +56,7 @@ class _TuiConsoleMixin:
     # in lib/console_commands.py) + one _cmd_* method below + one entry here.
     _COMMAND_HANDLERS = {
         'focus': '_cmd_focus',
+        'grep': '_cmd_grep',
         'clear': '_cmd_clear',
         'find': '_cmd_find',    # lives in lib/launch_tui_find.py's _TuiFindMixin
     }
@@ -148,17 +151,57 @@ class _TuiConsoleMixin:
             self._show_console_error(f'focus: unknown node "{node_name}"')
             return False
         self.filter_node = node_name
-        self.ring.set_filter(functools.partial(focus_predicate, target=node_name))
-        self._reset_view_after_filter_change()
-        self._find_after_filter_change()
-        self.console_error = None
+        self.mode_stack = push_mode(self.mode_stack, 'focus')
+        self._apply_filters()
+        return True
+
+    def _cmd_grep(self, arg):
+        # Live filter on line text: lines arriving later that match show up too, so zero
+        # current matches is not an error (e.g. waiting for "goal reached"). A bare `grep`
+        # drops just the grep filter, keeping any focus.
+        query = arg.strip()
+        if not query and self.grep_query is None:
+            self._show_console_error('grep: text required')
+            return False
+        self.grep_query = query or None
+        if query:
+            self.mode_stack = push_mode(self.mode_stack, 'grep')
+        else:
+            self.mode_stack = drop_mode(self.mode_stack, 'grep')
+        self._apply_filters()
         return True
 
     def _cmd_clear(self, arg):
-        # Back to normal view: drops both the focus filter and any active find.
+        # Back to normal view: drops every filter (focus, grep) and any active find.
         self.filter_node = None
-        self.ring.set_filter(None)
+        self.grep_query = None
         self._find_clear()
-        self._reset_view_after_filter_change()
-        self.console_error = None
+        self.mode_stack = []
+        self._apply_filters()
         return True
+
+    def _escape_mode(self):
+        """Bare Esc (console closed): exit the most recently entered mode — find, grep or
+        focus — leaving any earlier ones active. No-op when no mode is active."""
+        if not self.mode_stack:
+            return
+        mode = self.mode_stack[-1]
+        if mode == 'find':
+            self._find_clear()  # drops 'find' from mode_stack itself
+            return
+        self.mode_stack = self.mode_stack[:-1]
+        if mode == 'grep':
+            self.grep_query = None
+        elif mode == 'focus':
+            self.filter_node = None
+        self._apply_filters()
+
+    def _apply_filters(self):
+        # Rebuild the whole filter stack from per-command state, so filters compose.
+        self.ring.set_filter(build_filter(self.filter_node, self.grep_query))
+        self._reset_view_after_filter_change()
+        self._find_after_filter_change()
+        self.console_error = None
+
+    def _filter_status(self):
+        return format_filter_status(self.filter_node, self.grep_query)

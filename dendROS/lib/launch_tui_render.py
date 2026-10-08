@@ -30,7 +30,7 @@ _COPY_TOAST_DIM_UNTIL = 1.4
 # that matter right now are the ones advertised (see _header_key_hints()).
 _HINT_IDLE = (('\\', 'open console'),)
 _HINT_CONSOLE = (('Enter', 'run'), ('Esc', 'close'))
-_HINT_FIND = (('Tab/S-Tab', 'step'), ('Esc', 'end'))
+_HINT_FIND_STEP = ('Tab/S-Tab', 'step')
 
 
 def _hint_width(pairs):
@@ -127,7 +127,7 @@ class _TuiRenderMixin:
             left_end = self._draw_segments(row, alert_col, usable_width, segments_from_ansi(text),
                                            default_bg=self.header_bg)
 
-        # Right side, right to left: key hint, then the find chip. The key hint is the
+        # Right side, right to left: key hint, then the find/filter chips. The key hint is the
         # lowest-priority header item — dropped rather than drawn over left-side content
         # (crash/param alerts, the process-finished hint).
         right_col = usable_width
@@ -137,17 +137,20 @@ class _TuiRenderMixin:
             right_col -= hint_w + 1
             self._draw_key_hints(row, right_col + 1, hints, header_attr)
 
-        find_status = self._find_status()
-        if find_status is not None:
-            # Right-aligned brand chip (same colors as the console bar); the "Copied" toast
-            # briefly draws over its right end, which is fine for a 1.4s flash.
-            chip = f' {find_status} '
+        # Brand chips (same colors as the console bar), right to left: the find indicator,
+        # then the active filter stack (focus/grep). The "Copied" toast briefly draws over
+        # the rightmost one, which is fine for a 1.4s flash.
+        chip_attr = self.pair_cache.attr_for(self.console_fg, self.console_bg, True)
+        for status in (self._find_status(), self._filter_status()):
+            if status is None:
+                continue
+            chip = f' {status} '
             chip_col = max(alert_col, right_col - len(chip))
             try:
-                scr.addstr(row, chip_col, chip[:max(0, right_col - chip_col)],
-                           self.pair_cache.attr_for(self.console_fg, self.console_bg, True))
+                scr.addstr(row, chip_col, chip[:max(0, right_col - chip_col)], chip_attr)
             except curses.error:
                 pass
+            right_col = max(alert_col, chip_col - 1)
 
         copied_at = self.copy_toast_at
         if copied_at is not None:
@@ -170,9 +173,11 @@ class _TuiRenderMixin:
     def _header_key_hints(self):
         if self.console_active:
             return _HINT_CONSOLE
-        if self.find_query is not None:
-            return _HINT_FIND
-        return _HINT_IDLE
+        if not self.mode_stack:
+            return _HINT_IDLE
+        # Esc names the mode it will exit (the most recent one) — see _escape_mode().
+        step = (_HINT_FIND_STEP,) if self.find_query is not None else ()
+        return step + (('Esc', f'exit {self.mode_stack[-1]}'),)
 
     def _draw_key_hints(self, row, col, pairs, header_attr):
         # Keys bold, descriptions dim — reads as "press this" at a glance.

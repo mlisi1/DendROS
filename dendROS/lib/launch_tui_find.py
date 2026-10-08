@@ -10,9 +10,11 @@ view and centers it; Tab steps to older matches, Shift+Tab to newer ones (wrappi
 matches on screen are highlighted, the current line's in brand orange; a `find "text" n/N`
 indicator sits in the header. A find *freezes* the view (find_pinned) so streaming output
 can't scroll the match away — End, or scrolling back down to the tail, resumes following.
-Esc (console closed) ends the find; `\\clear` ends it along with any focus filter.
+Esc (console closed) ends the find if it's the most recent mode (see _escape_mode() in
+lib/launch_tui_console.py); `\\clear` ends it along with any focus/grep filter.
 """
 
+from lib.console_commands import drop_mode, push_mode
 from lib.tui_find import (
     center_view_offset,
     find_matching_seqs,
@@ -35,9 +37,9 @@ class _TuiFindMixin:
         self._find_cache = []
 
     def _find_matches(self):
-        # Recomputed only when the ring's contents, the focus filter, or the query change —
+        # Recomputed only when the ring's contents, the filter stack, or the query change —
         # i.e. at most once per drained tick while a find is active.
-        key = (self.ring.seq_range(), self.filter_node, self.find_query)
+        key = (self.ring.seq_range(), self.filter_node, self.grep_query, self.find_query)
         if key != self._find_cache_key:
             self._find_cache = find_matching_seqs(self.ring.visible_entries(), self.find_query)
             self._find_cache_key = key
@@ -68,6 +70,7 @@ class _TuiFindMixin:
 
     def _find_clear(self):
         self._init_find_state()
+        self.mode_stack = drop_mode(self.mode_stack, 'find')
 
     def _find_release_pin_if_at_tail(self):
         # Scrolling back down to the live tail means "follow again", same as End.
@@ -75,7 +78,7 @@ class _TuiFindMixin:
             self.find_pinned = False
 
     def _find_after_filter_change(self):
-        # A focus change re-scopes the search to the newly visible lines: stay on the
+        # A filter change (focus/grep) re-scopes the search to the newly visible lines: stay on the
         # current match if it's still visible, else move to the nearest older one.
         if self.find_query is None:
             return
@@ -111,6 +114,7 @@ class _TuiFindMixin:
         log_h = self._log_height(self.scr.getmaxyx()[0])
         self._sync_pin(log_h)
         self.find_query = query
+        self.mode_stack = push_mode(self.mode_stack, 'find')
         self._find_cache_key = None
         self._find_jump(initial_match_seq(matches, entries, self.view_offset))
         self.console_error = None

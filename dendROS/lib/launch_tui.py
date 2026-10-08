@@ -252,6 +252,8 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiInputMix
         self.console_error = None         # last error message text, or None
         self.console_error_at = None      # monotonic() timestamp, mirrors copy_toast_at's fade
         self.filter_node = None           # currently focused node name, or None (unfiltered)
+        self.grep_query = None            # active `grep` text, or None (see _apply_filters())
+        self.mode_stack = []              # active 'focus'/'grep'/'find', oldest-first; Esc pops the last
         self.known_nodes = self._build_known_nodes_from_ring()
         self.last_command_check = 0.0     # 1x/sec poll gate for the remote command mailbox
         self._init_console_colors()       # sets self.console_fg/console_bg
@@ -428,7 +430,7 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiInputMix
                     if result is None:
                         pass
                     elif result[0] == 'escape':
-                        self._find_clear()  # bare Esc: end the find, keep any focus
+                        self._escape_mode()  # bare Esc: exit the most recent focus/grep/find
                     elif result[0] == 'nav':
                         self._handle_nav(result[1])
                     else:  # result[0] == 'mouse'

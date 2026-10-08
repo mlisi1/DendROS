@@ -14,11 +14,16 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'dendROS'))
 
 from lib.console_commands import (
+    build_filter,
     canonical_node_name,
+    drop_mode,
     focus_predicate,
+    format_filter_status,
+    grep_predicate,
     line_matches_node,
     node_identity_names,
     parse_console_command,
+    push_mode,
 )
 
 
@@ -132,3 +137,93 @@ class TestParseConsoleCommand:
 
     def test_multi_word_arg_preserved_verbatim(self):
         assert parse_console_command("focus a b") == ('focus', 'a b')
+
+
+
+# ── grep_predicate() ─────────────────────────────────────────────────────────────
+
+class TestGrepPredicate:
+    def test_substring_match(self):
+        assert grep_predicate("[talker-1] [INFO]: goal reached", None, None, "goal")
+
+    def test_non_match(self):
+        assert not grep_predicate("[talker-1] [INFO]: hello", None, None, "goal")
+
+    def test_lowercase_query_is_case_insensitive(self):
+        assert grep_predicate("Timeout waiting", None, None, "timeout")
+
+    def test_uppercase_query_is_case_sensitive(self):
+        assert grep_predicate("Timeout waiting", None, None, "Timeout")
+        assert not grep_predicate("timeout waiting", None, None, "Timeout")
+
+    def test_matches_text_not_node_identity(self):
+        # A line from node "planner" without the word in its text doesn't match.
+        assert not grep_predicate("[INFO]: hello", "planner", "planner", "planner")
+
+
+# ── build_filter() ───────────────────────────────────────────────────────────────
+
+class TestBuildFilter:
+    def test_no_filters_is_none(self):
+        assert build_filter() is None
+        assert build_filter(None, '') is None
+
+    def test_focus_only(self):
+        pred = build_filter('talker', None)
+        assert pred("anything", "talker", "talker")
+        assert not pred("anything", "listener", "listener")
+
+    def test_grep_only(self):
+        pred = build_filter(None, 'goal')
+        assert pred("goal reached", "listener", "listener")
+        assert not pred("hello", "listener", "listener")
+
+    def test_focus_and_grep_must_both_hold(self):
+        pred = build_filter('talker', 'goal')
+        assert pred("goal reached", "talker", "talker")
+        assert not pred("goal reached", "listener", "listener")  # wrong node
+        assert not pred("hello", "talker", "talker")              # no text match
+
+    def test_composable_node_via_logger_name(self):
+        pred = build_filter('lidar_driver', 'scan')
+        assert pred("scan ok", "container", "/lidar_driver")
+
+
+# ── format_filter_status() ───────────────────────────────────────────────────────
+
+class TestFormatFilterStatus:
+    def test_none_when_unfiltered(self):
+        assert format_filter_status() is None
+
+    def test_focus_only(self):
+        assert format_filter_status('talker', None) == 'focus talker'
+
+    def test_grep_only(self):
+        assert format_filter_status(None, 'goal') == 'grep "goal"'
+
+    def test_both(self):
+        assert format_filter_status('talker', 'goal') == 'focus talker · grep "goal"'
+
+
+
+# ── push_mode() / drop_mode() — Esc mode stack ───────────────────────────────────
+
+class TestModeStack:
+    def test_push_appends_in_activation_order(self):
+        assert push_mode(push_mode([], 'focus'), 'grep') == ['focus', 'grep']
+
+    def test_reactivating_moves_to_top_without_duplicate(self):
+        # focus, grep, then a new focus target: Esc must exit focus first now.
+        assert push_mode(['focus', 'grep'], 'focus') == ['grep', 'focus']
+
+    def test_drop_removes_from_anywhere(self):
+        assert drop_mode(['focus', 'find', 'grep'], 'find') == ['focus', 'grep']
+
+    def test_drop_inactive_is_noop(self):
+        assert drop_mode(['grep'], 'focus') == ['grep']
+
+    def test_pure_does_not_mutate_input(self):
+        stack = ['focus']
+        push_mode(stack, 'grep')
+        drop_mode(stack, 'focus')
+        assert stack == ['focus']
