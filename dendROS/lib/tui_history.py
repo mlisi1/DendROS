@@ -9,9 +9,11 @@ DENDROS_SHELL_PID to both the launch pipe and `dendros reopen`, so each shell re
 own last run even with several terminals running launches side by side. Falls back to
 os.getppid() (the invoking shell, for both entry points) when the variable is missing.
 
-Format: JSONL — a header object ({version, saved_at, argv, banner}), then one
-[segments, plain_text, node_name, logger_name] array per RingLog entry. Pure/curses-free,
-unit-tested in test/unit/test_tui_history.py.
+Format: JSONL — a header object ({version, saved_at, argv, banner, muted}), then one
+[segments, plain_text, node_name, logger_name] array per RingLog entry. Entries are always
+the full unfiltered scrollback — `mute` only hides lines, so the muted node names are stored
+in the header and re-applied on reopen (a file without `muted` loads as nothing muted).
+Pure/curses-free, unit-tested in test/unit/test_tui_history.py.
 """
 
 import json
@@ -74,9 +76,11 @@ def prune_stale(keep_id=None):
             pass
 
 
-def save_last_run(entries, argv=None, banner_text='', shell_id=None):
+def save_last_run(entries, argv=None, banner_text='', shell_id=None, muted=(), saved_at=None):
     """Atomically write `entries` ((segments, plain, node_name, logger_name) tuples, as
-    RingLog stores them) as this terminal's last run. Best-effort: never raises."""
+    RingLog stores them) as this terminal's last run, with the `muted` node names. Pass
+    `saved_at` to keep the original end time when re-saving (a review's mute changes).
+    Best-effort: never raises."""
     if shell_id is None:
         shell_id = current_shell_id()
     path = get_history_path(shell_id)
@@ -88,9 +92,10 @@ def save_last_run(entries, argv=None, banner_text='', shell_id=None):
             with os.fdopen(fd, 'w', encoding='utf-8') as f:
                 header = {
                     'version': _FORMAT_VERSION,
-                    'saved_at': time.time(),
+                    'saved_at': saved_at if saved_at is not None else time.time(),
                     'argv': list(argv or []),
                     'banner': banner_text or '',
+                    'muted': sorted(muted or ()),
                 }
                 f.write(json.dumps(header) + '\n')
                 for segments, plain, node_name, logger_name in entries:
@@ -109,7 +114,7 @@ def save_last_run(entries, argv=None, banner_text='', shell_id=None):
 
 
 def load_last_run(shell_id=None):
-    """This terminal's last run as a dict {saved_at, argv, banner, entries}, or None if
+    """This terminal's last run as a dict {saved_at, argv, banner, muted, entries}, or None if
     nothing was saved (or the file is unreadable/from an incompatible version).
     `entries` come back in RingLog's tuple shape, segments included."""
     path = get_history_path(shell_id)
@@ -130,5 +135,6 @@ def load_last_run(shell_id=None):
         'saved_at': header.get('saved_at'),
         'argv': header.get('argv') or [],
         'banner': header.get('banner') or '',
+        'muted': set(header.get('muted') or ()),
         'entries': entries,
     }

@@ -21,6 +21,8 @@ from lib.console_commands import (
     drop_mode,
     focus_predicate,
     format_filter_status,
+    format_mute_status,
+    mute_predicate,
     grep_predicate,
     level_predicate,
     line_level,
@@ -301,3 +303,45 @@ class TestLevelPredicate:
     def test_status_chip_order(self):
         assert format_filter_status('talker', 'x', 'warn') == 'focus talker · level warn · grep "x"'
         assert format_filter_status(None, None, 'error') == 'level error'
+
+
+
+# ── mute: mute_predicate() / format_mute_status() / build_filter(muted=…) ─────────
+
+class TestMute:
+    def test_muted_node_hidden(self):
+        assert not mute_predicate('x', 'talker', 'talker', {'talker'})
+
+    def test_other_nodes_and_level_less_lines_pass(self):
+        assert mute_predicate('x', 'listener', 'listener', {'talker'})
+        assert mute_predicate('Traceback (most recent call last):', None, None, {'talker'})
+
+    def test_muting_container_hides_its_components(self):
+        assert not mute_predicate('x', 'container', 'lidar_driver', {'container'})
+
+    def test_muting_component_hides_only_it(self):
+        muted = {'lidar_driver'}
+        assert not mute_predicate('x', 'container', '/lidar_driver', muted)
+        assert mute_predicate('x', 'container', 'camera_driver', muted)
+
+    def test_build_filter_mutes_under_other_filters(self):
+        pred = build_filter(None, 'goal', None, {'talker'})
+        assert not pred('goal', 'talker', 'talker')
+        assert pred('goal', 'listener', 'listener')
+        assert not pred('other', 'listener', 'listener')
+
+    def test_build_filter_snapshot_of_muted_set(self):
+        # The predicate must not change under the ring when the set is later mutated —
+        # the caller rebuilds the filter through _apply_filters() instead.
+        muted = {'talker'}
+        pred = build_filter(muted=muted)
+        muted.clear()
+        assert not pred('x', 'talker', 'talker')
+
+    def test_empty_muted_is_no_filter(self):
+        assert build_filter(muted=set()) is None
+
+    def test_status_text(self):
+        assert format_mute_status(set()) is None
+        assert format_mute_status({'a'}) == '1 node muted'
+        assert format_mute_status({'a', 'b'}) == '2 nodes muted'

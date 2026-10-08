@@ -12,6 +12,7 @@ import threading
 import time
 
 from lib.launch_tui import _tui_main
+from lib.tui_history import save_last_run
 from lib.tui_pure import RingLog
 
 
@@ -38,7 +39,11 @@ def review_tui(last_run):
     (lib/tui_history.load_last_run()'s dict) in a read-only TUI. Same _TuiSession as a live
     run — scrolling, selection/copy, focus/find/clear all work — with the process already
     finished and no polling of the cross-process disable flag or command mailbox (those
-    belong to live launches; a review must never steal a `dendros focus` meant for one)."""
+    belong to live launches; a review must never steal a `dendros focus` meant for one).
+
+    Mutes: the saved run's muted nodes are re-applied on open, and any mute/unmute made
+    during the review is written back to the same file (original end time kept), so the
+    next `dendros reopen` shows the run the way it was left."""
     import curses
     locale.setlocale(locale.LC_ALL, '')
 
@@ -54,8 +59,14 @@ def review_tui(last_run):
         'review': True,
         'review_label': _review_label(last_run),
         'banner_text': last_run.get('banner', ''),
+        'muted': set(last_run.get('muted') or ()),  # mutated in place by mute/unmute
     }
-    curses.wrapper(_tui_main, ring, session, threading.Event(), stop_event, _NullCrashAlert)
+    try:
+        curses.wrapper(_tui_main, ring, session, threading.Event(), stop_event, _NullCrashAlert)
+    finally:
+        if session['muted'] != set(last_run.get('muted') or ()):
+            save_last_run(entries, last_run.get('argv'), last_run.get('banner', ''),
+                          muted=session['muted'], saved_at=last_run.get('saved_at'))
 
 
 def _review_label(last_run):

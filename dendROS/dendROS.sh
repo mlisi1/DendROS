@@ -68,6 +68,19 @@ set_tui_command(('level ' + sys.argv[1]).strip())
 " "${2:-}"
             echo "${_DENDROS_TAG} level command sent"
             ;;
+        mute|unmute)
+            if [[ -z "${2:-}" ]]; then
+                [[ "$1" == unmute ]] && echo "Usage: dendros unmute <node_name|all>" \
+                                     || echo "Usage: dendros mute <node_name>"
+                return 1
+            fi
+            python3 -c "
+import sys; sys.path.insert(0, '${_DENDROS_DIR}')
+from lib.global_config import set_tui_command
+set_tui_command(sys.argv[1] + ' ' + sys.argv[2])
+" "$1" "$2"
+            echo "${_DENDROS_TAG} $1 command sent"
+            ;;
         reopen)  DENDROS_SHELL_PID=$$ python3 "${_DENDROS_DIR}/dendros_reopen.py" ;;
         clear)
             python3 -c "
@@ -95,7 +108,9 @@ set_tui_command('clear')
             echo "            (combines with focus; no text = drop the grep filter)"
             echo "  level     Show only lines at a severity or worse (debug|info|warn|error|fatal) in a running TUI"
             echo "            (lines without a level, e.g. tracebacks, stay visible; no level = drop the filter)"
-            echo "  clear     Restore the full scrollback (drops focus, level, grep and find) in a running TUI session"
+            echo "  mute      Hide one node's lines in a running TUI (not a mode: stays until unmute/clear)"
+            echo "  unmute    Show a muted node again in a running TUI ('unmute all' for every one)"
+            echo "  clear     Restore the full scrollback (drops focus, level, grep, find and mutes) in a running TUI"
             echo "  reopen    Reopen this terminal's last ros2 launch TUI run (read-only scrollback)"
             ;;
     esac
@@ -105,7 +120,7 @@ _dendros_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
 
     if [[ $COMP_CWORD -eq 1 ]]; then
-        COMPREPLY=($(compgen -W "config init disable enable focus find grep level clear reopen" -- "$cur"))
+        COMPREPLY=($(compgen -W "config init disable enable focus find grep level mute unmute clear reopen" -- "$cur"))
         return
     fi
 

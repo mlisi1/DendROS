@@ -22,6 +22,7 @@ from lib.console_commands import (
     canonical_node_name,
     drop_mode,
     format_filter_status,
+    format_mute_status,
     node_identity_names,
     LEVEL_NAMES,
     parse_console_command,
@@ -61,6 +62,8 @@ class _TuiConsoleMixin:
         'focus': '_cmd_focus',
         'grep': '_cmd_grep',
         'level': '_cmd_level',
+        'mute': '_cmd_mute',
+        'unmute': '_cmd_unmute',
         'clear': '_cmd_clear',
         'help': '_cmd_help',    # lives in lib/launch_tui_help.py's _TuiHelpMixin
         'find': '_cmd_find',    # lives in lib/launch_tui_find.py's _TuiFindMixin
@@ -139,14 +142,16 @@ class _TuiConsoleMixin:
         (lib/console_spec.py); every other edit resets the completion cycle."""
         curses = self.curses
         if ch == 9:
-            self.console_buffer = self.completer.tab(self.console_buffer, self.known_nodes)
+            self.console_buffer = self.completer.tab(self.console_buffer, self.known_nodes,
+                                                     muted_nodes=self.muted_nodes)
             return
         if ch == 27:
             result = read_escape_sequence(self.scr, self.curses)  # drains trailing bytes too
             if result is not None and result[0] == 'nav':
                 if result[1] == 'backtab':
                     self.console_buffer = self.completer.tab(self.console_buffer, self.known_nodes,
-                                                             backwards=True)
+                                                             backwards=True,
+                                                             muted_nodes=self.muted_nodes)
                 return  # arrows/PageUp/... don't close the bar mid-typing
         self.completer.reset()
         if ch in (10, 13, curses.KEY_ENTER):
@@ -192,6 +197,44 @@ class _TuiConsoleMixin:
         self._apply_filters()
         return True
 
+    def _cmd_mute(self, arg):
+        # Not a mode: no mode_stack entry, so Esc never undoes it — only `unmute` (one node or
+        # `all`) and `clear` do. muted_nodes is mutated in place (shared with run_tui()'s
+        # session dict, see _TuiSession.__init__).
+        node_name = canonical_node_name(arg.strip())
+        if not node_name:
+            self._show_console_error('mute: node name required')
+            return False
+        if node_name not in self.known_nodes:
+            self._show_console_error(f'mute: unknown node "{node_name}"')
+            return False
+        if node_name in self.muted_nodes:
+            self._show_console_error(f'mute: "{node_name}" is already muted')
+            return False
+        self.muted_nodes.add(node_name)
+        self._apply_filters()
+        return True
+
+    def _cmd_unmute(self, arg):
+        node_name = canonical_node_name(arg.strip())
+        if not node_name:
+            self._show_console_error('unmute: node name or "all" required')
+            return False
+        if node_name == 'all':
+            # Keyword wins over a node literally named "all" (still unmuted by this, too).
+            if not self.muted_nodes:
+                self._show_console_error('unmute: nothing is muted')
+                return False
+            self.muted_nodes.clear()  # in place: shared with the session dict
+            self._apply_filters()
+            return True
+        if node_name not in self.muted_nodes:
+            self._show_console_error(f'unmute: "{node_name}" is not muted')
+            return False
+        self.muted_nodes.discard(node_name)
+        self._apply_filters()
+        return True
+
     def _cmd_grep(self, arg):
         # Live filter on line text: lines arriving later that match show up too, so zero
         # current matches is not an error (e.g. waiting for "goal reached"). A bare `grep`
@@ -228,8 +271,10 @@ class _TuiConsoleMixin:
         return True
 
     def _cmd_clear(self, arg):
-        # Back to normal view: drops every filter (focus, level, grep) and any active find.
+        # Back to normal view: drops every filter (focus, level, grep), every mute, and any
+        # active find.
         self.filter_node = None
+        self.muted_nodes.clear()  # in place: shared with the session dict
         self.grep_query = None
         self.min_level = None
         self._find_clear()
@@ -257,10 +302,14 @@ class _TuiConsoleMixin:
 
     def _apply_filters(self):
         # Rebuild the whole filter stack from per-command state, so filters compose.
-        self.ring.set_filter(build_filter(self.filter_node, self.grep_query, self.min_level))
+        self.ring.set_filter(build_filter(self.filter_node, self.grep_query, self.min_level,
+                                          self.muted_nodes))
         self._reset_view_after_filter_change()
         self._find_after_filter_change()
         self.console_error = None
 
     def _filter_status(self):
         return format_filter_status(self.filter_node, self.grep_query, self.min_level)
+
+    def _mute_status(self):
+        return format_mute_status(self.muted_nodes)

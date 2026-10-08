@@ -16,7 +16,8 @@ class CommandSpec(NamedTuple):
     name: str
     usage: str                 # shown in help, e.g. 'focus <node>'
     summary: str               # one line, shown in help
-    arg_kind: Optional[str]    # what Tab completes the argument from: 'node' | 'level' | None
+    arg_kind: Optional[str]    # what Tab completes the argument from:
+                               # 'node' | 'unmuted_node' | 'muted_node' | 'level' | None
 
 
 COMMANDS = (
@@ -28,7 +29,12 @@ COMMANDS = (
                 'Show only lines containing text (uppercase = case-sensitive)', None),
     CommandSpec('find', 'find <text>',
                 'Jump to lines containing text; Tab/Shift+Tab step older/newer', None),
-    CommandSpec('clear', 'clear', 'Drop every filter and end any find', None),
+    CommandSpec('mute', 'mute <node>',
+                "Hide a node's lines (not a mode: Esc keeps it; header shows the count)",
+                'unmuted_node'),
+    CommandSpec('unmute', 'unmute <node|all>', 'Show a muted node again, or every muted node',
+                'muted_node'),
+    CommandSpec('clear', 'clear', 'Drop every filter and mute, and end any find', None),
     CommandSpec('help', 'help', 'Show this help', None),
 )
 COMMAND_NAMES = tuple(spec.name for spec in COMMANDS)
@@ -44,7 +50,8 @@ KEYS = (
     ('q', 'Quit (once the launch has exited)'),
 )
 
-REMOTE_NOTE = 'From another shell: dendros focus|find|grep|level|clear …  ·  dendros reopen'
+REMOTE_NOTE = ('From another shell: dendros focus|find|grep|level|mute|unmute|clear …  ·  '
+               'dendros reopen')
 
 
 # ── Tab completion ─────────────────────────────────────────────────────────────────
@@ -69,7 +76,7 @@ def _match(prefix, candidates, smart_case):
     return sorted(c for c in candidates if c.lower().startswith(low))
 
 
-def completion_context(buffer, known_nodes=()):
+def completion_context(buffer, known_nodes=(), muted_nodes=()):
     """Split the console buffer into (head, prefix, candidates, smart_case): `head` is the
     fixed part kept verbatim, `prefix` the word being completed, `candidates` what it may
     become, `smart_case` whether an uppercase prefix means exact case (node names only).
@@ -85,6 +92,11 @@ def completion_context(buffer, known_nodes=()):
     kind = spec.arg_kind if spec else None
     if kind == 'node':
         return head, canonical_node_name(arg), sorted(known_nodes), True
+    if kind == 'unmuted_node':
+        return head, canonical_node_name(arg), sorted(set(known_nodes) - set(muted_nodes)), True
+    if kind == 'muted_node':
+        pool = sorted(muted_nodes) + (['all'] if muted_nodes else [])
+        return head, canonical_node_name(arg), pool, True
     if kind == 'level':
         return head, arg, list(LEVEL_NAMES), False
     return head, arg, [], False
@@ -104,7 +116,7 @@ class Completer:
         self._head = ''
         self._last_output = None
 
-    def tab(self, buffer, known_nodes=(), backwards=False):
+    def tab(self, buffer, known_nodes=(), backwards=False, muted_nodes=()):
         """Return the new buffer for a Tab (or Shift+Tab) press on `buffer`."""
         if buffer == self._last_output and len(self.candidates) > 1:
             n = len(self.candidates)
@@ -116,7 +128,7 @@ class Completer:
             self._last_output = out
             return out
 
-        head, prefix, pool, smart_case = completion_context(buffer, known_nodes)
+        head, prefix, pool, smart_case = completion_context(buffer, known_nodes, muted_nodes)
         matches = _match(prefix, pool, smart_case)
         self._head = head
         self.index = None

@@ -47,6 +47,17 @@ class TestCompletionContext:
     def test_node_argument_leading_slash_ignored(self):
         assert completion_context('focus /ta', NODES)[1] == 'ta'
 
+    def test_mute_completes_only_unmuted_nodes(self):
+        pool = completion_context('mute ', NODES, {'talker'})[2]
+        assert 'talker' not in pool and 'talker_2' in pool
+
+    def test_unmute_completes_only_muted_nodes_plus_all(self):
+        assert completion_context('unmute ', NODES, {'talker', 'listener'})[2] == \
+            ['listener', 'talker', 'all']
+
+    def test_unmute_with_nothing_muted_has_no_candidates(self):
+        assert completion_context('unmute ', NODES, set())[2] == []
+
     def test_level_argument(self):
         assert completion_context('level w')[2] == ['debug', 'info', 'warn', 'error', 'fatal']
 
@@ -118,6 +129,14 @@ class TestCompleter:
         buf = c.tab('f')  # focus, find
         assert buf == 'f' and c.candidates == ['find ', 'focus ']
         assert c.tab(buf) == 'find '
+
+    def test_unmute_tab_cycles_muted(self):
+        c = Completer()
+        assert c.tab('unmute t', NODES, muted_nodes={'talker', 'talker_2'}) == 'unmute talker'
+        assert c.candidates == ['talker', 'talker_2']
+
+    def test_unmute_all_completion(self):
+        assert Completer().tab('unmute a', NODES, muted_nodes={'talker'}) == 'unmute all'
 
     def test_text_command_argument_untouched(self):
         assert Completer().tab('grep tal', NODES) == 'grep tal'

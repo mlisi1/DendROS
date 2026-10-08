@@ -119,6 +119,38 @@ class TestSaveLoad:
         assert load_last_run(shell_id=os.getpid()) is None
 
 
+class TestMutedPersistence:
+    def test_muted_roundtrip(self, tmp_config):
+        save_last_run([_entry('x', 'talker')], shell_id=os.getpid(), muted={'talker', 'b'})
+        assert load_last_run(shell_id=os.getpid())['muted'] == {'talker', 'b'}
+
+    def test_default_nothing_muted(self, tmp_config):
+        save_last_run([_entry('x')], shell_id=os.getpid())
+        assert load_last_run(shell_id=os.getpid())['muted'] == set()
+
+    def test_file_without_muted_key_loads_as_nothing_muted(self, tmp_config):
+        # Runs saved before mute existed stay readable.
+        os.makedirs(get_history_dir(), exist_ok=True)
+        with open(get_history_path(os.getpid()), 'w') as f:
+            f.write(json.dumps({'version': 1, 'saved_at': 1.0, 'argv': [], 'banner': ''}) + '\n')
+        assert load_last_run(shell_id=os.getpid())['muted'] == set()
+
+    def test_muted_lines_are_still_saved(self, tmp_config):
+        # Mute is presentation-only: the saved scrollback keeps every line.
+        entries = [_entry('a', 'talker'), _entry('b', 'listener')]
+        save_last_run(entries, shell_id=os.getpid(), muted={'talker'})
+        assert load_last_run(shell_id=os.getpid())['entries'] == entries
+
+    def test_resave_keeps_original_end_time(self, tmp_config):
+        # A review's mute changes are written back without changing "ended HH:MM".
+        save_last_run([_entry('x')], shell_id=os.getpid(), saved_at=1234.5)
+        run = load_last_run(shell_id=os.getpid())
+        save_last_run(run['entries'], run['argv'], run['banner'], shell_id=os.getpid(),
+                      muted={'talker'}, saved_at=run['saved_at'])
+        again = load_last_run(shell_id=os.getpid())
+        assert again['saved_at'] == 1234.5 and again['muted'] == {'talker'}
+
+
 class TestPrune:
     def test_save_prunes_runs_of_closed_shells(self, tmp_config):
         dead = _dead_pid()

@@ -141,14 +141,17 @@ class _TuiRenderMixin:
         # Brand chips (same colors as the console bar), right to left: the find indicator,
         # then the active filter stack (focus/grep). The "Copied" toast briefly draws over
         # the rightmost one, which is fine for a 1.4s flash.
+        # Then the mute count — plain bold orange text, not a chip: mute isn't a mode.
         chip_attr = self.pair_cache.attr_for(self.console_fg, self.console_bg, True)
-        for status in (self._find_status(), self._filter_status()):
+        mute_attr = self.pair_cache.attr_for(self.console_fg, self.header_bg, True)
+        for status, attr in ((self._find_status(), chip_attr), (self._filter_status(), chip_attr),
+                             (self._mute_status(), mute_attr)):
             if status is None:
                 continue
             chip = f' {status} '
             chip_col = max(alert_col, right_col - len(chip))
             try:
-                scr.addstr(row, chip_col, chip[:max(0, right_col - chip_col)], chip_attr)
+                scr.addstr(row, chip_col, chip[:max(0, right_col - chip_col)], attr)
             except curses.error:
                 pass
             right_col = max(alert_col, chip_col - 1)

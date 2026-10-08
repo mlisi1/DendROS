@@ -107,12 +107,34 @@ def level_predicate(plain_text, node_name, logger_name, min_level):
     return rank is None or rank >= _LEVEL_RANKS[min_level]
 
 
-def build_filter(focus_node=None, grep_query=None, min_level=None):
+# ── `mute` / `unmute` ──────────────────────────────────────────────────────────────
+# Not a mode (Esc never undoes it; `unmute <node|all>` and `clear` do): a set of canonical
+# node names whose lines are hidden underneath every other filter. Persisted with the run
+# for `dendros reopen`.
+
+def mute_predicate(plain_text, node_name, logger_name, muted):
+    """RingLog.set_filter() predicate hiding lines from muted nodes. Same identity rule as
+    focus (process tag OR logger name): muting a container hides its components' lines too,
+    muting a component's logger name hides only that component."""
+    return not (node_identity_names(node_name, logger_name) & muted)
+
+
+def format_mute_status(muted):
+    """Header text while any node is muted, e.g. `2 nodes muted`, else None."""
+    n = len(muted)
+    if not n:
+        return None
+    return f'{n} node{"s" if n != 1 else ""} muted'
+
+
+def build_filter(focus_node=None, grep_query=None, min_level=None, muted=None):
     """Combine the active console filters into one RingLog.set_filter() predicate (all must
     hold), or None when none are active. Each filtering command only updates its own state
     and the caller rebuilds the whole stack through here, so filters compose (e.g. focus +
     grep) instead of the last command overwriting the previous one's filter."""
     preds = []
+    if muted:
+        preds.append(functools.partial(mute_predicate, muted=frozenset(muted)))
     if focus_node:
         preds.append(functools.partial(focus_predicate, target=focus_node))
     if min_level:

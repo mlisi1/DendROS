@@ -153,7 +153,8 @@ def run_tui(stdin_lines, colorize_fn, ca_module, pw_module, param_alert, param_a
                 return
             # else: flag cleared while still running — loop back and reopen curses
     finally:
-        save_last_run(ring.entries(), launch_argv, session.get('banner_text', ''))
+        save_last_run(ring.entries(), launch_argv, session.get('banner_text', ''),
+                      muted=session.get('muted', ()))
 
 
 def _tui_main(scr, ring, session, passthrough_event, stop_event, ca_module):
@@ -257,6 +258,10 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiHelpMixi
         self.filter_node = None           # currently focused node name, or None (unfiltered)
         self.grep_query = None            # active `grep` text, or None (see _apply_filters())
         self.min_level = None             # active `level` ('warn', ...), or None
+        # `mute`d node names. Lives in the run-wide `session` dict (mutated in place), not
+        # per _TuiSession: it must survive a disable/enable reopen, and run_tui() saves it
+        # with the run for `dendros reopen` (lib/tui_history.py).
+        self.muted_nodes = session.setdefault('muted', set())
         self.mode_stack = []              # active 'focus'/'level'/'grep'/'find', oldest-first; Esc pops the last
         self.known_nodes = self._build_known_nodes_from_ring()
         self.last_command_check = 0.0     # 1x/sec poll gate for the remote command mailbox
@@ -264,6 +269,9 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiHelpMixi
         self._init_find_state()           # `\find`: see lib/launch_tui_find.py
         self._init_help_state()           # `\help` overlay: see lib/launch_tui_help.py
         self.completer = Completer()      # console-bar Tab completion (lib/console_spec.py)
+        # The ring outlives this session (disable/enable reopen): re-sync its filter with
+        # this session's state — only mutes carry over, focus/grep/level/find start fresh.
+        self._apply_filters()
 
     def _disabled_system_wide(self):
         if self.review:
