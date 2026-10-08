@@ -29,6 +29,7 @@ from lib.console_commands import (
     push_mode,
 )
 from lib.global_config import pop_tui_command
+from lib.launch_tui_input import read_escape_sequence
 from lib.tui_pure import quantize_rgb_to_256
 
 # Console error toast: bold -> normal -> dim -> gone. Same fast timing as the "Copied"
@@ -61,6 +62,7 @@ class _TuiConsoleMixin:
         'grep': '_cmd_grep',
         'level': '_cmd_level',
         'clear': '_cmd_clear',
+        'help': '_cmd_help',    # lives in lib/launch_tui_help.py's _TuiHelpMixin
         'find': '_cmd_find',    # lives in lib/launch_tui_find.py's _TuiFindMixin
     }
 
@@ -131,6 +133,38 @@ class _TuiConsoleMixin:
             self._show_console_error(f'unknown command: {cmd}')
             return False
         return getattr(self, handler_name)(arg)
+
+    def _console_key(self, ch):
+        """One key while the console bar is open. Tab/Shift+Tab complete via self.completer
+        (lib/console_spec.py); every other edit resets the completion cycle."""
+        curses = self.curses
+        if ch == 9:
+            self.console_buffer = self.completer.tab(self.console_buffer, self.known_nodes)
+            return
+        if ch == 27:
+            result = read_escape_sequence(self.scr, self.curses)  # drains trailing bytes too
+            if result is not None and result[0] == 'nav':
+                if result[1] == 'backtab':
+                    self.console_buffer = self.completer.tab(self.console_buffer, self.known_nodes,
+                                                             backwards=True)
+                return  # arrows/PageUp/... don't close the bar mid-typing
+        self.completer.reset()
+        if ch in (10, 13, curses.KEY_ENTER):
+            text = self.console_buffer
+            self.console_buffer = ''
+            if self._apply_console_command(text):
+                self.console_active = False
+        elif ch in (27, ord('\\')):
+            # Bare Esc (or a mouse event) and \ cancel, symmetric with \ opening the bar. No
+            # command syntax needs a literal backslash in its argument (node names are
+            # restricted to [a-zA-Z0-9_./-]), so nothing is lost treating it as close.
+            self.console_active = False
+            self.console_buffer = ''
+            self.console_error = None
+        elif ch in (curses.KEY_BACKSPACE, 127, 8):
+            self.console_buffer = self.console_buffer[:-1]
+        elif 32 <= ch <= 126:
+            self.console_buffer += chr(ch)
 
     def _check_remote_command(self):
         if self.review:

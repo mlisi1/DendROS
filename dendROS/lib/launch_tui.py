@@ -50,9 +50,11 @@ from lib import __version__
 from lib.colors import DENDROS_TAG
 from lib.config_loader import resolve_node
 from lib.console_commands import node_identity_names
+from lib.console_spec import Completer
 from lib.global_config import is_disable_flag_set
 from lib.launch_tui_console import _TuiConsoleMixin, _CONSOLE_ERROR_DIM_UNTIL
 from lib.launch_tui_find import _TuiFindMixin
+from lib.launch_tui_help import _TuiHelpMixin
 from lib.launch_tui_input import _TuiInputMixin, read_escape_sequence
 from lib.launch_tui_render import _TuiRenderMixin, _COPY_TOAST_DIM_UNTIL
 from lib.tui_pure import (
@@ -191,13 +193,14 @@ def _tui_main(scr, ring, session, passthrough_event, stop_event, ca_module):
             pass
 
 
-class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiInputMixin):
+class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiHelpMixin, _TuiInputMixin):
     """One curses.wrapper() session's worth of state and event handling. Drawing methods
     (_draw_segments/_draw_banner/_draw_scrollbar/_redraw/_draw_console) come from
     _TuiRenderMixin in lib/launch_tui_render.py; console command handling (_cmd_focus/
     _cmd_clear/_apply_console_command/_check_remote_command/...) comes from
     _TuiConsoleMixin in lib/launch_tui_console.py; `\find` search (_cmd_find/_find_step/...)
-    comes from _TuiFindMixin in lib/launch_tui_find.py; mouse/nav input handling
+    comes from _TuiFindMixin in lib/launch_tui_find.py; the `\help` overlay comes from
+    _TuiHelpMixin in lib/launch_tui_help.py; mouse/nav input handling
     (_screen_to_content/_handle_mouse/_handle_nav) comes from _TuiInputMixin in
     lib/launch_tui_input.py — all three split out purely to keep this file's core
     session/event-loop logic and the other concerns separately sized, not because any of
@@ -259,6 +262,8 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiInputMix
         self.last_command_check = 0.0     # 1x/sec poll gate for the remote command mailbox
         self._init_console_colors()       # sets self.console_fg/console_bg
         self._init_find_state()           # `\find`: see lib/launch_tui_find.py
+        self._init_help_state()           # `\help` overlay: see lib/launch_tui_help.py
+        self.completer = Completer()      # console-bar Tab completion (lib/console_spec.py)
 
     def _disabled_system_wide(self):
         if self.review:
@@ -401,30 +406,15 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiInputMix
 
                 if ch == curses.KEY_RESIZE:
                     scr.clear()  # wipe stale content; next _redraw() recomputes from getmaxyx()
+                elif self.help_open:
+                    self._help_key(ch)  # the overlay captures every key while it's up
                 elif self.console_active:
-                    if ch in (10, 13, curses.KEY_ENTER):
-                        text = self.console_buffer
-                        self.console_buffer = ''
-                        if self._apply_console_command(text):
-                            self.console_active = False
-                    elif ch in (27, ord('\\')):
-                        # Esc and \ both cancel (symmetric with \ opening the bar). No
-                        # current or planned command syntax needs a literal backslash in
-                        # its argument (node names are restricted to [a-zA-Z0-9_./-]), so
-                        # there's nothing lost by treating it as the close key here too.
-                        if ch == 27:
-                            read_escape_sequence(scr, curses)  # drain trailing SGR bytes
-                        self.console_active = False
-                        self.console_buffer = ''
-                        self.console_error = None
-                    elif ch in (curses.KEY_BACKSPACE, 127, 8):
-                        self.console_buffer = self.console_buffer[:-1]
-                    elif 32 <= ch <= 126:
-                        self.console_buffer += chr(ch)
+                    self._console_key(ch)
                 elif ch == ord('\\'):
                     self.console_active = True
                     self.console_buffer = ''
                     self.console_error = None
+                    self.completer.reset()
                 elif ch == 27:
                     # keypad(False): every arrow key/nav key/mouse report arrives raw here.
                     result = read_escape_sequence(scr, curses)

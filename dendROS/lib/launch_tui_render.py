@@ -29,8 +29,9 @@ _COPY_TOAST_DIM_UNTIL = 1.4
 # Right-aligned header key hint, (key, description) pairs — context-dependent so the keys
 # that matter right now are the ones advertised (see _header_key_hints()).
 _HINT_IDLE = (('\\', 'open console'),)
-_HINT_CONSOLE = (('Enter', 'run'), ('Esc', 'close'))
+_HINT_CONSOLE = (('Tab', 'complete'), ('Enter', 'run'), ('Esc', 'close'))
 _HINT_FIND_STEP = ('Tab/S-Tab', 'step')
+_HINT_HELP = (('Esc', 'close help'),)
 
 
 def _hint_width(pairs):
@@ -171,6 +172,8 @@ class _TuiRenderMixin:
                     pass
 
     def _header_key_hints(self):
+        if self.help_open:
+            return _HINT_HELP
         if self.console_active:
             return _HINT_CONSOLE
         if not self.mode_stack:
@@ -212,6 +215,21 @@ class _TuiRenderMixin:
             scr.addstr(row, 0, prompt[:usable_width], console_attr)
         except curses.error:
             pass
+
+        # Ambiguous Tab completion: candidates listed dim after the input, the one cycled
+        # to (if any) in bold reverse. Cut off at the bar's edge.
+        col = len(prompt) + 2
+        cand_attr = self.pair_cache.attr_for(None, self.console_bg, False) | curses.A_DIM
+        for i, cand in enumerate(self.completer.candidates):
+            if col >= usable_width:
+                break
+            text = cand.strip()[:usable_width - col]
+            attr = (console_attr | curses.A_REVERSE) if i == self.completer.index else cand_attr
+            try:
+                scr.addstr(row, col, text, attr)
+            except curses.error:
+                pass
+            col += len(text) + 2
 
         if self.console_error is not None:
             elapsed = time.monotonic() - self.console_error_at
@@ -316,6 +334,8 @@ class _TuiRenderMixin:
             row_i += 1
 
         self._draw_scrollbar()  # real terminal scrollbar is inert on the alt screen buffer
+        if self.help_open:
+            self._draw_help()  # the only thing allowed over the body — see lib/launch_tui_help.py
         if self._console_h():
             self._draw_console(max_x)
 
