@@ -16,6 +16,7 @@ In [TUI mode](launch-tui.md), press ++backslash++ to open the console bar at the
 | `find <text>` | Jump between lines containing some text |
 | `mute <node>` | Hide one node's lines |
 | `unmute <node\|all>` | Show a muted node again |
+| `mark [label]` | Insert a timestamped separator line |
 | `clear` | Back to the full, unfiltered log |
 | `help` | Show every command and key |
 
@@ -138,6 +139,30 @@ Hides a noisy node's lines, without switching into a mode.
 Nodes are matched like in `focus`: muting a container hides its components, muting a component hides only that component.
 
 The header shows how many nodes are muted, for example `2 nodes muted`. ++escape++ does not unmute anything; only `unmute` and `clear` do. Mutes are saved with the run, so [`dendros reopen`](tui-remote.md#reopen-the-last-run) shows the run with the same nodes muted.
+
+---
+
+## `mark [label]`
+
+Inserts a separator line into the log, with the current time and an optional label:
+
+```text
+\mark sending goal
+```
+
+```text
+[bt_navigator-5] [INFO] [...]: BT tick #3: NavigateToPose running
+──── 14:32:05 · sending goal ──────────────────────────────────────────────
+[bt_navigator-5] [INFO] [...]: NavigateToPose goal received (3.5, 2.1)
+```
+
+Use it right before you do something to the running system (send a goal, call a service, unplug a sensor), so it's easy to see what was printed from that moment on. Later, `\find sending goal` jumps back to it.
+
+- The rule spans the whole width of the terminal, also after resizing. Copying a mark gives just `──── 14:32:05 · sending goal ────`.
+- Marks stay visible under every filter and mute, so they still separate the log while you `focus` or `grep`.
+- They're part of the log: copied with a selection, and kept by [`dendros reopen`](tui-remote.md#reopen-the-last-run).
+- `dendros mark <label>` sends one from another terminal, which also works from a test script.
+- A reopened, finished run can't get new marks.
 
 ---
 

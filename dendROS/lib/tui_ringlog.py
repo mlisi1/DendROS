@@ -185,11 +185,12 @@ class RingLog:
     def total_rows(self):
         return self._filtered_total_rows if self._filter_fn is not None else self._total_rows
 
-    def visible_rows(self, view_offset, height):
+    def visible_rows(self, view_offset, height, with_logger=False):
         """Up to `height` (segments, is_continuation) rows ending `view_offset` rows back
         from the tail. is_continuation marks a mid-line wrap (vs. a new logical line), so
         callers can rejoin text without spurious newlines. Also usable for an arbitrary
-        historical range, not just the live viewport.
+        historical range, not just the live viewport. with_logger=True adds each row's line
+        logger_name as a third element — the renderer uses it to draw `mark` lines.
 
         When a filter is active (set_filter()), non-matching lines are skipped entirely —
         this is presentation-only, _lines itself is never touched."""
@@ -205,7 +206,10 @@ class RingLog:
                 if self._filter_fn is not None and not self._filter_fn(plain, node_name, logger_name):
                     continue
                 wrapped = wrap_line(segments, width)
-                tagged = [(row, i > 0) for i, row in enumerate(wrapped)]
+                if with_logger:
+                    tagged = [(row, i > 0, logger_name) for i, row in enumerate(wrapped)]
+                else:
+                    tagged = [(row, i > 0) for i, row in enumerate(wrapped)]
                 collected_rev.extend(reversed(tagged))
             collected_rev.reverse()
             end = max(0, len(collected_rev) - view_offset)

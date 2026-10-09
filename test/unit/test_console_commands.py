@@ -20,6 +20,9 @@ from lib.console_commands import (
     canonical_node_name,
     drop_mode,
     focus_predicate,
+    format_mark,
+    is_mark,
+    MARK_ID,
     format_focus,
     parse_node_list,
     format_filter_status,
@@ -399,3 +402,37 @@ class TestFocusSeveralNodes:
     def test_filter_status_with_several_nodes(self):
         assert format_filter_status(('talker', 'listener'), 'x', 'warn') == \
             'focus talker, listener · level warn · grep "x"'
+
+
+# ── mark ──────────────────────────────────────────────────────────────────────────
+
+class TestMark:
+    def test_text_with_label(self):
+        # Stored short; the renderer extends the rule to the screen width at draw time.
+        assert format_mark('sending goal', '14:32:05') == '──── 14:32:05 · sending goal ────'
+
+    def test_text_without_label(self):
+        assert format_mark('', '14:32:05') == '──── 14:32:05 ────'
+        assert '·' not in format_mark('   ', '14:32:05')
+
+    def test_label_whitespace_collapsed_and_capped(self):
+        assert '· a b ' in format_mark('  a   b ', '00:00:00')
+        assert 'x' * 81 not in format_mark('x' * 200, '00:00:00')
+
+    def test_long_label_still_ends_with_a_rule(self):
+        assert format_mark('y' * 70, '00:00:00').endswith(' ────')
+
+    def test_mark_is_not_a_node(self):
+        assert node_identity_names(None, MARK_ID) == set()
+        assert is_mark(MARK_ID) and not is_mark('talker')
+
+    def test_marks_pass_every_filter(self):
+        mark = (format_mark('goal', '00:00:00'), None, MARK_ID)
+        for pred in (build_filter('talker'), build_filter(None, 'zzz'), build_filter(None, None, 'error'),
+                     build_filter(muted={'talker'}), build_filter(('a', 'b'), 'zzz', 'fatal', {'c'})):
+            assert pred(*mark)
+
+    def test_filters_still_apply_to_normal_lines(self):
+        pred = build_filter('talker', 'goal')
+        assert not pred('[listener-1] goal', 'listener', None)
+        assert pred('[talker-1] goal', 'talker', None)

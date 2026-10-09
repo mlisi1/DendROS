@@ -31,6 +31,30 @@ def canonical_node_name(name):
     return name[1:] if name.startswith('/') else name
 
 
+# ── `mark` ───────────────────────────────────────────────────────────────────────
+# A mark is an ordinary RingLog line (so find, copy, wrap and `dendros reopen` handle it for
+# free) whose logger_name slot holds this sentinel instead of a real ROS logger name. It
+# identifies marks to build_filter() — they pass every filter and mute — and is kept out of
+# node_identity_names(), so it never appears as a focusable/mutable node.
+MARK_ID = '\x00dendros-mark'
+MARK_FILL = '─'
+_MARK_MAX_LABEL = 80
+
+
+def format_mark(label, clock):
+    """Stored text of a mark line: `──── 14:32:05 · sending goal ────`. `clock` is the
+    HH:MM:SS string; the label is whitespace-collapsed and capped. Kept short on purpose —
+    it's what a copy yields — and the renderer extends the rule with MARK_FILL to the
+    terminal's *current* width on every redraw, so it spans the screen at any size instead
+    of wrapping (narrower) or stopping short (wider) after a resize."""
+    label = ' '.join(label.split())[:_MARK_MAX_LABEL]
+    return f'──── {clock}' + (f' · {label}' if label else '') + ' ' + MARK_FILL * 4
+
+
+def is_mark(logger_name):
+    return logger_name == MARK_ID
+
+
 def node_identity_names(node_name, logger_name):
     """Return the set (possibly empty) of canonical name(s) identifying a line, given the
     node_name/logger_name discovered by dendROS_pipe.py's colorization pipeline. Both are
@@ -41,7 +65,7 @@ def node_identity_names(node_name, logger_name):
     names = set()
     if node_name:
         names.add(canonical_node_name(node_name))
-    if logger_name:
+    if logger_name and logger_name != MARK_ID:
         names.add(canonical_node_name(logger_name))
     return names
 
@@ -156,9 +180,9 @@ def build_filter(focus_nodes=None, grep_query=None, min_level=None, muted=None):
         preds.append(functools.partial(grep_predicate, query=grep_query))
     if not preds:
         return None
-    if len(preds) == 1:
-        return preds[0]
-    return lambda plain, node_name, logger_name: all(p(plain, node_name, logger_name) for p in preds)
+    # Marks are bookmarks: they stay visible under every filter and mute.
+    return lambda plain, node_name, logger_name: (
+        logger_name == MARK_ID or all(p(plain, node_name, logger_name) for p in preds))
 
 
 # Focused names spelled out in the header chip before the rest collapse into "+N".

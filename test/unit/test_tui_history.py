@@ -171,3 +171,16 @@ class TestPrune:
 
     def test_prune_missing_dir_is_noop(self, tmp_config):
         prune_stale()  # must not raise
+
+
+class TestMarkPersistence:
+    def test_mark_lines_roundtrip(self, tmp_path, monkeypatch):
+        # `dendros reopen` must show marks exactly as they were (brand colors, MARK_ID).
+        from lib.console_commands import MARK_ID
+        from lib.tui_history import load_last_run, save_last_run
+        monkeypatch.setenv('HOME', str(tmp_path))
+        monkeypatch.setenv('DENDROS_SHELL_PID', str(os.getpid()))
+        entries = [([['──── 14:32:05 · goal ────', 172, 24, True]], '──── 14:32:05 · goal ────', None, MARK_ID)]
+        save_last_run(entries, ['launch', 'p', 'x.py'], '')
+        loaded = load_last_run()['entries']
+        assert loaded[0][3] == MARK_ID and loaded[0][1] == entries[0][1]

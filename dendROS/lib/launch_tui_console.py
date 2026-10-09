@@ -22,6 +22,8 @@ from lib.console_commands import (
     canonical_node_name,
     drop_mode,
     format_filter_status,
+    format_mark,
+    MARK_ID,
     format_mute_status,
     node_identity_names,
     LEVEL_NAMES,
@@ -68,6 +70,7 @@ class _TuiConsoleMixin:
         'mute': '_cmd_mute',
         'unmute': '_cmd_unmute',
         'clear': '_cmd_clear',
+        'mark': '_cmd_mark',
         'help': '_cmd_help',    # lives in lib/launch_tui_help.py's _TuiHelpMixin
         'find': '_cmd_find',    # lives in lib/launch_tui_find.py's _TuiFindMixin
     }
@@ -250,6 +253,21 @@ class _TuiConsoleMixin:
             return False
         self.muted_nodes.discard(node_name)
         self._apply_filters()
+        return True
+
+    def _cmd_mark(self, arg):
+        """Append a timestamped separator line, e.g. `──── 14:32:05 · sending goal ───`.
+        Not a mode or a filter: it's just a line in the log (find/copy/reopen see it), drawn
+        in the brand colors and exempt from every filter (see console_commands.MARK_ID)."""
+        if self.review:
+            self._show_console_error('mark: not available in a finished run')
+            return False
+        # Anything the reader already queued happened before the mark: draw it first, so
+        # the mark lands exactly where it was typed.
+        self._drain_queue()
+        text = format_mark(arg, time.strftime('%H:%M:%S'))
+        self.ring.append([(text, self.console_fg, self.console_bg, True)], text, None, MARK_ID)
+        self.console_error = None
         return True
 
     def _cmd_grep(self, arg):

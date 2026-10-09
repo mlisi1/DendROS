@@ -71,6 +71,10 @@ set_disable_flag(False)
         clear)
             _dendros_send_tui_command clear clear
             ;;
+        mark)
+            # Label optional: a bare `dendros mark` inserts just the timestamp.
+            _dendros_send_tui_command "mark ${*:2}" mark
+            ;;
         *)
             echo "Usage: dendros <command>"
             echo ""
@@ -92,6 +96,8 @@ set_disable_flag(False)
             echo "  mute      Hide one node's lines in a running TUI (not a mode: stays until unmute/clear)"
             echo "  unmute    Show a muted node again in a running TUI ('unmute all' for every one)"
             echo "  clear     Restore the full scrollback (drops focus, level, grep, find and mutes) in a running TUI"
+            echo "  mark      Insert a timestamped separator line, with an optional label, into a running TUI"
+            echo "            (e.g. 'dendros mark sending goal' right before you act; find it later with find)"
             echo "  reopen    Reopen this terminal's last ros2 launch TUI run (read-only scrollback)"
             ;;
     esac
@@ -101,7 +107,7 @@ _dendros_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
 
     if [[ $COMP_CWORD -eq 1 ]]; then
-        COMPREPLY=($(compgen -W "config init disable enable focus find grep level mute unmute clear reopen" -- "$cur"))
+        COMPREPLY=($(compgen -W "config init disable enable focus find grep level mute unmute clear mark reopen" -- "$cur"))
         return
     fi
 

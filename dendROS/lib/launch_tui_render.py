@@ -12,6 +12,7 @@ from lib.launch_tui_console import (
     _TOAST_NORMAL_UNTIL,
     _TOAST_DIM_UNTIL,
 )
+from lib.console_commands import MARK_FILL, MARK_ID
 from lib.tui_find import row_highlight_spans
 from lib.tui_pure import (
     segments_from_ansi,
@@ -326,12 +327,13 @@ class _TuiRenderMixin:
         except curses.error:
             pass
 
-        rows = self.ring.visible_rows(self.view_offset, log_h)
+        rows = self.ring.visible_rows(self.view_offset, log_h, with_logger=True)
+        mark_attr = self.pair_cache.attr_for(self.console_fg, self.console_bg, True)
         n_rows = len(rows)
         hl_rows = self._highlight_rows(log_h)  # None unless a `\find` or `\grep` is active
         current_find_attr = self.pair_cache.attr_for(0, self.console_fg, True)  # black on brand orange
         row_i = 0
-        for wrapped_row, _is_continuation in rows:
+        for wrapped_row, _is_continuation, logger_name in rows:
             scr_row = self.banner_h + row_i
             row_tail_offset = screen_row_to_tail_offset(row_i, n_rows, self.view_offset)
             row_len = sum(len(seg[0]) for seg in wrapped_row)
@@ -353,8 +355,17 @@ class _TuiRenderMixin:
                 scr.clrtoeol()
             except curses.error:
                 pass
-            self._draw_segments(scr_row, 0, usable_width, wrapped_row, sel_span=sel_span,
-                                find_spans=find_spans, find_attr=find_attr, grep_spans=grep_spans)
+            end_col = self._draw_segments(scr_row, 0, usable_width, wrapped_row, sel_span=sel_span,
+                                          find_spans=find_spans, find_attr=find_attr,
+                                          grep_spans=grep_spans)
+            if logger_name == MARK_ID and end_col < usable_width:
+                # `mark` rule: extended to the current width at draw time (not stored), so
+                # it spans the screen at any terminal size. Not part of the line's text, so
+                # selection/copy and find ignore it.
+                try:
+                    scr.addstr(scr_row, end_col, MARK_FILL * (usable_width - end_col), mark_attr)
+                except curses.error:
+                    pass
             row_i += 1
         while row_i < log_h:  # blank out rows below the last one drawn
             scr_row = self.banner_h + row_i

@@ -1115,3 +1115,19 @@ class TestRingLogTailGrowth:
         ring.set_filter(lambda plain, node, logger: node == 'a')
         assert ring.anchor_at(0) == (3, 0)
         assert ring.anchor_at(1) == (1, 0)
+
+
+class TestVisibleRowsWithLogger:
+    def test_rows_carry_logger_name_when_asked(self):
+        ring = RingLog(maxlen=10)
+        ring.set_width(4)
+        ring.append([('abcdef', None, None, False)], 'abcdef', 'n', 'mark-id')  # 2 rows
+        ring.append([('xy', None, None, False)], 'xy', 'n', None)
+        rows = ring.visible_rows(0, 10, with_logger=True)
+        assert [(r[1], r[2]) for r in rows] == [(False, 'mark-id'), (True, 'mark-id'), (False, None)]
+
+    def test_default_shape_unchanged(self):
+        ring = RingLog(maxlen=10)
+        ring.set_width(10)
+        ring.append([('a', None, None, False)], 'a', 'n', 'l')
+        assert all(len(r) == 2 for r in ring.visible_rows(0, 10))

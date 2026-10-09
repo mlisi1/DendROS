@@ -107,6 +107,7 @@ The `ros2()` shell wrapper intercepts specific subcommands; everything else call
 | `dendros mute <node>` | Send `mute` to a running TUI launch. |
 | `dendros unmute <node\|all>` | Send `unmute` to a running TUI launch. |
 | `dendros clear` | Send `clear` to a running TUI launch. |
+| `dendros mark [label]` | Send `mark` to a running TUI launch. |
 
 Tab completion is available for all subcommands, `dendros init` flags and `dendros level` values after sourcing `dendROS.sh`. The commands sent to a running TUI are described in [Remote Control & Reopen](tui-remote.md).
 
@@ -124,6 +125,7 @@ Typed after ++backslash++ in [TUI mode](launch-tui.md); ++up++ / ++down++ recall
 | `find <text>` | Jump to lines containing the text; ++tab++ / ++shift+tab++ step older / newer. |
 | `mute <node>` | Hide one node's lines until `unmute` or `clear`. |
 | `unmute <node\|all>` | Show a muted node again, or all of them. |
+| `mark [label]` | Insert a timestamped separator line; marks stay visible under every filter. |
 | `clear` | Remove all filters and mutes, end any find. |
 | `help` | Show all commands and keys. |
 

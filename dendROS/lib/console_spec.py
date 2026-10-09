@@ -35,6 +35,8 @@ COMMANDS = (
                 'unmuted_node'),
     CommandSpec('unmute', 'unmute <node|all>', 'Show a muted node again, or every muted node',
                 'muted_node'),
+    CommandSpec('mark', 'mark [label]',
+                'Insert a timestamped separator line into the log (find it again with find)', None),
     CommandSpec('clear', 'clear', 'Drop every filter and mute, and end any find', None),
     CommandSpec('help', 'help', 'Show this help', None),
 )

@@ -16,6 +16,7 @@ dendros find exception
 dendros mute camera_driver
 dendros unmute all
 dendros clear
+dendros mark sending goal
 ```
 
 | Command | Same as |
@@ -27,6 +28,7 @@ dendros clear
 | `dendros mute <node>` | `\mute <node>` |
 | `dendros unmute <node\|all>` | `\unmute <node\|all>` |
 | `dendros clear` | `\clear` |
+| `dendros mark [label]` | `\mark [label]` |
 
 Typical use: the launch runs in one pane while you work in another, and you want to look at a single node without switching panes.
 
