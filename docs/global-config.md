@@ -1,6 +1,6 @@
-# dendros config
+# Global Settings
 
-`dendros config` opens a full-screen interactive TUI for managing global defaults.
+Global settings are the defaults for every package and every terminal. `dendros config` opens a full-screen editor for them.
 
 ```bash
 dendros config
@@ -62,7 +62,9 @@ Settings are grouped into tabs — **Output**, **CLI**, **Unmatched**, **System*
 | **Colorize launch msgs** | `on` / `off` | When off, `[INFO] [node-N]: process started …` lines pass through unchanged. |
 | **Show timestamp** | `on` / `off` | Show the `[timestamp]` bracket in node log lines (`[node-N] [INFO] [timestamp] [logger]: msg`). Off strips it. |
 | **Show logger name** | `on` / `off` | Show the `[logger_name]` bracket — the ROS graph name registered via `get_logger()`, which can differ from the `[node-N]` launch process name. Off strips it. |
-| **Ignore bold** | `on` / `off` | Compatibility fix: some terminals brighten bold *foreground* text but never brighten backgrounds, so a group's bold color can look like two different shades between a node's regular text and its inverted `[TAG]` badge. Turn on if colors look inconsistent in your terminal. Applies everywhere colors are resolved — `ros2 launch`/`run`, the TUI, and all CLI commands. See [Troubleshooting](quickstart.md#troubleshooting). |
+| **Ignore bold** | `on` / `off` | Compatibility fix: some terminals brighten bold *foreground* text but never brighten backgrounds, so a group's bold color can look like two different shades between a node's regular text and its inverted `[TAG]` badge. Turn on if colors look inconsistent in your terminal. Applies everywhere colors are resolved — `ros2 launch`/`run`, the TUI, and all CLI commands. See [Troubleshooting](troubleshooting.md#colors). |
+| **Launch mode** | `classic` / `tui` | `classic` prints `ros2 launch` output to the terminal as usual. `tui` opens it in the full-screen viewer with scrollback, search and filters. `ros2 run` always uses classic. See [TUI Mode](launch-tui.md). |
+| **TUI scrollback lines** | integer | How many lines TUI mode keeps. Default `5000`. Only used when launch mode is `tui`. |
 
 ### CLI commands
 
@@ -137,6 +139,9 @@ config_merge: true
 colorize_launch_msgs: true
 show_timestamp: true
 show_logger_name: true
+ignore_bold: false
+launch_mode: classic
+tui_scrollback_lines: 5000
 crash_alert: true
 crash_alert_color: node
 crash_alert_interval: 30

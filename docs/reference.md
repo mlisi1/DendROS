@@ -54,7 +54,9 @@ Stored in `~/.config/dendROS/defaults.yaml`, managed via `dendros config`:
 | `colorize_launch_msgs` | `true` | Colorize lifecycle lines globally. |
 | `show_timestamp` | `true` | Show the `[timestamp]` bracket in node log lines globally. |
 | `show_logger_name` | `true` | Show the `[logger_name]` bracket in node log lines globally. |
-| `ignore_bold` | `false` | Strip the bold modifier everywhere colors are resolved (launch/run, TUI, all CLI commands). Compatibility fix for terminals that brighten bold foreground text but not backgrounds — see [Troubleshooting](quickstart.md#troubleshooting). |
+| `ignore_bold` | `false` | Strip the bold modifier everywhere colors are resolved (launch/run, TUI, all CLI commands). Compatibility fix for terminals that brighten bold foreground text but not backgrounds — see [Troubleshooting](troubleshooting.md#colors). |
+| `launch_mode` | `classic` | `classic` or `tui` — open `ros2 launch` in the full-screen viewer. See [TUI Mode](launch-tui.md). |
+| `tui_scrollback_lines` | `5000` | Lines kept by TUI mode. |
 | `crash_alert` | `true` | Print an inline banner when a node dies unexpectedly. |
 | `crash_alert_color` | `node` | `node` = use group color; `red` = always bold red. |
 | `crash_alert_interval` | `30` | Seconds between periodic banner reprints. `0` = only on new crashes. |
@@ -76,7 +78,7 @@ The `ros2()` shell wrapper intercepts specific subcommands; everything else call
 
 | Subcommand | Behavior |
 |---|---|
-| `ros2 launch …` | Output piped through the DendROS colorizer. |
+| `ros2 launch …` | Output piped through the DendROS colorizer; opens the full-screen viewer when `launch_mode: tui`. |
 | `ros2 run …` | Output piped through the DendROS colorizer. |
 | `ros2 node list` | Output piped through `dendros_node_list.py` — nodes colored by group. See [ros2 node list](node-list.md). |
 | `ros2 node info …` | Output piped through `dendros_node_info.py` — node name, sections, and entries colorized by group. See [ros2 node info](node-info.md). |
@@ -97,8 +99,42 @@ The `ros2()` shell wrapper intercepts specific subcommands; everything else call
 | `dendros init` | Scaffold `config/dendROS.yaml` from launch files. See flags below. |
 | `dendros disable` | Disable colorization **system-wide** — every terminal, including an already-running `ros2 launch`, switches to plain passthrough within about a second. Also sets `DENDROS_DISABLE=1` in the current shell. |
 | `dendros enable` | Re-enable colorization **system-wide**. Also unsets `DENDROS_DISABLE` in the current shell. |
+| `dendros reopen` | Reopen this terminal's last TUI launch, read-only. See [Reopen the last run](tui-remote.md#reopen-the-last-run). |
+| `dendros focus <node>` | Send `focus` to a running TUI launch. |
+| `dendros level [lvl]` | Send `level` to a running TUI launch (no level removes the filter). |
+| `dendros grep [text]` | Send `grep` to a running TUI launch (no text removes the filter). |
+| `dendros find <text>` | Send `find` to a running TUI launch. |
+| `dendros mute <node>` | Send `mute` to a running TUI launch. |
+| `dendros unmute <node\|all>` | Send `unmute` to a running TUI launch. |
+| `dendros clear` | Send `clear` to a running TUI launch. |
 
-Tab completion is available for all subcommands and `dendros init` flags after sourcing `dendROS.sh`.
+Tab completion is available for all subcommands, `dendros init` flags and `dendros level` values after sourcing `dendROS.sh`. The commands sent to a running TUI are described in [Remote Control & Reopen](tui-remote.md).
+
+---
+
+## TUI console commands
+
+Typed after ++backslash++ in [TUI mode](launch-tui.md). See [Console Commands](tui-console.md) for details and keys.
+
+| Command | Description |
+|---|---|
+| `focus <node>` | Show only one node's lines (process name or logger name). |
+| `level [lvl]` | Show lines at `debug`/`info`/`warn`/`error`/`fatal` or worse; lines without a level stay visible. No argument removes the filter. |
+| `grep [text]` | Show only lines containing the text (smart case). No argument removes the filter. |
+| `find <text>` | Jump to lines containing the text; ++tab++ / ++shift+tab++ step older / newer. |
+| `mute <node>` | Hide one node's lines until `unmute` or `clear`. |
+| `unmute <node\|all>` | Show a muted node again, or all of them. |
+| `clear` | Remove all filters and mutes, end any find. |
+| `help` | Show all commands and keys. |
+
+---
+
+## Environment variables
+
+| Variable | Effect |
+|---|---|
+| `DENDROS_DISABLE=1` | Bypass DendROS in this shell or for one command. See [Enable & Disable](runtime-control.md). |
+| `DENDROS_DEBUG=1` | Print the config summary and node-to-color map to stderr at startup. |
 
 ---
 

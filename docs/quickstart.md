@@ -108,155 +108,36 @@ ros2 launch my_bringup main.launch.py
 </div>
 </div>
 
-If you ever want to turn colorization off, run `dendros disable` (and `dendros enable` to turn it
-back on). This takes effect everywhere — every terminal, including a `ros2 launch` that's already
-running elsewhere.
+---
 
-!!! note
-    For just one shell/invocation instead of system-wide, prefix the command with
-    `DENDROS_DISABLE=1` instead:
-    ```bash
-    DENDROS_DISABLE=1 ros2 launch my_bringup main.launch.py
-    ```
+## Step 5 — Try TUI mode (optional)
 
-??? note "Colors may look different across terminals"
-    ROS 2's own log-level colors, and any *standard* named color you use in `dendROS.yaml`
-    (`red`, `blue`, `green`, …), are rendered using **your terminal emulator's own color
-    theme** — that's how ANSI works, with or without DendROS. The exact same session can
-    genuinely look different depending on what you're running it in:
+For big launches, switch `ros2 launch` to the full-screen viewer, where you can scroll back, search, filter by node or severity, and copy with the mouse:
 
-    
+```bash
+dendros config    # Output tab → Launch mode → tui, then s to save
+```
 
-    === "Terminator"
+Launch again, then press ++backslash++ and type a command:
 
-        <div class="term">
-          <div class="term-bar">
-            <div class="term-dots">
-              <div class="term-dot term-dot-red"></div>
-              <div class="term-dot term-dot-yellow"></div>
-              <div class="term-dot term-dot-green"></div>
-            </div>
-            <div class="term-title">Terminator</div>
-          </div>
-          <div class="term-body-image">
-          <p align="center">
-        <img src="../assets/images/screenshots/Terminator.png" width="800" alt="Same session in Terminator"/>
-        </p>
-        </div>
-        </div>
+```text
+\focus slam_toolbox
+\level warn
+```
 
-
-    === "Konsole"
-
-        <div class="term">
-          <div class="term-bar">
-            <div class="term-dots">
-              <div class="term-dot term-dot-red"></div>
-              <div class="term-dot term-dot-yellow"></div>
-              <div class="term-dot term-dot-green"></div>
-            </div>
-            <div class="term-title">Konsole</div>
-          </div>
-          <div class="term-body-image">
-          <p align="center">
-        <img src="../assets/images/screenshots/Konsole.png" width="800" alt="Same session in Konsole"/>
-        </p>
-        </div>
-        </div>
-
-
-
-    === "Yakuake"
-      
-        <div class="term">
-          <div class="term-bar">
-            <div class="term-dots">
-              <div class="term-dot term-dot-red"></div>
-              <div class="term-dot term-dot-yellow"></div>
-              <div class="term-dot term-dot-green"></div>
-            </div>
-            <div class="term-title">Yakuake</div>
-          </div>
-          <div class="term-body-image">
-          <p align="center">
-        <img src="../assets/images/screenshots/yakuake.png" width="800" alt="Same session in Yakuake"/>
-        </p>
-        </div>
-        </div>
-
-    Use [extended/hex colors](colors.md) (`"#FF6600"`, `teal`, `coral`, …) instead of the 8
-    standard names if you want an exact, portable color regardless of terminal theme. See
-    [Troubleshooting](#troubleshooting) below for a related but different issue — bold
-    colors specifically looking inconsistent between a node's text and its `[TAG]` badge.
+See [TUI Mode](launch-tui.md) and [Console Commands](tui-console.md).
 
 ---
 
-## Troubleshooting
+## Turning it off
 
-??? warning "No colors showing"
-    Run with debug mode:
-    ```bash
-    DENDROS_DEBUG=1 ros2 launch my_bringup main.launch.py
-    ```
-    If you see `passthrough mode`, the config was not discovered. Verify:
+`dendros disable` turns DendROS off in every terminal, including launches that are already running; `dendros enable` turns it back on. To skip it for a single command, prefix it with `DENDROS_DISABLE=1`. See [Enable & Disable](runtime-control.md).
 
-    - The package was built and you sourced `install/setup.bash`.
-    - `config/dendROS.yaml` is installed. Check `CMakeLists.txt` for:
-      ```cmake
-      install(DIRECTORY config/ DESTINATION share/${PROJECT_NAME})
-      ```
+---
 
-??? warning "Nodes not matching expected colors"
-    Check the debug summary — it prints each group and its patterns. Compare against raw output:
-    ```bash
-    DENDROS_DISABLE=1 ros2 launch my_bringup main.launch.py 2>&1 | grep '^\['
-    ```
-    Node names are matched after stripping the `-N` suffix. Use wildcards (`nav2_*`) for nodes you don't know in advance.
+## Next steps
 
-??? warning "A node's [TAG] badge is a different shade than its own text"
-    Some terminals brighten bold *foreground* text but never brighten backgrounds — since a
-    node's regular text is bold foreground and its inverted `[TAG]` badge uses that same
-    color as a background, the two can end up looking like different shades of the same
-    color on terminals that do this. It's a terminal rendering quirk, not a config problem:
-
-
-    === "Mismatched Colors"
-        <div class="term">
-          <div class="term-bar">
-            <div class="term-dots">
-              <div class="term-dot term-dot-red"></div>
-              <div class="term-dot term-dot-yellow"></div>
-              <div class="term-dot term-dot-green"></div>
-            </div>
-            <div class="term-title">Before — ignore_bold off (default)</div>
-          </div>
-          <div class="term-body-image">
-          <p align="center">
-        <img src="../assets/images/screenshots/mismatching_colors.png" width="800" alt="Tag and node text rendered as different shades"/>
-        </p>
-        </div>
-        </div>
-
-    === "Correct Colors"
-
-        <div class="term">
-          <div class="term-bar">
-            <div class="term-dots">
-              <div class="term-dot term-dot-red"></div>
-              <div class="term-dot term-dot-yellow"></div>
-              <div class="term-dot term-dot-green"></div>
-            </div>
-            <div class="term-title">After — ignore_bold on</div>
-          </div>
-          <div class="term-body-image">
-          <p align="center">
-        <img src="../assets/images/screenshots/correct_colors.png" width="800" alt="Tag and node text rendered as the same shade"/>
-        </p>
-        </div>
-        </div>
-
-    Fix it by enabling **Ignore bold** in `dendros config` (Output tab), or setting
-    `ignore_bold: true` in `~/.config/dendROS/defaults.yaml` directly. This strips the bold
-    modifier everywhere colors are resolved — `ros2 launch`/`run`, the TUI, and every
-    `ros2 node/service/action/param/topic` CLI command — so hue stays consistent regardless
-    of how your terminal handles bold. See [Global config](global-config.md#output-launch-run).
+- [Package Config](configuration.md): groups, badges, keyword highlighting
+- [Colors](colors.md): every accepted color format
+- [Global Settings](global-config.md): defaults for all packages
+- [Troubleshooting](troubleshooting.md): no colors, wrong colors, terminal quirks

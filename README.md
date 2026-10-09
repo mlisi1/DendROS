@@ -54,8 +54,11 @@ It also features some quality of life improvements for ROS outputs.
   One config file per package maps node groups to colors, badges, and display rules
 
 
+- ### **Full-screen launch viewer (TUI mode)**
+  Set `launch_mode: tui` and `ros2 launch` opens in a full-screen viewer: scroll back through the whole run, select and copy with the mouse, and press `\` to `focus` one node, filter by `level` or `grep`, `find` text, or `mute` noisy nodes. The same commands work from another terminal (`dendros focus planner_server`), and `dendros reopen` brings back the last run after it ended. [→ TUI Mode](https://mlisi1.github.io/DendROS/launch-tui/)
+
 - ### **All main `ros2` CLI commands wrapped**
-  `ros2 node list`, `ros2 node info`, `ros2 service list`, `ros2 action list`, `ros2 topic list`, `ros2 param list`, and `ros2 param describe` — all colorized with the same group colors and badges, no extra config required. [→ Full feature list](https://mlisi1.github.io/DendROS/node-list/#ros2--intercepted-subcommands)
+  `ros2 node list`, `ros2 node info`, `ros2 service list`, `ros2 action list`, `ros2 topic list`, `ros2 param list`, and `ros2 param describe` — all colorized with the same group colors and badges, no extra config required. [→ Full list](https://mlisi1.github.io/DendROS/ros2-cli/)
 
 - ### **One command to get started**
    Too lazy to look up how DendROS config works? We got you covered: `dendros init` scans your launch files and generates an initial config for you
@@ -99,7 +102,7 @@ It also features some quality of life improvements for ROS outputs.
 </p>
 
 - ### **Truly non-invasive** 
-  Shell-level pipe; you won't loose autocompletion or aliases for launch files
+  Shell-level pipe; you won't lose autocompletion or aliases for launch files. `dendros disable` switches DendROS off in every terminal, even for launches that are already running
 
 <img
   align="right"

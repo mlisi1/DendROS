@@ -1,4 +1,4 @@
-# Config File
+# Package Config
 
 Place `dendROS.yaml` inside your package's `config/` directory:
 

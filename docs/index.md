@@ -24,7 +24,7 @@
 </div>
 </div>
 
-DendROS shadows the `ros2` command with a shell function. When you run `ros2 launch` or `ros2 run`, the output is piped through a lightweight Python colorizer that reads a small YAML config from your package, matches the `[node-N]` prefix on each line, and applies group colors. Every other `ros2` subcommand passes through unchanged. Packages without a config are completely unaffected — no changes to launch files, no exit-code clobbering, no buffering.
+DendROS shadows the `ros2` command with a shell function. When you run `ros2 launch` or `ros2 run`, the output is piped through a lightweight Python colorizer that reads a small YAML config from your package, matches the `[node-N]` prefix on each line, and applies group colors. The common `ros2` introspection commands (`node list`, `topic list`, …) get the same colors, and `ros2 launch` can optionally open in a full-screen viewer where you can scroll, search and filter the log. Packages without a config are completely unaffected — no changes to launch files, no exit-code clobbering, no buffering.
 
 ---
 
@@ -62,9 +62,19 @@ DendROS shadows the `ros2` command with a shell function. When you run `ros2 lau
 <p>Python tracebacks colored automatically — bold red header, dim red frames, even when prefixed with a node name.</p>
 </div>
 <div class="feature-card" markdown>
+<div class="fc-icon">📟</div>
+<strong>Full-screen launch viewer</strong>
+<p>Optional TUI mode for <code>ros2 launch</code>: scrollback, mouse copy, and a console to <code>focus</code> a node, filter by <code>level</code>, <code>grep</code>, <code>find</code> and <code>mute</code>. [TUI Mode →](launch-tui.md)</p>
+</div>
+<div class="feature-card" markdown>
+<div class="fc-icon">🛰️</div>
+<strong>Remote control &amp; reopen</strong>
+<p>Filter a running launch from another terminal with <code>dendros focus</code>, and bring back the last run with <code>dendros reopen</code>. [More →](tui-remote.md)</p>
+</div>
+<div class="feature-card" markdown>
 <div class="fc-icon">🖥️</div>
 <strong>All ros2 CLI commands wrapped</strong>
-<p>Node list, node info, service list, action list, topic list, param list, param describe — all colorized with the same group colors and badges, zero config overhead. [See all →](reference.md#ros2--intercepted-subcommands)</p>
+<p>Node list, node info, service list, action list, topic list, param list, param describe — all colorized with the same group colors and badges, zero config overhead. [See all →](ros2-cli.md)</p>
 </div>
 <div class="feature-card" markdown>
 <div class="fc-icon">🔔</div>
@@ -74,7 +84,7 @@ DendROS shadows the `ros2` command with a shell function. When you run `ros2 lau
 <div class="feature-card" markdown>
 <div class="fc-icon">🚫</div>
 <strong>Truly non-invasive</strong>
-<p>No launch file changes. Exit codes preserved. <code>DENDROS_DISABLE=1</code> bypasses everything instantly.</p>
+<p>No launch file changes. Exit codes preserved. <code>dendros disable</code> switches it off everywhere, even in launches already running.</p>
 </div>
 </div>
 
