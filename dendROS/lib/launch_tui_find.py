@@ -41,7 +41,7 @@ class _TuiFindMixin:
         # One visible_entries() snapshot (a filter pass over the whole scrollback) per change
         # of the ring's contents, wrap width, filter stack or query — i.e. at most once per
         # drained tick while a find is active, shared by matching, jumping and every redraw.
-        key = (self.ring.seq_range(), self.ring.wrap_width, self.filter_node, self.grep_query,
+        key = (self.ring.seq_range(), self.ring.wrap_width, self.filter_nodes, self.grep_query,
                self.min_level, frozenset(self.muted_nodes), self.find_query)
         if key != self._find_cache_key:
             self._find_entries = self.ring.visible_entries()

@@ -27,6 +27,7 @@ from lib.console_commands import (
     LEVEL_NAMES,
     parse_console_command,
     parse_level,
+    parse_node_list,
     push_mode,
 )
 from lib.global_config import pop_tui_command
@@ -197,14 +198,18 @@ class _TuiConsoleMixin:
         return False
 
     def _cmd_focus(self, arg):
-        node_name = canonical_node_name(arg.strip())
-        if not node_name:
+        # One or more nodes; a line passes if it belongs to any of them. Re-running replaces
+        # the set (like every other filter). All-or-nothing: one unknown name and nothing changes.
+        names = parse_node_list(arg)
+        if not names:
             self._show_console_error('focus: node name required')
             return False
-        if node_name not in self.known_nodes:
-            self._show_console_error(f'focus: unknown node "{node_name}"')
+        unknown = [n for n in names if n not in self.known_nodes]
+        if unknown:
+            plural = 's' if len(unknown) > 1 else ''
+            self._show_console_error(f'focus: unknown node{plural} ' + ', '.join(f'"{n}"' for n in unknown))
             return False
-        self.filter_node = node_name
+        self.filter_nodes = names
         self.mode_stack = push_mode(self.mode_stack, 'focus')
         self._apply_filters()
         return True
@@ -285,7 +290,7 @@ class _TuiConsoleMixin:
     def _cmd_clear(self, arg):
         # Back to normal view: drops every filter (focus, level, grep), every mute, and any
         # active find.
-        self.filter_node = None
+        self.filter_nodes = None
         self.muted_nodes.clear()  # in place: shared with the session dict
         self.grep_query = None
         self.min_level = None
@@ -309,19 +314,19 @@ class _TuiConsoleMixin:
         elif mode == 'level':
             self.min_level = None
         elif mode == 'focus':
-            self.filter_node = None
+            self.filter_nodes = None
         self._apply_filters()
 
     def _apply_filters(self):
         # Rebuild the whole filter stack from per-command state, so filters compose.
-        self.ring.set_filter(build_filter(self.filter_node, self.grep_query, self.min_level,
+        self.ring.set_filter(build_filter(self.filter_nodes, self.grep_query, self.min_level,
                                           self.muted_nodes))
         self._reset_view_after_filter_change()
         self._find_after_filter_change()
         self.console_error = None
 
     def _filter_status(self):
-        return format_filter_status(self.filter_node, self.grep_query, self.min_level)
+        return format_filter_status(self.filter_nodes, self.grep_query, self.min_level)
 
     def _mute_status(self):
         return format_mute_status(self.muted_nodes)

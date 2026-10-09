@@ -53,11 +53,24 @@ def line_matches_node(node_name, logger_name, target):
     return target in node_identity_names(node_name, logger_name)
 
 
-def focus_predicate(plain_text, node_name, logger_name, target):
-    """RingLog.set_filter() predicate for `focus <target>` — matches on node identity, not
-    line text. `plain_text` is unused but required by the predicate signature (see
-    RingLog.set_filter()'s docstring in lib/tui_pure.py)."""
-    return line_matches_node(node_name, logger_name, target)
+def parse_node_list(arg):
+    """Node names from a `focus` argument — whitespace- or comma-separated, canonicalized,
+    duplicates dropped, order kept: `focus planner, /controller planner` → (planner, controller)."""
+    names = (canonical_node_name(n) for n in arg.replace(',', ' ').split())
+    return tuple(dict.fromkeys(n for n in names if n))
+
+
+def _as_targets(targets):
+    # A single name (str) or any collection of names -> frozenset of names.
+    return frozenset((targets,) if isinstance(targets, str) else targets)
+
+
+def focus_predicate(plain_text, node_name, logger_name, targets):
+    """RingLog.set_filter() predicate for `focus <node>...` — a line passes when it belongs
+    to ANY of `targets` (one name or a collection), matched on node identity, not line text.
+    `plain_text` is unused but required by the predicate signature (see
+    RingLog.set_filter()'s docstring in lib/tui_ringlog.py)."""
+    return bool(node_identity_names(node_name, logger_name) & _as_targets(targets))
 
 
 def grep_predicate(plain_text, node_name, logger_name, query):
@@ -127,7 +140,7 @@ def format_mute_status(muted):
     return f'{n} node{"s" if n != 1 else ""} muted'
 
 
-def build_filter(focus_node=None, grep_query=None, min_level=None, muted=None):
+def build_filter(focus_nodes=None, grep_query=None, min_level=None, muted=None):
     """Combine the active console filters into one RingLog.set_filter() predicate (all must
     hold), or None when none are active. Each filtering command only updates its own state
     and the caller rebuilds the whole stack through here, so filters compose (e.g. focus +
@@ -135,8 +148,8 @@ def build_filter(focus_node=None, grep_query=None, min_level=None, muted=None):
     preds = []
     if muted:
         preds.append(functools.partial(mute_predicate, muted=frozenset(muted)))
-    if focus_node:
-        preds.append(functools.partial(focus_predicate, target=focus_node))
+    if focus_nodes:
+        preds.append(functools.partial(focus_predicate, targets=_as_targets(focus_nodes)))
     if min_level:
         preds.append(functools.partial(level_predicate, min_level=min_level))
     if grep_query:
@@ -148,12 +161,26 @@ def build_filter(focus_node=None, grep_query=None, min_level=None, muted=None):
     return lambda plain, node_name, logger_name: all(p(plain, node_name, logger_name) for p in preds)
 
 
-def format_filter_status(focus_node=None, grep_query=None, min_level=None):
+# Focused names spelled out in the header chip before the rest collapse into "+N".
+_FOCUS_CHIP_NAMES = 3
+
+
+def format_focus(focus_nodes):
+    """`talker`, `talker, listener`, or `a, b +3` past _FOCUS_CHIP_NAMES names (a long list
+    would push the other header items off)."""
+    names = (focus_nodes,) if isinstance(focus_nodes, str) else tuple(focus_nodes)
+    if len(names) <= _FOCUS_CHIP_NAMES:
+        return ', '.join(names)
+    shown = _FOCUS_CHIP_NAMES - 1
+    return f"{', '.join(names[:shown])} +{len(names) - shown}"
+
+
+def format_filter_status(focus_nodes=None, grep_query=None, min_level=None):
     """Header chip text describing the active filter stack, e.g.
-    `focus talker · level warn · grep "x"`, or None when unfiltered."""
+    `focus talker, listener · level warn · grep "x"`, or None when unfiltered."""
     parts = []
-    if focus_node:
-        parts.append(f'focus {focus_node}')
+    if focus_nodes:
+        parts.append(f'focus {format_focus(focus_nodes)}')
     if min_level:
         parts.append(f'level {min_level}')
     if grep_query:

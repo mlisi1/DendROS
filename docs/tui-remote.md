@@ -20,7 +20,7 @@ dendros clear
 
 | Command | Same as |
 |---|---|
-| `dendros focus <node>` | `\focus <node>` |
+| `dendros focus <node>...` | `\focus <node>...` |
 | `dendros level [lvl]` | `\level [lvl]` (no level removes the filter) |
 | `dendros grep [text]` | `\grep [text]` (no text removes the filter) |
 | `dendros find <text>` | `\find <text>` |

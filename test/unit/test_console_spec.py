@@ -42,8 +42,21 @@ class TestCompletionContext:
     def test_node_argument(self):
         head, prefix, pool, smart_case = completion_context('focus ta', NODES)
         assert (head, prefix) == ('focus ', 'ta')
-        assert pool == sorted(NODES)
+        assert pool == sorted(n + ' ' for n in NODES)  # trailing space: ready for the next name
         assert smart_case is True
+
+    def test_focus_completes_the_last_of_several_names(self):
+        head, prefix, pool, _ = completion_context('focus talker li', NODES)
+        assert (head, prefix) == ('focus talker ', 'li')
+        assert 'talker ' not in pool  # already listed
+
+    def test_focus_after_a_space_starts_a_new_name(self):
+        head, prefix, pool, _ = completion_context('focus talker ', NODES)
+        assert (head, prefix) == ('focus talker ', '')
+        assert 'talker ' not in pool and 'listener ' in pool
+
+    def test_focus_already_listed_with_slash_not_offered(self):
+        assert 'talker ' not in completion_context('focus /talker ', NODES)[2]
 
     def test_node_argument_leading_slash_ignored(self):
         assert completion_context('focus /ta', NODES)[1] == 'ta'
@@ -80,29 +93,29 @@ class TestCompleter:
     def test_ambiguous_extends_to_common_prefix_and_lists(self):
         c = Completer()
         assert c.tab('focus t', NODES) == 'focus talker'
-        assert c.candidates == ['talker', 'talker_2']
+        assert c.candidates == ['talker ', 'talker_2 ']
         assert c.index is None
 
     def test_repeated_tab_cycles_and_wraps(self):
         c = Completer()
         buf = c.tab('focus t', NODES)
         buf = c.tab(buf, NODES)
-        assert (buf, c.index) == ('focus talker', 0)
+        assert (buf, c.index) == ('focus talker ', 0)
         buf = c.tab(buf, NODES)
-        assert (buf, c.index) == ('focus talker_2', 1)
+        assert (buf, c.index) == ('focus talker_2 ', 1)
         buf = c.tab(buf, NODES)
-        assert (buf, c.index) == ('focus talker', 0)
+        assert (buf, c.index) == ('focus talker ', 0)
 
     def test_shift_tab_cycles_backwards(self):
         c = Completer()
         buf = c.tab('focus t', NODES)
-        assert c.tab(buf, NODES, backwards=True) == 'focus talker_2'
+        assert c.tab(buf, NODES, backwards=True) == 'focus talker_2 '
 
     def test_edit_breaks_the_cycle(self):
         c = Completer()
         buf = c.tab('focus t', NODES)
         # User typed '_' after the completion: fresh completion, not a cycle step.
-        assert c.tab(buf + '_', NODES) == 'focus talker_2'
+        assert c.tab(buf + '_', NODES) == 'focus talker_2 '
         assert c.candidates == []
 
     def test_reset_clears_candidates(self):
@@ -117,8 +130,8 @@ class TestCompleter:
         assert c.candidates == []
 
     def test_smart_case_node(self):
-        assert Completer().tab('focus pl', NODES) == 'focus Planner'
-        assert Completer().tab('focus Pl', NODES) == 'focus Planner'
+        assert Completer().tab('focus pl', NODES) == 'focus Planner '
+        assert Completer().tab('focus Pl', NODES) == 'focus Planner '
         assert Completer().tab('focus PL', NODES) == 'focus PL'  # uppercase = exact case, no match
 
     def test_level_completion(self):
@@ -238,3 +251,8 @@ class TestCommandHistory:
             h.add(f'grep {i}')
         assert len(h.entries) == CommandHistory.MAX_ENTRIES
         assert h.entries[0] == 'grep 20'
+
+
+class TestFocusSeveralNodes:
+    def test_second_name_completes_after_first(self):
+        assert Completer().tab('focus talker lis', NODES) == 'focus talker listener '

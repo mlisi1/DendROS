@@ -169,7 +169,7 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiHelpMixi
         self.console_buffer = ''
         self.console_error = None         # last error message text, or None
         self.console_error_at = None      # monotonic() timestamp, mirrors copy_toast_at's fade
-        self.filter_node = None           # currently focused node name, or None (unfiltered)
+        self.filter_nodes = None          # tuple of focused node names, or None (unfiltered)
         self.grep_query = None            # active `grep` text, or None (see _apply_filters())
         self.min_level = None             # active `level` ('warn', ...), or None
         # `mute`d node names. Lives in the run-wide `session` dict (mutated in place), not

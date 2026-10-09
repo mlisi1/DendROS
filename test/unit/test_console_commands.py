@@ -20,6 +20,8 @@ from lib.console_commands import (
     canonical_node_name,
     drop_mode,
     focus_predicate,
+    format_focus,
+    parse_node_list,
     format_filter_status,
     format_mute_status,
     mute_predicate,
@@ -345,3 +347,55 @@ class TestMute:
         assert format_mute_status(set()) is None
         assert format_mute_status({'a'}) == '1 node muted'
         assert format_mute_status({'a', 'b'}) == '2 nodes muted'
+
+
+# ── focus with several nodes ─────────────────────────────────────────────────────
+
+class TestFocusSeveralNodes:
+    def test_parse_node_list_spaces_and_commas(self):
+        assert parse_node_list('planner, controller  /amcl') == ('planner', 'controller', 'amcl')
+
+    def test_parse_node_list_dedupes_keeping_order(self):
+        assert parse_node_list('b a /b a') == ('b', 'a')
+
+    def test_parse_node_list_empty(self):
+        assert parse_node_list('  , ') == ()
+
+    def test_predicate_matches_any_target(self):
+        targets = {'talker', 'amcl'}
+        assert focus_predicate('', 'talker', None, targets)
+        assert focus_predicate('', 'amcl_node', 'amcl', targets)   # by logger name
+        assert not focus_predicate('', 'listener', None, targets)
+
+    def test_predicate_still_accepts_one_name(self):
+        assert focus_predicate('', 'talker', None, 'talker')
+
+    def test_build_filter_several_nodes(self):
+        pred = build_filter(('talker', 'listener'))
+        assert pred('x', 'talker', None) and pred('x', 'listener', None)
+        assert not pred('x', 'amcl', None)
+
+    def test_build_filter_several_nodes_with_grep(self):
+        pred = build_filter(('talker', 'listener'), 'goal')
+        assert pred('goal reached', 'listener', None)
+        assert not pred('idle', 'listener', None)
+        assert not pred('goal reached', 'amcl', None)
+
+    def test_composable_container_and_component_together(self):
+        # Container (process tag) + a component of another container (logger name).
+        pred = build_filter(('component_container', 'camera'))
+        assert pred('x', 'component_container', 'talker')
+        assert pred('x', 'component_container_2', 'camera')
+        assert not pred('x', 'component_container_2', 'lidar')
+
+    def test_chip_lists_up_to_three_names(self):
+        assert format_focus(('a',)) == 'a'
+        assert format_focus(('a', 'b', 'c')) == 'a, b, c'
+        assert format_focus('a') == 'a'
+
+    def test_chip_collapses_long_lists(self):
+        assert format_focus(('a', 'b', 'c', 'd', 'e')) == 'a, b +3'
+
+    def test_filter_status_with_several_nodes(self):
+        assert format_filter_status(('talker', 'listener'), 'x', 'warn') == \
+            'focus talker, listener · level warn · grep "x"'

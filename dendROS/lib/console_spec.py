@@ -17,12 +17,13 @@ class CommandSpec(NamedTuple):
     usage: str                 # shown in help, e.g. 'focus <node>'
     summary: str               # one line, shown in help
     arg_kind: Optional[str]    # what Tab completes the argument from:
-                               # 'node' | 'unmuted_node' | 'muted_node' | 'level' | None
+                               # 'nodes' (several, space-separated) | 'unmuted_node' |
+                               # 'muted_node' | 'level' | None
 
 
 COMMANDS = (
-    CommandSpec('focus', 'focus <node>',
-                "Show only one node's lines (launch process tag or logger name)", 'node'),
+    CommandSpec('focus', 'focus <node>...',
+                "Show only these nodes' lines (launch process tag or logger name)", 'nodes'),
     CommandSpec('level', 'level <lvl>',
                 'Show lines at debug|info|warn|error|fatal or worse (tracebacks always stay)', 'level'),
     CommandSpec('grep', 'grep <text>',
@@ -91,8 +92,18 @@ def completion_context(buffer, known_nodes=(), muted_nodes=()):
     head = buffer[:len(buffer) - len(arg)]
     spec = _SPECS_BY_NAME.get(cmd.lower())
     kind = spec.arg_kind if spec else None
-    if kind == 'node':
-        return head, canonical_node_name(arg), sorted(known_nodes), True
+    if kind == 'nodes':
+        # Completes the last word; names already listed aren't offered again, and a
+        # completed name gets a trailing space, ready for the next one.
+        words = arg.split()
+        if arg and not arg[-1].isspace():
+            prefix = words.pop()
+        else:
+            prefix = ''
+        head = buffer[:len(buffer) - len(prefix)]
+        listed = {canonical_node_name(w) for w in words}
+        pool = sorted(n + ' ' for n in set(known_nodes) - listed)
+        return head, canonical_node_name(prefix), pool, True
     if kind == 'unmuted_node':
         return head, canonical_node_name(arg), sorted(set(known_nodes) - set(muted_nodes)), True
     if kind == 'muted_node':

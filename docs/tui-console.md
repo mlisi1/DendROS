@@ -10,7 +10,7 @@ In [TUI mode](launch-tui.md), press ++backslash++ to open the console bar at the
 
 | Command | What it does |
 |---|---|
-| `focus <node>` | Show only one node's lines |
+| `focus <node>...` | Show only the lines of one or more nodes |
 | `level <lvl>` | Show only lines at a severity or worse |
 | `grep <text>` | Show only lines containing some text |
 | `find <text>` | Jump between lines containing some text |
@@ -35,20 +35,25 @@ All of these commands can also be sent from another terminal, see [Remote Contro
 
 ---
 
-## `focus <node>`
+## `focus <node>...`
 
-Shows only the lines of one node.
+Shows only the lines of the nodes you list.
 
 ```text
 \focus talker
+\focus planner_server controller_server bt_navigator
 ```
+
+Separate names with spaces (commas work too). A line is shown if it belongs to any of the listed nodes. Running `focus` again replaces the list.
 
 You can use either the launch process name (the `talker` in `[talker-1]`) or the node's ROS logger name. A leading `/` is optional.
 
 !!! tip "Composable nodes"
     Components loaded into a container print under the container's process name, but each one logs under its own logger name. `focus my_container` shows the container and all its components; `focus my_component` shows just that component.
 
-Only nodes that have printed at least one line (including the launch's own `process started` line) can be focused. An unknown name shows an error in the header and leaves the current view alone.
+Only nodes that have printed at least one line (including the launch's own `process started` line) can be focused. If any name is unknown, the header shows an error naming it and the current view stays as it was.
+
+The header chip lists the focused nodes, for example `focus talker, listener`. Long lists are shortened to `focus a, b +3`.
 
 ---
 
@@ -170,7 +175,7 @@ The header hint always names the mode the next ++escape++ will exit, for example
 In the console bar, ++tab++ completes:
 
 - command names
-- node names, for `focus` and `mute`
+- node names, for `focus` (each further name too, skipping ones already listed) and `mute`
 - muted node names and `all`, for `unmute`
 - severity names, for `level`
 

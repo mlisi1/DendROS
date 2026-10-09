@@ -39,10 +39,10 @@ set_disable_flag(False)
             ;;
         focus)
             if [[ -z "${2:-}" ]]; then
-                echo "Usage: dendros focus <node_name>"
+                echo "Usage: dendros focus <node_name>..."
                 return 1
             fi
-            _dendros_send_tui_command "focus $2" focus
+            _dendros_send_tui_command "focus ${*:2}" focus
             ;;
         find)
             if [[ -z "${2:-}" ]]; then
@@ -81,8 +81,8 @@ set_disable_flag(False)
             echo "                     --labels/-l     auto-generate group labels"
             echo "  disable   Disable colorization system-wide (all terminals, incl. already-running launches)"
             echo "  enable    Re-enable colorization system-wide (all terminals)"
-            echo "  focus     Filter an already-running ros2 launch TUI to one node's output"
-            echo "            (same as typing 'focus <node_name>' in the TUI's \\ console)"
+            echo "  focus     Filter an already-running ros2 launch TUI to one or more nodes' output"
+            echo "            (same as typing 'focus <node_name>...' in the TUI's \\ console)"
             echo "  find      Jump to text in an already-running ros2 launch TUI (Tab/Shift+Tab to step)"
             echo "            (same as typing 'find <text>' in the TUI's \\ console)"
             echo "  grep      Show only lines containing text in an already-running ros2 launch TUI"

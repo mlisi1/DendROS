@@ -100,7 +100,7 @@ The `ros2()` shell wrapper intercepts specific subcommands; everything else call
 | `dendros disable` | Disable colorization **system-wide** — every terminal, including an already-running `ros2 launch`, switches to plain passthrough within about a second. Also sets `DENDROS_DISABLE=1` in the current shell. |
 | `dendros enable` | Re-enable colorization **system-wide**. Also unsets `DENDROS_DISABLE` in the current shell. |
 | `dendros reopen` | Reopen this terminal's last TUI launch, read-only. See [Reopen the last run](tui-remote.md#reopen-the-last-run). |
-| `dendros focus <node>` | Send `focus` to a running TUI launch. |
+| `dendros focus <node>...` | Send `focus` to a running TUI launch. |
 | `dendros level [lvl]` | Send `level` to a running TUI launch (no level removes the filter). |
 | `dendros grep [text]` | Send `grep` to a running TUI launch (no text removes the filter). |
 | `dendros find <text>` | Send `find` to a running TUI launch. |
@@ -118,7 +118,7 @@ Typed after ++backslash++ in [TUI mode](launch-tui.md); ++up++ / ++down++ recall
 
 | Command | Description |
 |---|---|
-| `focus <node>` | Show only one node's lines (process name or logger name). |
+| `focus <node>...` | Show only the lines of the listed nodes (process name or logger name). |
 | `level [lvl]` | Show lines at `debug`/`info`/`warn`/`error`/`fatal` or worse; lines without a level stay visible. No argument removes the filter. |
 | `grep [text]` | Show only lines containing the text (smart case), with the matches highlighted. No argument removes the filter. |
 | `find <text>` | Jump to lines containing the text; ++tab++ / ++shift+tab++ step older / newer. |
