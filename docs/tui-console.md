@@ -17,6 +17,7 @@ In [TUI mode](launch-tui.md), press ++backslash++ to open the console bar at the
 | `mute <node>` | Hide one node's lines |
 | `unmute <node\|all>` | Show a muted node again |
 | `mark [label]` | Insert a timestamped separator line |
+| `tee <file> [-c] [-a]` | Save the lines currently shown to a file |
 | `clear` | Back to the full, unfiltered log |
 | `help` | Show every command and key |
 
@@ -163,6 +164,26 @@ Use it right before you do something to the running system (send a goal, call a 
 - They're part of the log: copied with a selection, and kept by [`dendros reopen`](tui-remote.md#reopen-the-last-run).
 - `dendros mark <label>` sends one from another terminal, which also works from a test script.
 - A reopened, finished run can't get new marks.
+
+---
+
+## `tee <file> [-c] [-a]`
+
+Saves the current view to a file: every line in the scrollback that passes the active filters (`focus`, `level`, `grep`, mutes), marks included. Lines are written whole, not as they're wrapped on screen.
+
+```text
+\tee ~/bugs/planner_timeout.log          # plain text
+\tee -c ~/bugs/planner_timeout.log       # with colors (view with less -R or cat)
+\tee -a ~/bugs/planner_timeout.log       # append instead of overwriting
+```
+
+- It's a snapshot of what's there right now; it doesn't keep writing as new lines arrive.
+- The header shows how many lines were written, or why the file couldn't be written.
+- A relative path is relative to the directory the launch was started from. With `dendros tee` it's relative to the terminal you type it in.
+- It works in [`dendros reopen`](tui-remote.md#reopen-the-last-run) too, so you can still save a run after it has ended.
+- With `-c`, colors are saved as the 256-color codes the TUI displays.
+
+A typical bug report: `\focus planner_server`, `\level warn`, then `\tee planner.log`, and attach the file.
 
 ---
 

@@ -75,6 +75,24 @@ set_disable_flag(False)
             # Label optional: a bare `dendros mark` inserts just the timestamp.
             _dendros_send_tui_command "mark ${*:2}" mark
             ;;
+        tee)
+            # The TUI runs in the launch's directory, not this one: resolve a relative path
+            # here, so `dendros tee out.log` lands where the user typed it.
+            local _flags="" _path="" _arg
+            for _arg in "${@:2}"; do
+                case "$_arg" in
+                    -c|--color|-a|--append) _flags+="$_arg " ;;
+                    *) _path+="${_path:+ }$_arg" ;;
+                esac
+            done
+            if [[ -z "$_path" ]]; then
+                echo "Usage: dendros tee <file> [-c] [-a]"
+                return 1
+            fi
+            [[ "$_path" == "~"* ]] && _path="${HOME}${_path:1}"
+            [[ "$_path" != /* ]] && _path="${PWD}/${_path}"
+            _dendros_send_tui_command "tee ${_flags}${_path}" tee
+            ;;
         *)
             echo "Usage: dendros <command>"
             echo ""
@@ -98,6 +116,8 @@ set_disable_flag(False)
             echo "  clear     Restore the full scrollback (drops focus, level, grep, find and mutes) in a running TUI"
             echo "  mark      Insert a timestamped separator line, with an optional label, into a running TUI"
             echo "            (e.g. 'dendros mark sending goal' right before you act; find it later with find)"
+            echo "  tee       Save the lines a running TUI currently shows (filters applied) to a file"
+            echo "            (dendros tee <file> [-c keep colors] [-a append])"
             echo "  reopen    Reopen this terminal's last ros2 launch TUI run (read-only scrollback)"
             ;;
     esac
@@ -107,7 +127,7 @@ _dendros_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
 
     if [[ $COMP_CWORD -eq 1 ]]; then
-        COMPREPLY=($(compgen -W "config init disable enable focus find grep level mute unmute clear mark reopen" -- "$cur"))
+        COMPREPLY=($(compgen -W "config init disable enable focus find grep level mute unmute clear mark tee reopen" -- "$cur"))
         return
     fi
 
@@ -117,6 +137,10 @@ _dendros_complete() {
             ;;
         level)
             COMPREPLY=($(compgen -W "debug info warn error fatal" -- "$cur"))
+            ;;
+        tee)
+            compopt -o filenames 2>/dev/null
+            COMPREPLY=($(compgen -f -- "$cur") $(compgen -W "-c -a" -- "$cur"))
             ;;
         *)
             COMPREPLY=()

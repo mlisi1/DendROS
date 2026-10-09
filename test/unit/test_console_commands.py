@@ -25,6 +25,7 @@ from lib.console_commands import (
     MARK_ID,
     format_focus,
     parse_node_list,
+    parse_tee_args,
     format_filter_status,
     format_mute_status,
     mute_predicate,
@@ -436,3 +437,23 @@ class TestMark:
         pred = build_filter('talker', 'goal')
         assert not pred('[listener-1] goal', 'listener', None)
         assert pred('[talker-1] goal', 'talker', None)
+
+
+class TestTeeArgs:
+    def test_path_only(self):
+        assert parse_tee_args('out.log') == ('out.log', False, False, None)
+
+    def test_flags_before_or_after(self):
+        assert parse_tee_args('-c out.log -a') == ('out.log', True, True, None)
+        assert parse_tee_args('out.log --color') == ('out.log', True, False, None)
+
+    def test_path_with_spaces(self):
+        assert parse_tee_args('-c my logs/run 1.log')[0] == 'my logs/run 1.log'
+
+    def test_missing_path(self):
+        assert parse_tee_args('-c')[3] == 'file name required'
+        assert parse_tee_args('')[0] is None
+
+    def test_unknown_option_anywhere(self):
+        assert 'unknown option "-x"' in parse_tee_args('-x out.log')[3]
+        assert 'unknown option "-x"' in parse_tee_args('out.log -x')[3]

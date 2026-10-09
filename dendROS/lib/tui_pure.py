@@ -138,6 +138,31 @@ def segments_from_ansi(line, quantize=quantize_rgb_to_256):
     return segments
 
 
+def _color_params(color, base, bright_base, ext):
+    # 0-7 / 8-15 as the classic 30-37 / 90-97 (or 40-47 / 100-107) codes, so they keep
+    # following the viewing terminal's theme like the original output did; 16-255 as 38/48;5;N.
+    if color < 8:
+        return [str(base + color)]
+    if color < 16:
+        return [str(bright_base + color - 8)]
+    return [ext, '5', str(color)]
+
+
+def segments_to_ansi(segments):
+    """Inverse of segments_from_ansi(): one line of (text, fg, bg, bold) runs back to text
+    with SGR codes (256-color, since that's what segments hold), reset at the end. Used by
+    the console's `tee -c` to save the colored view to a file."""
+    out = []
+    for text, fg, bg, bold in segments:
+        params = (['1'] if bold else [])
+        if fg is not None:
+            params += _color_params(fg, 30, 90, '38')
+        if bg is not None:
+            params += _color_params(bg, 40, 100, '48')
+        out.append(f"\033[0;{';'.join(params)}m{text}" if params else f'\033[0m{text}')
+    return ''.join(out) + '\033[0m' if out else ''
+
+
 def wrap_line(segments, width):
     """Character-wrap one line's colored segments into rows of at most `width` columns,
     splitting mid-segment so color survives a wrap boundary. Always returns >=1 row."""

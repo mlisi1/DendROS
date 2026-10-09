@@ -169,6 +169,7 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiHelpMixi
         self.console_buffer = ''
         self.console_error = None         # last error message text, or None
         self.console_error_at = None      # monotonic() timestamp, mirrors copy_toast_at's fade
+        self.console_message_ok = False   # True = the toast is a success message (orange, not red)
         self.filter_nodes = None          # tuple of focused node names, or None (unfiltered)
         self.grep_query = None            # active `grep` text, or None (see _apply_filters())
         self.min_level = None             # active `level` ('warn', ...), or None

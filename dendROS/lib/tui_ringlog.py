@@ -78,6 +78,13 @@ class RingLog:
                 if self._filter_fn is None or self._filter_fn(plain, node_name, logger_name)
             ]
 
+    def filtered_entries(self):
+        """(segments, plain_text) of every retained line passing the active filter,
+        oldest-first, unwrapped — the console's `tee` writes exactly this."""
+        with self._lock:
+            return [(segments, plain) for segments, plain, node_name, logger_name in self._lines
+                    if self._filter_fn is None or self._filter_fn(plain, node_name, logger_name)]
+
     def set_filter(self, predicate):
         """Set (or clear, with None) a presentation-only filter. `predicate(plain_text,
         node_name, logger_name) -> bool`. Never touches _lines/_row_counts — the full

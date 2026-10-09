@@ -37,6 +37,9 @@ COMMANDS = (
                 'muted_node'),
     CommandSpec('mark', 'mark [label]',
                 'Insert a timestamped separator line into the log (find it again with find)', None),
+    CommandSpec('tee', 'tee <file> [-c] [-a]',
+                'Save the lines currently shown (filters applied) to a file; -c keeps colors, '
+                '-a appends', None),
     CommandSpec('clear', 'clear', 'Drop every filter and mute, and end any find', None),
     CommandSpec('help', 'help', 'Show this help', None),
 )

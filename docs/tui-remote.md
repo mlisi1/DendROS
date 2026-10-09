@@ -17,6 +17,7 @@ dendros mute camera_driver
 dendros unmute all
 dendros clear
 dendros mark sending goal
+dendros tee ~/planner.log
 ```
 
 | Command | Same as |
@@ -29,6 +30,7 @@ dendros mark sending goal
 | `dendros unmute <node\|all>` | `\unmute <node\|all>` |
 | `dendros clear` | `\clear` |
 | `dendros mark [label]` | `\mark [label]` |
+| `dendros tee <file> [-c] [-a]` | `\tee <file> [-c] [-a]` (a relative path is resolved in the terminal you type it in) |
 
 Typical use: the launch runs in one pane while you work in another, and you want to look at a single node without switching panes.
 

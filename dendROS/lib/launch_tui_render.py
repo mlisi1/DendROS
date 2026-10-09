@@ -241,7 +241,8 @@ class _TuiRenderMixin:
 
         if self.console_error is not None:
             elapsed = time.monotonic() - self.console_error_at
-            error_attr = self.pair_cache.attr_for(curses.COLOR_RED, self.console_bg, False)
+            toast_fg = self.console_fg if self.console_message_ok else curses.COLOR_RED
+            error_attr = self.pair_cache.attr_for(toast_fg, self.console_bg, False)
             if elapsed < _TOAST_BOLD_UNTIL:
                 err_attr = error_attr | curses.A_BOLD
             elif elapsed < _TOAST_NORMAL_UNTIL:

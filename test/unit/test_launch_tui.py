@@ -26,6 +26,7 @@ from lib.tui_pure import (
     decode_sgr_mouse,
     decode_navigation_key,
     PairCache,
+    segments_to_ansi,
 )
 from lib.tui_ringlog import RingLog
 from lib.tui_clipboard import (
@@ -1131,3 +1132,42 @@ class TestVisibleRowsWithLogger:
         ring.set_width(10)
         ring.append([('a', None, None, False)], 'a', 'n', 'l')
         assert all(len(r) == 2 for r in ring.visible_rows(0, 10))
+
+
+class TestSegmentsToAnsi:
+    """`tee -c` writes segments back as SGR text: must round-trip through segments_from_ansi()."""
+
+    def test_roundtrip(self):
+        segs = [('[talker-1] ', 4, None, True), ('[INFO]', 2, None, False), (' msg', None, None, False),
+                (' x', 172, 24, True), (' y', 9, 0, False)]
+        assert segments_from_ansi(segments_to_ansi(segs)) == segs
+
+    def test_basic_colors_use_theme_codes(self):
+        out = segments_to_ansi([('a', 1, 3, False), ('b', 12, None, False)])
+        assert '\033[0;31;43ma' in out and '\033[0;94mb' in out
+
+    def test_extended_colors_use_256_codes(self):
+        assert '\033[0;1;38;5;172;48;5;24mx' in segments_to_ansi([('x', 172, 24, True)])
+
+    def test_plain_segment_and_trailing_reset(self):
+        out = segments_to_ansi([('plain', None, None, False)])
+        assert out == '\033[0mplain\033[0m'
+
+    def test_empty(self):
+        assert segments_to_ansi([]) == ''
+
+
+class TestFilteredEntries:
+    def test_returns_unwrapped_lines_passing_filter(self):
+        ring = RingLog(maxlen=10)
+        ring.set_width(3)
+        ring.append([('talker long line', None, None, False)], 'talker long line', 'talker', None)
+        ring.append([('listener', None, None, False)], 'listener', 'listener', None)
+        ring.set_filter(lambda plain, node, logger: node == 'talker')
+        assert [p for _, p in ring.filtered_entries()] == ['talker long line']
+
+    def test_no_filter_returns_everything(self):
+        ring = RingLog(maxlen=10)
+        for t in ('a', 'b'):
+            ring.append([(t, None, None, False)], t)
+        assert [p for _, p in ring.filtered_entries()] == ['a', 'b']

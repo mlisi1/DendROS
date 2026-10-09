@@ -14,6 +14,7 @@ lib/console_commands.py if needed, a `_cmd_<name>` method here, and one entry in
 _apply_console_command()'s dispatch logic need to change per new command.
 """
 
+import os
 import time
 
 from lib.colors import _DENDROS_BLUE, _DENDROS_ORANGE
@@ -30,10 +31,12 @@ from lib.console_commands import (
     parse_console_command,
     parse_level,
     parse_node_list,
+    parse_tee_args,
     push_mode,
 )
 from lib.global_config import pop_tui_command
 from lib.launch_tui_input import read_escape_sequence
+from lib.tui_pure import segments_to_ansi
 
 # Header toasts (console errors here, "Copied" in lib/launch_tui_render.py): bold -> normal
 # -> dim -> gone, seconds since shown. One set of timings shared by both toasts.
@@ -71,6 +74,7 @@ class _TuiConsoleMixin:
         'unmute': '_cmd_unmute',
         'clear': '_cmd_clear',
         'mark': '_cmd_mark',
+        'tee': '_cmd_tee',
         'help': '_cmd_help',    # lives in lib/launch_tui_help.py's _TuiHelpMixin
         'find': '_cmd_find',    # lives in lib/launch_tui_find.py's _TuiFindMixin
     }
@@ -132,6 +136,12 @@ class _TuiConsoleMixin:
     def _show_console_error(self, msg):
         self.console_error = msg
         self.console_error_at = time.monotonic()
+        self.console_message_ok = False
+
+    def _show_console_info(self, msg):
+        # Same toast slot and fade as an error, drawn in brand orange instead of red.
+        self._show_console_error(msg)
+        self.console_message_ok = True
 
     def _apply_console_command(self, raw_text):
         """Dispatch one console command line. Shared by the local Enter-key submission and
@@ -268,6 +278,30 @@ class _TuiConsoleMixin:
         text = format_mark(arg, time.strftime('%H:%M:%S'))
         self.ring.append([(text, self.console_fg, self.console_bg, True)], text, None, MARK_ID)
         self.console_error = None
+        return True
+
+    def _cmd_tee(self, arg):
+        """Snapshot the current view — every retained line passing the active filters
+        (focus/level/grep/mutes; marks included), unwrapped — to a file. Plain text, or with
+        -c the colors as ANSI SGR codes; -a appends. Relative paths resolve against the
+        launch's working directory (`dendros tee` makes them absolute in the sending shell)."""
+        path, color, append, error = parse_tee_args(arg)
+        if error:
+            self._show_console_error(f'tee: {error}')
+            return False
+        full = os.path.abspath(os.path.expanduser(os.path.expandvars(path)))
+        self._drain_queue()  # include everything produced up to now
+        entries = self.ring.filtered_entries()
+        try:
+            with open(full, 'a' if append else 'w', encoding='utf-8') as f:
+                for segments, plain in entries:
+                    f.write((segments_to_ansi(segments) if color else plain) + '\n')
+        except OSError as e:
+            self._show_console_error(f'tee: {e.strerror or e}: {full}')
+            return False
+        shown = full.replace(os.path.expanduser('~'), '~', 1)
+        verb = 'appended' if append else 'wrote'
+        self._show_console_info(f'tee: {verb} {len(entries)} line{"s" if len(entries) != 1 else ""} to {shown}')
         return True
 
     def _cmd_grep(self, arg):

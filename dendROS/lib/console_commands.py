@@ -212,6 +212,32 @@ def format_filter_status(focus_nodes=None, grep_query=None, min_level=None):
     return ' · '.join(parts) if parts else None
 
 
+# ── `tee` ────────────────────────────────────────────────────────────────────────
+
+_TEE_FLAGS = {'-c': 'color', '--color': 'color', '-a': 'append', '--append': 'append'}
+
+
+def parse_tee_args(arg):
+    """`tee <file> [-c] [-a]` → (path, color, append, error). Flags may come before or after
+    the path; everything else is the path (so it may contain spaces). error is a message
+    string (and path None) when the path is missing or a flag is unknown."""
+    color = append = False
+    words = []
+    for word in arg.split():
+        flag = _TEE_FLAGS.get(word)
+        if flag == 'color':
+            color = True
+        elif flag == 'append':
+            append = True
+        elif word.startswith('-') and len(word) > 1:
+            return None, False, False, f'unknown option "{word}" (use -c for colors, -a to append)'
+        else:
+            words.append(word)
+    if not words:
+        return None, False, False, 'file name required'
+    return ' '.join(words), color, append, None
+
+
 # ── Esc mode stack ─────────────────────────────────────────────────────────────────
 # "Invasive" view modes (focus, level, grep, find) are remembered in activation order; bare Esc
 # exits the most recent one, so stacked modes peel back one layer per press. Pure list
