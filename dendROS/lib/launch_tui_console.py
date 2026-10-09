@@ -31,22 +31,24 @@ from lib.console_commands import (
 )
 from lib.global_config import pop_tui_command
 from lib.launch_tui_input import read_escape_sequence
-from lib.tui_pure import quantize_rgb_to_256
 
-# Console error toast: bold -> normal -> dim -> gone. Same fast timing as the "Copied"
-# toast in lib/launch_tui_render.py (_COPY_TOAST_*_UNTIL) -- kept as separate constants
-# since this file doesn't otherwise depend on that module, but the values must stay equal.
-_CONSOLE_ERROR_BOLD_UNTIL = 1.2
-_CONSOLE_ERROR_NORMAL_UNTIL = 1.3
-_CONSOLE_ERROR_DIM_UNTIL = 1.4
+# Header toasts (console errors here, "Copied" in lib/launch_tui_render.py): bold -> normal
+# -> dim -> gone, seconds since shown. One set of timings shared by both toasts.
+_TOAST_BOLD_UNTIL = 1.2
+_TOAST_NORMAL_UNTIL = 1.3
+_TOAST_DIM_UNTIL = 1.4
 
-# Reserved palette slots for the console's exact brand colors (see _init_console_colors()).
-# Picked from the top of the xterm-256 grayscale ramp — ordinary node accent colors
-# (moderately saturated brand/user colors) are very unlikely to quantize there, but it's
-# not impossible; a collision would just nudge that one node's rendered color for the rest
-# of the session, a rare cosmetic edge case, not a correctness bug.
-_CONSOLE_BG_COLOR_SLOT = 254
-_CONSOLE_FG_COLOR_SLOT = 253
+# Palette slots for the console's brand colors (see _init_console_colors()). Chosen so that
+# their *stock* xterm-256 colors already approximate the brand colors: some terminals
+# (Konsole/Yakuake among them) accept curses' palette reprogramming without applying it,
+# and with unrelated slots the console would then render in whatever those slots normally
+# hold — the previous choice, 253/254 from the grey ramp, came out near-white on white.
+#   24  = #005f87: a blue. (23 = #005f5f is numerically nearer to brand blue but reads teal.)
+#   172 = #d78700: the nearest stock orange.
+# Where reprogramming does apply, node colors that quantize to these two slots shift to the
+# exact brand blue/orange for the session — at most a few RGB units, a cosmetic edge case.
+_CONSOLE_BG_COLOR_SLOT = 24
+_CONSOLE_FG_COLOR_SLOT = 172
 
 
 def _rgb_to_curses_scale(rgb):
@@ -91,7 +93,9 @@ class _TuiConsoleMixin:
         (0,95,95), equal green/blue, which reads as cyan/teal rather than navy. Reprogramming
         two reserved palette slots to the exact RGB (same technique other curses TUIs use for
         accurate brand chrome) fixes that; falls back to the quantized approximation on
-        terminals that can't change their palette."""
+        terminals that can't change their palette — and since the slots' stock colors are already
+        blue/orange (see _CONSOLE_*_COLOR_SLOT), terminals that silently ignore the
+        reprogramming still render the console legibly."""
         curses = self.curses
         try:
             if curses.can_change_color() and curses.COLORS >= 256:
@@ -102,8 +106,10 @@ class _TuiConsoleMixin:
                 return
         except curses.error:
             pass
-        self.console_bg = quantize_rgb_to_256(*_DENDROS_BLUE)
-        self.console_fg = quantize_rgb_to_256(*_DENDROS_ORANGE)
+        # No palette support at all: the same slots, unprogrammed, are still the closest
+        # blue/orange (plain quantization would pick teal 23 for the blue).
+        self.console_bg = _CONSOLE_BG_COLOR_SLOT
+        self.console_fg = _CONSOLE_FG_COLOR_SLOT
 
     def _console_h(self):
         return 1 if (self.console_active or self.console_error is not None) else 0
@@ -112,12 +118,12 @@ class _TuiConsoleMixin:
         return max(1, max_y - self.banner_h - self._console_h())
 
     def _reset_view_after_filter_change(self):
-        # _sync_pin() treats any total_rows() delta as tail growth; a filter change isn't
-        # that, so bypass it entirely and re-baseline directly.
+        # Tail-relative row offsets mean nothing across a filter change: snap to the tail
+        # and re-baseline _sync_pin() directly.
         self.view_offset = 0
         self.sel_anchor = None
         self.sel_cursor = None
-        self.last_total_rows = self.ring.total_rows()
+        self.last_tail_growth = self.ring.tail_growth()
 
     def _show_console_error(self, msg):
         self.console_error = msg

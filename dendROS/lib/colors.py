@@ -78,9 +78,23 @@ def set_ignore_bold(value):
 
 
 def _strip_bold_token(code):
-    """Remove a bare '1' (bold) SGR parameter from a ';'-joined code string."""
-    parts = [p for p in code.split(';') if p != '1']
-    return ';'.join(parts) if parts else '0'
+    """Remove a bare '1' (bold) SGR parameter from a ';'-joined code string. The operands of
+    extended colors (38/48;2;R;G;B and 38/48;5;N) are copied through untouched — a channel
+    value or palette index of 1 is not bold."""
+    params = code.split(';')
+    kept = []
+    i = 0
+    while i < len(params):
+        p = params[i]
+        if p in ('38', '48') and i + 1 < len(params):
+            n_operands = {'2': 4, '5': 2}.get(params[i + 1], 0)
+            kept.extend(params[i:i + 1 + n_operands])
+            i += 1 + n_operands
+            continue
+        if p != '1':
+            kept.append(p)
+        i += 1
+    return ';'.join(kept) if kept else '0'
 
 
 def _ansi(code):

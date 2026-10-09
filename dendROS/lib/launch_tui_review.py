@@ -13,7 +13,7 @@ import time
 
 from lib.launch_tui import _tui_main
 from lib.tui_history import save_last_run
-from lib.tui_pure import RingLog
+from lib.tui_ringlog import RingLog
 
 
 class _NullCrashAlert:
@@ -62,7 +62,7 @@ def review_tui(last_run):
         'muted': set(last_run.get('muted') or ()),  # mutated in place by mute/unmute
     }
     try:
-        curses.wrapper(_tui_main, ring, session, threading.Event(), stop_event, _NullCrashAlert)
+        curses.wrapper(_tui_main, ring, session, stop_event, _NullCrashAlert)
     finally:
         if session['muted'] != set(last_run.get('muted') or ()):
             save_last_run(entries, last_run.get('argv'), last_run.get('banner', ''),

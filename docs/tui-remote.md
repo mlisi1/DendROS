@@ -33,7 +33,7 @@ Typical use: the launch runs in one pane while you work in another, and you want
 Errors (unknown node, no matches) are shown in the TUI's header, not in the terminal that sent the command.
 
 !!! note "One TUI at a time"
-    Commands aren't addressed to a specific launch. Each command is delivered to exactly one TUI: if several TUI launches are running, whichever one checks first receives it. If none is running, the command waits and is applied by the next TUI launch that starts.
+    Commands aren't addressed to a specific launch. Each command is delivered to exactly one TUI: if several TUI launches are running, whichever one checks first receives it. If none is running, the command is dropped: a newly started TUI launch ignores commands sent before it started.
 
 ---
 

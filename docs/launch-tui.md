@@ -76,7 +76,7 @@ DendROS tries two ways to reach the clipboard at the same time:
 
 ++ctrl+c++ stops the launch as usual. Nodes that die during shutdown don't trigger crash alerts.
 
-The TUI stays open after the launch exits, so you can keep reading, searching and copying. The header shows `-- process finished --`; press ++q++ to quit.
+The TUI stays open after the launch exits, so you can keep reading, searching and copying. The header shows `-- process finished --`; press ++q++ to quit. Pressing ++ctrl+c++ a second time closes the viewer right away.
 
 Closed it too early? [`dendros reopen`](tui-remote.md#reopen-the-last-run) brings the last run back.
 

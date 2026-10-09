@@ -23,7 +23,7 @@ from lib.tui_find import (
     rows_meta,
     row_highlight_spans,
 )
-from lib.tui_pure import RingLog
+from lib.tui_ringlog import RingLog
 
 
 def _entries(*texts, start_seq=0, rows=None):

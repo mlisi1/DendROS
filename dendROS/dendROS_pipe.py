@@ -429,7 +429,7 @@ def main():
 
     if use_tui:
         try:
-            from lib.launch_tui import run_tui
+            from lib.launch_tui_run import run_tui
         except Exception as e:
             if _DEBUG:
                 _dbg(f'TUI unavailable ({e}), falling back to classic mode')

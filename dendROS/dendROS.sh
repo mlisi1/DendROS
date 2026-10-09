@@ -4,6 +4,17 @@ _DENDROS_PIPE="${_DENDROS_DIR}/dendROS_pipe.py"
 # Must stay in sync with lib.colors.DENDROS_TAG.
 _DENDROS_TAG=$'\033[38;2;0;75;107;1m[dend\033[38;2;224;127;0;1mROS]\033[0m'
 
+# Deliver one console command (e.g. "focus talker") to a running ros2 launch TUI through
+# the one-shot mailbox file (lib.global_config.set_tui_command). $2 names it in the reply.
+_dendros_send_tui_command() {
+    python3 -c "
+import sys; sys.path.insert(0, '${_DENDROS_DIR}')
+from lib.global_config import set_tui_command
+set_tui_command(sys.argv[1].strip())
+" "$1"
+    echo "${_DENDROS_TAG} $2 command sent"
+}
+
 dendros() {
     case "${1:-}" in
         config)  python3 "${_DENDROS_DIR}/dendros_config.py" ;;
@@ -31,42 +42,22 @@ set_disable_flag(False)
                 echo "Usage: dendros focus <node_name>"
                 return 1
             fi
-            python3 -c "
-import sys; sys.path.insert(0, '${_DENDROS_DIR}')
-from lib.global_config import set_tui_command
-set_tui_command('focus ' + sys.argv[1])
-" "$2"
-            echo "${_DENDROS_TAG} focus command sent"
+            _dendros_send_tui_command "focus $2" focus
             ;;
         find)
             if [[ -z "${2:-}" ]]; then
                 echo "Usage: dendros find <text>"
                 return 1
             fi
-            python3 -c "
-import sys; sys.path.insert(0, '${_DENDROS_DIR}')
-from lib.global_config import set_tui_command
-set_tui_command('find ' + sys.argv[1])
-" "${*:2}"
-            echo "${_DENDROS_TAG} find command sent"
+            _dendros_send_tui_command "find ${*:2}" find
             ;;
         grep)
             # No text = drop the grep filter (keeps any focus), same as a bare `grep` in the console.
-            python3 -c "
-import sys; sys.path.insert(0, '${_DENDROS_DIR}')
-from lib.global_config import set_tui_command
-set_tui_command(('grep ' + sys.argv[1]).strip())
-" "${*:2}"
-            echo "${_DENDROS_TAG} grep command sent"
+            _dendros_send_tui_command "grep ${*:2}" grep
             ;;
         level)
             # No level = drop the level filter, same as a bare `level` in the console.
-            python3 -c "
-import sys; sys.path.insert(0, '${_DENDROS_DIR}')
-from lib.global_config import set_tui_command
-set_tui_command(('level ' + sys.argv[1]).strip())
-" "${2:-}"
-            echo "${_DENDROS_TAG} level command sent"
+            _dendros_send_tui_command "level ${2:-}" level
             ;;
         mute|unmute)
             if [[ -z "${2:-}" ]]; then
@@ -74,21 +65,11 @@ set_tui_command(('level ' + sys.argv[1]).strip())
                                      || echo "Usage: dendros mute <node_name>"
                 return 1
             fi
-            python3 -c "
-import sys; sys.path.insert(0, '${_DENDROS_DIR}')
-from lib.global_config import set_tui_command
-set_tui_command(sys.argv[1] + ' ' + sys.argv[2])
-" "$1" "$2"
-            echo "${_DENDROS_TAG} $1 command sent"
+            _dendros_send_tui_command "$1 $2" "$1"
             ;;
         reopen)  DENDROS_SHELL_PID=$$ python3 "${_DENDROS_DIR}/dendros_reopen.py" ;;
         clear)
-            python3 -c "
-import sys; sys.path.insert(0, '${_DENDROS_DIR}')
-from lib.global_config import set_tui_command
-set_tui_command('clear')
-"
-            echo "${_DENDROS_TAG} clear command sent"
+            _dendros_send_tui_command clear clear
             ;;
         *)
             echo "Usage: dendros <command>"

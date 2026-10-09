@@ -125,9 +125,14 @@ def handle_restart(node_name):
 
 
 def print_alert_banner():
-    """Print a prominent inline alert banner."""
+    """Print a prominent inline alert banner.
+
+    With no dead nodes left (all restarted), classic mode prints nothing, while a sink (the
+    TUI's pinned header banner) receives '' so it clears the stale alert."""
     global _last_alert_time
     if not _dead_nodes:
+        if _sink is not None:
+            _sink('')
         return
     HDR = '\033[31;1;7m'
     RED = '\033[31;1m'

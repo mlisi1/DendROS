@@ -8,18 +8,17 @@ command bar, `focus`/`clear`, cross-process command mailbox) lives in lib/launch
 `_TuiConsoleMixin` and lib/console_commands.py; this module owns session state/event handling
 and drives it all from real screen/keyboard/mouse events.
 
-Threading: run_tui() spawns one long-lived background reader thread consuming the same
-_iter_stdin() generator the classic loop uses, pushing tagged records onto a queue.Queue() —
-it never touches curses. The main thread owns curses exclusively, draining the queue on a
-50ms tick. run_tui() loops calling curses.wrapper(_tui_main); _tui_main returns 'disabled'
-when `dendros disable` fires mid-run, and run_tui() then waits for either a re-enable
-(reopening a session that replays the *entire* RingLog, including the passthrough gap, so
-history is never fragmented) or the launch process ending.
+Run-wide lifecycle (the reader thread, the RingLog, disable/enable, Ctrl-C outside a
+session, falling back to classic output) lives in lib/launch_tui_run.py's run_tui(), which
+calls curses.wrapper(_tui_main) once per session. This module owns one session: the main
+thread drains the reader's queue on a 50ms tick and owns curses exclusively; _tui_main
+returns 'disabled' when `dendros disable` fires mid-run.
 
 Ctrl-C: SIGINT only reaches the main thread, so _TuiSession.run()'s getch() loop catches
-KeyboardInterrupt itself and calls ca_module.enter_shutdown_mode() directly.
+KeyboardInterrupt itself and calls ca_module.enter_shutdown_mode() directly (a second one
+quits the viewer); run_tui() handles the ones that land anywhere else.
 
-Rendering: RingLog (lib/tui_pure.py) is the sole scrollback source of truth — nothing is
+Rendering: RingLog (lib/tui_ringlog.py) is the sole scrollback source of truth — nothing is
 projected onto a persistent pad; each redraw rewraps on demand for the current viewport. A
 redraw is skipped when nothing visible changed, since some terminals clear an active mouse
 selection on *any* child-process output, not just visible changes — the scrollbar is drawn
@@ -39,32 +38,27 @@ xclip/xsel/wl-copy tool if present. Neither confirms success, so the "Copied" to
 any attempt.
 """
 
-import locale
 import os
 import queue
-import sys
 import threading
 import time
 
 from lib import __version__
 from lib.colors import DENDROS_TAG
-from lib.config_loader import resolve_node
 from lib.console_commands import node_identity_names
 from lib.console_spec import Completer
 from lib.global_config import is_disable_flag_set
-from lib.launch_tui_console import _TuiConsoleMixin, _CONSOLE_ERROR_DIM_UNTIL
+from lib.launch_tui_console import _TuiConsoleMixin, _TOAST_DIM_UNTIL
 from lib.launch_tui_find import _TuiFindMixin
 from lib.launch_tui_help import _TuiHelpMixin
 from lib.launch_tui_input import _TuiInputMixin, read_escape_sequence
-from lib.launch_tui_render import _TuiRenderMixin, _COPY_TOAST_DIM_UNTIL
+from lib.launch_tui_render import _TuiRenderMixin
 from lib.tui_pure import (
     quantize_rgb_to_256,
     segments_from_ansi,
     PairCache,
-    RingLog,
 )
 from lib.tui_clipboard import find_clipboard_tool
-from lib.tui_history import save_last_run
 
 # True black: terminfo can't read back the terminal's real background, and most dark themes
 # use a grey close enough that a computed offset wouldn't contrast reliably.
@@ -73,91 +67,7 @@ _HEADER_BG_RGB = (0, 0, 0)
 
 # ── Curses-owning layer (manual-testing only) ──────────────────────────────────
 
-def run_tui(stdin_lines, colorize_fn, ca_module, pw_module, param_alert, param_alert_style,
-            color_map, tag_map, style_map, tag_style, show_tag, global_cfg, launch_argv=None):
-    """Entry point from dendROS_pipe.py::main() when launch_mode is 'tui'. The reader
-    thread and RingLog persist across a mid-run disable/enable cycle (see module docstring).
-    Returns once the run is over: a normal quit, or the process ending while disabled.
-    On the way out the scrollback is saved as this terminal's last run, for
-    `dendros reopen` (lib/tui_history.py, lib/launch_tui_review.py)."""
-    import curses
-    locale.setlocale(locale.LC_ALL, '')  # required for curses to render multi-byte UTF-8
-
-    try:
-        scrollback = int(global_cfg.get('tui_scrollback_lines', 5000))
-    except (TypeError, ValueError):
-        scrollback = 5000
-    scrollback = max(1, scrollback)
-
-    ring = RingLog(maxlen=scrollback)
-    passthrough_event = threading.Event()  # set = no curses right now, reader prints raw
-    stop_event = threading.Event()  # set once = stdin_lines is exhausted, for good
-    # Current session's queue.Queue(), or None while disabled. Created up front (and adopted
-    # by the first _TuiSession) so lines the reader produces before curses finishes starting
-    # are buffered rather than dropped.
-    session = {'q': queue.Queue()}
-
-    def _reader():
-        try:
-            for line in stdin_lines:
-                if passthrough_event.is_set():
-                    # Disabled: relay directly, and record into RingLog so a later
-                    # re-enable can replay the complete history.
-                    sys.stdout.write(line)
-                    sys.stdout.flush()
-                    plain = line.rstrip('\r\n')
-                    ring.append([(plain, None, None, False)], plain)
-                    continue
-                if ca_module._crash_alert_enabled:
-                    dead_node, exit_code = ca_module.detect_death(line)
-                    if dead_node:
-                        code, _ = resolve_node(dead_node, color_map, tag_map)
-                        ca_module.record_death(dead_node, exit_code, code)
-                        ca_module.print_alert_banner()
-                    else:
-                        restarted = ca_module.detect_restart(line)
-                        if restarted:
-                            ca_module.handle_restart(restarted)
-                colored, node_name, logger_name = colorize_fn(line)
-                q = session['q']
-                if q is not None:
-                    q.put(('line', (colored, node_name, logger_name)))
-                    if param_alert:
-                        for notif in pw_module.drain(color_map, tag_map, style_map, tag_style,
-                                                      show_tag, param_alert_style):
-                            # Param-change notifications aren't tied to a specific line's
-                            # node identity (see lib/launch_tui_console.py's known-nodes
-                            # tracking) -- no node_name/logger_name to thread through.
-                            q.put(('line', (notif, None, None)))
-        except Exception:
-            pass
-        finally:
-            q = session['q']
-            if q is not None:
-                q.put(('eof', None))
-            stop_event.set()
-
-    reader_thread = threading.Thread(target=_reader, daemon=True)
-    reader_thread.start()
-
-    try:
-        while True:
-            result = curses.wrapper(_tui_main, ring, session, passthrough_event, stop_event, ca_module)
-            if result != 'disabled':
-                return  # normal quit — fully done
-
-            # Disabled mid-run: wait for a re-enable, or give up once the process has exited.
-            while not stop_event.is_set() and is_disable_flag_set():
-                time.sleep(0.5)
-            if stop_event.is_set():
-                return
-            # else: flag cleared while still running — loop back and reopen curses
-    finally:
-        save_last_run(ring.entries(), launch_argv, session.get('banner_text', ''),
-                      muted=session.get('muted', ()))
-
-
-def _tui_main(scr, ring, session, passthrough_event, stop_event, ca_module):
+def _tui_main(scr, ring, session, stop_event, ca_module):
     import curses
 
     curses.curs_set(0)
@@ -182,12 +92,15 @@ def _tui_main(scr, ring, session, passthrough_event, stop_event, ca_module):
     except OSError:
         pass
     try:
-        session_obj = _TuiSession(scr, ring, session, passthrough_event, stop_event, ca_module, curses)
+        session_obj = _TuiSession(scr, ring, session, stop_event, ca_module, curses)
+        session['opened'] = True
         try:
             return session_obj.run()
         finally:
             session['banner_text'] = session_obj.banner_text  # persisted by run_tui()
     finally:
+        # Also covers _TuiSession.__init__ raising after it installed its sink.
+        ca_module.set_sink(None)
         try:
             os.write(1, b'\x1b[?1006l\x1b[?1002l')
         except OSError:
@@ -199,8 +112,8 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiHelpMixi
     (_draw_segments/_draw_banner/_draw_scrollbar/_redraw/_draw_console) come from
     _TuiRenderMixin in lib/launch_tui_render.py; console command handling (_cmd_focus/
     _cmd_clear/_apply_console_command/_check_remote_command/...) comes from
-    _TuiConsoleMixin in lib/launch_tui_console.py; `\find` search (_cmd_find/_find_step/...)
-    comes from _TuiFindMixin in lib/launch_tui_find.py; the `\help` overlay comes from
+    _TuiConsoleMixin in lib/launch_tui_console.py; `\\find` search (_cmd_find/_find_step/...)
+    comes from _TuiFindMixin in lib/launch_tui_find.py; the `\\help` overlay comes from
     _TuiHelpMixin in lib/launch_tui_help.py; mouse/nav input handling
     (_screen_to_content/_handle_mouse/_handle_nav) comes from _TuiInputMixin in
     lib/launch_tui_input.py — all three split out purely to keep this file's core
@@ -208,11 +121,11 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiHelpMixi
     them is reusable alone.
     """
 
-    def __init__(self, scr, ring, session, passthrough_event, stop_event, ca_module, curses):
+    def __init__(self, scr, ring, session, stop_event, ca_module, curses):
         self.scr = scr
         self.ring = ring
         self.session = session
-        self.passthrough_event = passthrough_event
+        self.lock = session.setdefault('lock', threading.Lock())
         self.stop_event = stop_event
         self.ca_module = ca_module
         self.curses = curses
@@ -225,9 +138,10 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiHelpMixi
 
         # Adopt the queue run_tui() pre-created (holds any lines from before curses was up);
         # a session reopened after a disable gap gets a fresh one.
-        self.q = session['q'] if session['q'] is not None else queue.Queue()
-        session['q'] = self.q
-        passthrough_event.clear()  # must be set before the reader is told it's safe to use q
+        with self.lock:
+            self.q = session['q'] if session.get('q') is not None else queue.Queue()
+            session['q'] = self.q
+            session['mode'] = 'tui'
         # Review mode (`dendros reopen`, lib/launch_tui_review.py): read-only replay of a saved run.
         self.review = session.get('review', False)
         self.review_label = session.get('review_label', '')
@@ -239,7 +153,7 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiHelpMixi
             ca_module.print_alert_banner()  # reopening with a node already dead — surface now
 
         self.view_offset = 0  # 0 = following the live tail; >0 = scrolled back N rows (pinned)
-        self.last_total_rows = 0  # ring.total_rows() as of the last redraw/scroll-key, for the pin
+        self.last_tail_growth = ring.tail_growth()  # as of the last _sync_pin(), for the pin
         self.eof = stop_event.is_set()
         self.last_disable_check = 0.0
 
@@ -307,17 +221,21 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiHelpMixi
     def _sync_pin(self, log_h):
         # Keeps a scrolled-back view_offset (or an active/just-finished selection) pointed
         # at the same absolute content as the tail grows, instead of silently drifting.
-        # Idempotent when called twice with no intervening ring growth.
-        current_total = self.ring.total_rows()
-        delta = current_total - self.last_total_rows
+        # Shifts by the rows appended at the tail (ring.tail_growth()), not by the change in
+        # total_rows(): once the scrollback is full every append also evicts a line at the
+        # head, which leaves total_rows() flat while the content under a fixed tail offset
+        # still moves. Rewraps and filter changes re-baseline separately (_rewrap_keeping_view(),
+        # _reset_view_after_filter_change()). Idempotent with no intervening appends.
+        growth = self.ring.tail_growth()
+        delta = growth - self.last_tail_growth
         if delta and (self.sel_anchor is not None or self.view_offset > 0 or self.find_pinned):
             self.view_offset += delta
             if self.sel_anchor is not None:
                 self.sel_anchor = (self.sel_anchor[0] + delta, self.sel_anchor[1])
             if self.sel_cursor is not None:
                 self.sel_cursor = (self.sel_cursor[0] + delta, self.sel_cursor[1])
-        self.last_total_rows = current_total
-        max_offset = max(0, current_total - log_h)
+        self.last_tail_growth = growth
+        max_offset = max(0, self.ring.total_rows() - log_h)
         self.view_offset = max(0, min(self.view_offset, max_offset))
         return max_offset
 
@@ -330,14 +248,17 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiHelpMixi
         prev_copy_toast_active = False
         prev_console_visible = False
         prev_find_status = None
-        interrupted = False
         try:
             while True:
                 if self._disabled_system_wide():
                     # `dendros disable` from elsewhere — tear down, hand off to
                     # passthrough, let run_tui() decide whether to wait for a re-enable.
-                    self.passthrough_event.set()
-                    self.session['q'] = None
+                    # Under the lock: everything already queued lands in RingLog, and the
+                    # reader's next line sees 'passthrough' — nothing falls in between.
+                    with self.lock:
+                        self._drain_queue()
+                        self.session['q'] = None
+                        self.session['mode'] = 'passthrough'
                     return 'disabled'
 
                 if self._check_remote_command():
@@ -360,7 +281,7 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiHelpMixi
                 # since it repaints identical content with only the header corner changing.
                 copy_toast_active = False
                 if self.copy_toast_at is not None:
-                    if time.monotonic() - self.copy_toast_at < _COPY_TOAST_DIM_UNTIL:
+                    if time.monotonic() - self.copy_toast_at < _TOAST_DIM_UNTIL:
                         copy_toast_active = True
                     else:
                         self.copy_toast_at = None  # expired; this tick's redraw erases it
@@ -369,7 +290,7 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiHelpMixi
                 # set by a remote command even while the local console bar is closed.
                 console_error_active = False
                 if self.console_error is not None:
-                    if time.monotonic() - self.console_error_at < _CONSOLE_ERROR_DIM_UNTIL:
+                    if time.monotonic() - self.console_error_at < _TOAST_DIM_UNTIL:
                         console_error_active = True
                     else:
                         self.console_error = None
@@ -401,9 +322,9 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiHelpMixi
                 try:
                     ch = scr.getch()
                 except KeyboardInterrupt:
-                    if interrupted:
-                        break
-                    interrupted = True
+                    if self.session.get('interrupted'):
+                        break  # second Ctrl-C: quit the viewer
+                    self.session['interrupted'] = True
                     self.ca_module.enter_shutdown_mode()
                     continue
 

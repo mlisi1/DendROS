@@ -357,6 +357,23 @@ class TestIgnoreBold:
         # dark red -> '31;2' (dim), bold never entered the picture -- untouched
         assert _resolve_color('dark red') == '31;2'
 
+    def test_keeps_rgb_channel_equal_to_one(self):
+        set_ignore_bold(True)
+        assert _resolve_color('#FF0100') == '38;2;255;1;0'
+
+    def test_keeps_rgb_channels_with_bold_hex(self):
+        set_ignore_bold(True)
+        assert _resolve_color('@#010203') == '38;2;1;2;3'
+
+    def test_keeps_256_color_index_one(self):
+        set_ignore_bold(True)
+        assert _resolve_color('38;5;1') == '38;5;1'
+        assert _resolve_color('1;38;5;1') == '38;5;1'
+
+    def test_keeps_background_operands(self):
+        set_ignore_bold(True)
+        assert _resolve_color('1;48;2;1;1;1') == '48;2;1;1;1'
+
     def test_light_plus_bold_strips_only_bold(self):
         set_ignore_bold(True)
         # 'bold light blue' would normally be '94;1'

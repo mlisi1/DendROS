@@ -18,7 +18,8 @@ from lib.tui_history import (
     prune_stale,
     save_last_run,
 )
-from lib.tui_pure import RingLog, segments_from_ansi
+from lib.tui_pure import segments_from_ansi
+from lib.tui_ringlog import RingLog
 
 
 @pytest.fixture

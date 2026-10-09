@@ -35,15 +35,21 @@ class _TuiFindMixin:
         self.find_pinned = False    # True = view frozen on the match (see module docstring)
         self._find_cache_key = None
         self._find_cache = []
+        self._find_entries = []     # ring.visible_entries() snapshot the cache was built from
+
+    def _find_refresh(self):
+        # One visible_entries() snapshot (a filter pass over the whole scrollback) per change
+        # of the ring's contents, wrap width, filter stack or query — i.e. at most once per
+        # drained tick while a find is active, shared by matching, jumping and every redraw.
+        key = (self.ring.seq_range(), self.ring.wrap_width, self.filter_node, self.grep_query,
+               self.min_level, frozenset(self.muted_nodes), self.find_query)
+        if key != self._find_cache_key:
+            self._find_entries = self.ring.visible_entries()
+            self._find_cache = find_matching_seqs(self._find_entries, self.find_query)
+            self._find_cache_key = key
 
     def _find_matches(self):
-        # Recomputed only when the ring's contents, the filter stack, or the query change —
-        # i.e. at most once per drained tick while a find is active.
-        key = (self.ring.seq_range(), self.filter_node, self.grep_query, self.min_level,
-               frozenset(self.muted_nodes), self.find_query)
-        if key != self._find_cache_key:
-            self._find_cache = find_matching_seqs(self.ring.visible_entries(), self.find_query)
-            self._find_cache_key = key
+        self._find_refresh()
         return self._find_cache
 
     def _find_status(self):
@@ -53,7 +59,8 @@ class _TuiFindMixin:
         return format_find_status(self.find_query, match_position(matches, self.find_seq), len(matches))
 
     def _find_jump(self, seq):
-        offsets = line_tail_offsets(self.ring.visible_entries(), seq)
+        self._find_refresh()
+        offsets = line_tail_offsets(self._find_entries, seq)
         if offsets is None:
             return
         log_h = self._log_height(self.scr.getmaxyx()[0])
@@ -96,7 +103,8 @@ class _TuiFindMixin:
         None when no find is active — see _redraw() in lib/launch_tui_render.py."""
         if self.find_query is None:
             return None
-        entries = self.ring.visible_entries()
+        self._find_refresh()
+        entries = self._find_entries
         meta = rows_meta(entries, self.view_offset, log_h)
         seqs = {seq for seq, _ in meta}
         plain_by_seq = {seq: plain for seq, _, plain in entries if seq in seqs}

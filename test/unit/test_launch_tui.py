@@ -26,8 +26,8 @@ from lib.tui_pure import (
     decode_sgr_mouse,
     decode_navigation_key,
     PairCache,
-    RingLog,
 )
+from lib.tui_ringlog import RingLog
 from lib.tui_clipboard import (
     build_osc52_sequence,
     find_clipboard_tool,
@@ -661,6 +661,31 @@ class TestCrashAlertSink:
         out, _ = capsys.readouterr()
         assert 'talker' in out
 
+    def test_restart_clears_sink_banner(self):
+        # A respawned node must not leave the TUI header's crash banner up forever.
+        captured = []
+        ca.set_sink(lambda text: captured.append(text))
+        ca.record_death('talker', '1', None)
+        ca.print_alert_banner()
+        ca.handle_restart('talker')
+        ca.print_alert_banner()
+        assert captured[-1] == ''
+
+    def test_restart_keeps_other_dead_nodes_in_sink_banner(self):
+        captured = []
+        ca.set_sink(lambda text: captured.append(text))
+        ca.record_death('talker', '1', None)
+        ca.record_death('listener', '2', None)
+        ca.handle_restart('talker')
+        ca.print_alert_banner()
+        assert 'listener' in captured[-1] and 'talker' not in captured[-1]
+
+    def test_no_dead_nodes_prints_nothing_without_sink(self, capsys):
+        ca.set_sink(None)
+        ca.print_alert_banner()
+        out, _ = capsys.readouterr()
+        assert out == ''
+
     def test_sink_receives_no_trailing_newline(self):
         captured = []
         ca.set_sink(lambda text: captured.append(text))
@@ -994,3 +1019,99 @@ class TestDecodeNavigationKey:
         # A letter final byte should never be paired with a nonempty digit string --
         # the two encodings are mutually exclusive.
         assert decode_navigation_key('A', '5') is None
+
+
+class TestRingLogTailGrowth:
+    """tail_growth()/anchor_at()/offset_of() — what keeps a scrolled-back TUI view (and its
+    selection) on the same content once the scrollback is full, and across a resize."""
+
+    def _ring(self, n, maxlen=100, width=10):
+        ring = RingLog(maxlen=maxlen)
+        ring.set_width(width)
+        for i in range(n):
+            ring.append([(f'line {i}', None, None, False)], f'line {i}', node_name='a' if i % 2 else 'b')
+        return ring
+
+    def test_growth_counts_appended_rows(self):
+        ring = self._ring(3)
+        assert ring.tail_growth() == 3
+
+    def test_growth_keeps_counting_once_full(self):
+        # total_rows() stops moving at maxlen; tail_growth() must not, or a pinned view
+        # drifts one line per new line (the bug this replaces).
+        ring = self._ring(5, maxlen=3)
+        assert ring.total_rows() == 3
+        before = ring.tail_growth()
+        ring.append([('new', None, None, False)], 'new')
+        assert ring.total_rows() == 3
+        assert ring.tail_growth() == before + 1
+
+    def test_growth_counts_wrapped_rows(self):
+        ring = self._ring(0, width=4)
+        ring.append([('abcdefghij', None, None, False)], 'abcdefghij')  # 3 rows at width 4
+        assert ring.tail_growth() == 3
+
+    def test_growth_skips_lines_hidden_by_filter(self):
+        ring = self._ring(0)
+        ring.set_filter(lambda plain, node, logger: node == 'a')
+        ring.append([('x', None, None, False)], 'x', node_name='b')
+        assert ring.tail_growth() == 0
+        ring.append([('y', None, None, False)], 'y', node_name='a')
+        assert ring.tail_growth() == 1
+
+    def test_growth_unchanged_by_rewrap_and_filter(self):
+        ring = self._ring(4)
+        before = ring.tail_growth()
+        ring.set_width(3)
+        ring.set_filter(lambda plain, node, logger: node == 'a')
+        assert ring.tail_growth() == before
+
+    def test_pinned_offset_tracks_content_when_full(self):
+        # Simulates _sync_pin(): offset += growth delta. The row under the offset must
+        # stay the same line even though every append evicts one.
+        ring = self._ring(10, maxlen=10)
+        offset = 4
+        target = ring.visible_rows(offset, 1)[0][0][0][0]
+        last = ring.tail_growth()
+        for i in range(3):
+            ring.append([(f'more {i}', None, None, False)], f'more {i}')
+        offset += ring.tail_growth() - last
+        assert ring.visible_rows(offset, 1)[0][0][0][0] == target
+
+    def test_anchor_at_and_offset_of_roundtrip(self):
+        ring = self._ring(5, width=4)  # 'line N' = 6 chars -> 2 rows each
+        for offset in range(10):
+            assert ring.offset_of(*ring.anchor_at(offset)) == offset
+
+    def test_anchor_at_identifies_line_and_row(self):
+        ring = self._ring(3, width=4)  # seqs 0..2, 2 rows each
+        assert ring.anchor_at(0) == (2, 1)  # newest row = last row of the newest line
+        assert ring.anchor_at(1) == (2, 0)
+        assert ring.anchor_at(2) == (1, 1)
+        assert ring.anchor_at(6) is None
+
+    def test_anchor_survives_rewrap(self):
+        # The resize fix: the same line stays at the view's bottom after a rewrap.
+        ring = self._ring(6, width=4)
+        seq, row = ring.anchor_at(5)
+        ring.set_width(20)  # every line now 1 row
+        offset = ring.offset_of(seq, row)
+        assert ring.visible_rows(offset, 1)[0][0][0][0] == f'line {seq}'
+
+    def test_offset_of_clamps_row_after_rewrap(self):
+        ring = self._ring(2, width=4)
+        ring.set_width(20)
+        assert ring.offset_of(0, 1) == 1  # row 1 no longer exists -> the line's only row
+
+    def test_offset_of_evicted_or_hidden_is_none(self):
+        ring = self._ring(5, maxlen=3)
+        assert ring.offset_of(0, 0) is None  # evicted
+        ring.set_filter(lambda plain, node, logger: node == 'a')
+        assert ring.offset_of(4, 0) is None  # seq 4 is node 'b', hidden
+        assert ring.offset_of(3, 0) == 0
+
+    def test_anchor_respects_filter(self):
+        ring = self._ring(4)  # seqs 0..3; odd = node 'a'
+        ring.set_filter(lambda plain, node, logger: node == 'a')
+        assert ring.anchor_at(0) == (3, 0)
+        assert ring.anchor_at(1) == (1, 0)

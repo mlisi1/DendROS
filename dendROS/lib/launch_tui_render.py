@@ -8,9 +8,9 @@ etc.) and the two are one logical unit, not a reusable component.
 import time
 
 from lib.launch_tui_console import (
-    _CONSOLE_ERROR_BOLD_UNTIL,
-    _CONSOLE_ERROR_NORMAL_UNTIL,
-    _CONSOLE_ERROR_DIM_UNTIL,
+    _TOAST_BOLD_UNTIL,
+    _TOAST_NORMAL_UNTIL,
+    _TOAST_DIM_UNTIL,
 )
 from lib.tui_find import row_highlight_spans
 from lib.tui_pure import (
@@ -20,11 +20,9 @@ from lib.tui_pure import (
     compute_scrollbar_thumb,
 )
 
-# "Copied" toast: bold -> normal -> dim -> gone, curses' nearest approximation of a fade.
+# "Copied" toast: fades with the shared _TOAST_*_UNTIL timings, curses' nearest
+# approximation of a fade.
 _COPY_TOAST_TEXT = 'Copied'
-_COPY_TOAST_BOLD_UNTIL = 1.2
-_COPY_TOAST_NORMAL_UNTIL = 1.3
-_COPY_TOAST_DIM_UNTIL = 1.4
 
 # Right-aligned header key hint, (key, description) pairs — context-dependent so the keys
 # that matter right now are the ones advertised (see _header_key_hints()).
@@ -159,11 +157,11 @@ class _TuiRenderMixin:
         copied_at = self.copy_toast_at
         if copied_at is not None:
             elapsed = time.monotonic() - copied_at
-            if elapsed < _COPY_TOAST_BOLD_UNTIL:
+            if elapsed < _TOAST_BOLD_UNTIL:
                 toast_attr = header_attr | curses.A_BOLD
-            elif elapsed < _COPY_TOAST_NORMAL_UNTIL:
+            elif elapsed < _TOAST_NORMAL_UNTIL:
                 toast_attr = header_attr
-            elif elapsed < _COPY_TOAST_DIM_UNTIL:
+            elif elapsed < _TOAST_DIM_UNTIL:
                 toast_attr = header_attr | curses.A_DIM
             else:
                 toast_attr = None  # fully faded -- main loop clears copy_toast_at, not us
@@ -237,11 +235,11 @@ class _TuiRenderMixin:
         if self.console_error is not None:
             elapsed = time.monotonic() - self.console_error_at
             error_attr = self.pair_cache.attr_for(curses.COLOR_RED, self.console_bg, False)
-            if elapsed < _CONSOLE_ERROR_BOLD_UNTIL:
+            if elapsed < _TOAST_BOLD_UNTIL:
                 err_attr = error_attr | curses.A_BOLD
-            elif elapsed < _CONSOLE_ERROR_NORMAL_UNTIL:
+            elif elapsed < _TOAST_NORMAL_UNTIL:
                 err_attr = error_attr
-            elif elapsed < _CONSOLE_ERROR_DIM_UNTIL:
+            elif elapsed < _TOAST_DIM_UNTIL:
                 err_attr = error_attr | curses.A_DIM
             else:
                 err_attr = None  # fully faded -- main loop clears console_error, not us
@@ -282,6 +280,25 @@ class _TuiRenderMixin:
             except curses.error:
                 pass
 
+    def _rewrap_keeping_view(self, width, log_h):
+        # A resize rewraps all history, so every tail-relative row offset now points at
+        # different content. Re-anchor by line instead: remember which (seq, row-in-line)
+        # sits on the view's bottom row, rewrap, and put that line back there. A pinned find
+        # is simply re-centered on its match. The selection's columns don't survive a
+        # rewrap either, so it's dropped (the terminal-native equivalent loses it too).
+        self._sync_pin(log_h)  # absorb pending appends before re-anchoring
+        anchor = self.ring.anchor_at(self.view_offset) if self.view_offset > 0 else None
+        self.ring.set_width(width)
+        self.sel_anchor = None
+        self.sel_cursor = None
+        self.mouse_down = False
+        self.last_tail_growth = self.ring.tail_growth()
+        if anchor is not None:
+            offset = self.ring.offset_of(*anchor)
+            self.view_offset = offset if offset is not None else 0
+        if self.find_pinned and self.find_seq is not None:
+            self._find_jump(self.find_seq)
+
     def _redraw(self):
         curses = self.curses
         scr = self.scr
@@ -291,7 +308,8 @@ class _TuiRenderMixin:
         # (a known curses trouble spot at the bottom-right cell).
         usable_width = max(1, max_x - 2)
 
-        self.ring.set_width(usable_width)  # no-op unless the terminal was actually resized
+        if usable_width != self.ring.wrap_width:
+            self._rewrap_keeping_view(usable_width, log_h)
         self._sync_pin(log_h)
 
         self._draw_banner(max_x)
