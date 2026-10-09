@@ -26,7 +26,7 @@ COMMANDS = (
     CommandSpec('level', 'level <lvl>',
                 'Show lines at debug|info|warn|error|fatal or worse (tracebacks always stay)', 'level'),
     CommandSpec('grep', 'grep <text>',
-                'Show only lines containing text (uppercase = case-sensitive)', None),
+                'Show only lines containing text, highlighted (uppercase = case-sensitive)', None),
     CommandSpec('find', 'find <text>',
                 'Jump to lines containing text; Tab/Shift+Tab step older/newer', None),
     CommandSpec('mute', 'mute <node>',
@@ -43,6 +43,7 @@ _SPECS_BY_NAME = {spec.name: spec for spec in COMMANDS}
 KEYS = (
     ('\\', 'Open the console (\\ or Esc closes it)'),
     ('Tab / Shift+Tab', 'In the console: complete / cycle. Otherwise: step find matches'),
+    ('Up / Down', 'In the console: previous / next command'),
     ('Esc', 'Exit the most recent focus/level/grep/find, one per press'),
     ('PageUp/PageDown', 'Scroll (also mouse wheel, Up/Down)'),
     ('Home / End', 'Oldest line / follow the live tail'),
@@ -146,6 +147,54 @@ class Completer:
             out = head + (common if len(common) > len(prefix) else prefix)
         self._last_output = out
         return out
+
+
+# ── Command history ────────────────────────────────────────────────────────────────
+
+class CommandHistory:
+    """Up/Down recall in the console bar, bash-style. `entries` is the run-wide list of
+    submitted commands, oldest-first (owned by the caller so it outlives one curses session);
+    this object only tracks the browse position. Up from the line being typed saves it as a
+    draft that Down past the newest entry brings back. Any edit must call reset()."""
+
+    MAX_ENTRIES = 100
+
+    def __init__(self, entries=None):
+        self.entries = entries if entries is not None else []
+        self.reset()
+
+    def reset(self):
+        self.index = None   # position in entries while browsing, None = not browsing
+        self.draft = ''
+
+    def add(self, text):
+        """Record a submitted command (blank and repeat-of-the-last are skipped)."""
+        text = text.strip()
+        if text and (not self.entries or self.entries[-1] != text):
+            self.entries.append(text)
+            del self.entries[:-self.MAX_ENTRIES]
+        self.reset()
+
+    def older(self, buffer):
+        """Buffer after Up: the previous entry (stays on the oldest once there)."""
+        if not self.entries:
+            return buffer
+        if self.index is None:
+            self.draft = buffer
+            self.index = len(self.entries)
+        self.index = max(0, self.index - 1)
+        return self.entries[self.index]
+
+    def newer(self, buffer):
+        """Buffer after Down: the next entry, then the saved draft past the newest."""
+        if self.index is None:
+            return buffer
+        self.index += 1
+        if self.index >= len(self.entries):
+            draft = self.draft
+            self.reset()
+            return draft
+        return self.entries[self.index]
 
 
 # ── Help overlay layout ───────────────────────────────────────────────────────────

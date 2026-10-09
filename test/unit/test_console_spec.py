@@ -9,6 +9,7 @@ from lib.console_spec import (
     COMMAND_NAMES,
     COMMANDS,
     KEYS,
+    CommandHistory,
     Completer,
     completion_context,
     help_rows,
@@ -168,3 +169,72 @@ class TestHelpRows:
         assert continuation, 'expected wrapped description rows'
         key_w = len(rows[1][0][0])
         assert all(len(row[0][0]) == key_w for row in continuation)
+
+
+class TestCommandHistory:
+    """Up/Down recall in the console bar (bash-style)."""
+
+    def _hist(self, *cmds):
+        h = CommandHistory()
+        for c in cmds:
+            h.add(c)
+        return h
+
+    def test_up_walks_back_from_newest(self):
+        h = self._hist('focus a', 'grep x', 'level warn')
+        assert h.older('') == 'level warn'
+        assert h.older('level warn') == 'grep x'
+        assert h.older('grep x') == 'focus a'
+
+    def test_up_stops_at_oldest(self):
+        h = self._hist('focus a', 'grep x')
+        h.older(''); h.older('')
+        assert h.older('') == 'focus a'
+
+    def test_down_returns_to_draft(self):
+        h = self._hist('focus a', 'grep x')
+        assert h.older('fin') == 'grep x'
+        assert h.older('grep x') == 'focus a'
+        assert h.newer('focus a') == 'grep x'
+        assert h.newer('grep x') == 'fin'   # past the newest: what was being typed
+        assert h.newer('fin') == 'fin'      # not browsing any more: no-op
+
+    def test_down_without_browsing_is_noop(self):
+        h = self._hist('focus a')
+        assert h.newer('typed') == 'typed'
+
+    def test_up_with_empty_history_keeps_buffer(self):
+        assert CommandHistory().older('typed') == 'typed'
+
+    def test_add_skips_blank_and_consecutive_duplicates(self):
+        h = self._hist('grep x', '  ', 'grep x', 'focus a', 'grep x')
+        assert h.entries == ['grep x', 'focus a', 'grep x']
+
+    def test_add_strips_whitespace(self):
+        assert self._hist('  focus a  ').entries == ['focus a']
+
+    def test_add_ends_browse(self):
+        h = self._hist('focus a', 'grep x')
+        h.older('')
+        h.add('level warn')
+        assert h.older('') == 'level warn'  # starts again from the newest
+
+    def test_reset_starts_over_from_newest(self):
+        h = self._hist('focus a', 'grep x')
+        h.older(''); h.older('')
+        h.reset()
+        assert h.older('edited') == 'grep x'
+        assert h.newer('grep x') == 'edited'
+
+    def test_entries_list_is_shared(self):
+        # The TUI passes its run-wide list so history survives a disable/enable reopen.
+        shared = []
+        CommandHistory(shared).add('focus a')
+        assert CommandHistory(shared).older('') == 'focus a'
+
+    def test_capped(self):
+        h = CommandHistory()
+        for i in range(CommandHistory.MAX_ENTRIES + 20):
+            h.add(f'grep {i}')
+        assert len(h.entries) == CommandHistory.MAX_ENTRIES
+        assert h.entries[0] == 'grep 20'

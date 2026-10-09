@@ -46,7 +46,7 @@ import time
 from lib import __version__
 from lib.colors import DENDROS_TAG
 from lib.console_commands import node_identity_names
-from lib.console_spec import Completer
+from lib.console_spec import CommandHistory, Completer
 from lib.global_config import is_disable_flag_set
 from lib.launch_tui_console import _TuiConsoleMixin, _TOAST_DIM_UNTIL
 from lib.launch_tui_find import _TuiFindMixin
@@ -183,6 +183,9 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiHelpMixi
         self._init_find_state()           # `\find`: see lib/launch_tui_find.py
         self._init_help_state()           # `\help` overlay: see lib/launch_tui_help.py
         self.completer = Completer()      # console-bar Tab completion (lib/console_spec.py)
+        # Up/Down recall; the entries live in the run-wide session (like muted_nodes), so they
+        # survive a disable/enable reopen.
+        self.history = CommandHistory(session.setdefault('history', []))
         # The ring outlives this session (disable/enable reopen): re-sync its filter with
         # this session's state — only mutes carry over, focus/grep/level/find start fresh.
         self._apply_filters()
@@ -344,6 +347,7 @@ class _TuiSession(_TuiRenderMixin, _TuiConsoleMixin, _TuiFindMixin, _TuiHelpMixi
                     self.console_buffer = ''
                     self.console_error = None
                     self.completer.reset()
+                    self.history.reset()
                 elif ch == 27:
                     # keypad(False): every arrow key/nav key/mouse report arrives raw here.
                     result = read_escape_sequence(scr, curses)

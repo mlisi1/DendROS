@@ -76,6 +76,8 @@ Shows only lines containing the text.
 
 Matching uses smart case: all-lowercase text matches regardless of case, and any uppercase letter makes the match case-sensitive.
 
+The matching text is highlighted in bold, underlined orange, like `grep --color`. If a `find` is active too, its highlighting takes precedence where the two overlap.
+
 grep is a live filter. If nothing matches yet, the view is empty until a matching line arrives.
 
 ---
@@ -176,6 +178,14 @@ If several completions match, the first ++tab++ fills in the part they have in c
 
 ---
 
+## Command history
+
+In the console bar, ++up++ and ++down++ step through the commands you've entered during this launch, like in a shell. Whatever you were typing comes back when you press ++down++ past the newest one.
+
+Every submitted command is kept, including ones that failed, so a typo can be recalled and fixed. History lasts for the whole launch, including across `dendros disable`/`enable`, but isn't saved between launches.
+
+---
+
 ## Keys reference
 
 | Key | Where | Effect |
@@ -184,6 +194,7 @@ If several completions match, the first ++tab++ fills in the part they have in c
 | ++enter++ | console bar | Run the command |
 | ++escape++ / ++backslash++ | console bar | Close the bar |
 | ++tab++ / ++shift+tab++ | console bar | Complete / cycle completions |
+| ++up++ / ++down++ | console bar | Previous / next command |
 | ++tab++ / ++shift+tab++ | during `find` | Older / newer match |
 | ++escape++ | log view | Exit the most recent mode |
 | ++page-up++ / ++page-down++, ++up++ / ++down++, wheel | log view | Scroll |

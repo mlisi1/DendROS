@@ -27,7 +27,7 @@ _COPY_TOAST_TEXT = 'Copied'
 # Right-aligned header key hint, (key, description) pairs — context-dependent so the keys
 # that matter right now are the ones advertised (see _header_key_hints()).
 _HINT_IDLE = (('\\', 'open console'),)
-_HINT_CONSOLE = (('Tab', 'complete'), ('Enter', 'run'), ('Esc', 'close'))
+_HINT_CONSOLE = (('Tab', 'complete'), ('↑↓', 'history'), ('Enter', 'run'), ('Esc', 'close'))
 _HINT_FIND_STEP = ('Tab/S-Tab', 'step')
 _HINT_HELP = (('Esc', 'close help'),)
 
@@ -40,13 +40,15 @@ def _hint_width(pairs):
 class _TuiRenderMixin:
 
     def _draw_segments(self, row, col, usable_width, segments, default_bg=None, sel_span=None,
-                       find_spans=None, find_attr=None):
+                       find_spans=None, find_attr=None, grep_spans=None):
         # default_bg backfills segments with no bg of their own (e.g. header text); ones
         # that DO carry a bg (e.g. a crash-alert banner) keep it. find_spans: inclusive
         # (start, end) `\find` match columns — drawn with find_attr (the current match's
-        # brand-orange chip) when given, else reverse video.
+        # brand-orange chip) when given, else reverse video. grep_spans: `\grep` match
+        # columns, drawn bold+underlined brand orange over the line's own background (like
+        # `grep --color`; underline keeps it visible on an orange line). Find wins on overlap.
         curses = self.curses
-        if sel_span is None and not find_spans:
+        if sel_span is None and not find_spans and not grep_spans:
             # Fast path: one addstr() per same-attr run.
             for seg_text, fg, bg, bold in segments:
                 if col >= usable_width:
@@ -63,15 +65,19 @@ class _TuiRenderMixin:
         # Highlight path: per-character, so the selection (A_REVERSE) can be OR'd onto
         # the normal attribute rather than replacing it.
         find_spans = find_spans or ()
+        grep_spans = grep_spans or ()
         for seg_text, fg, bg, bold in segments:
             eff_bg = bg if bg is not None else default_bg
             base_attr = self.pair_cache.attr_for(fg, eff_bg, bold) if (fg is not None or eff_bg is not None or bold) else 0
+            grep_attr = self.pair_cache.attr_for(self.console_fg, eff_bg, True) | curses.A_UNDERLINE
             for ch in seg_text:
                 if col >= usable_width:
                     return col
                 attr = base_attr
                 if any(s <= col <= e for s, e in find_spans):
                     attr = find_attr if find_attr is not None else attr | curses.A_REVERSE
+                elif any(s <= col <= e for s, e in grep_spans):
+                    attr = grep_attr
                 if sel_span is not None and sel_span[0] <= col <= sel_span[1]:
                     attr |= curses.A_REVERSE
                 try:
@@ -322,7 +328,7 @@ class _TuiRenderMixin:
 
         rows = self.ring.visible_rows(self.view_offset, log_h)
         n_rows = len(rows)
-        find_rows = self._find_render_rows(log_h)  # None unless a `\find` is active
+        hl_rows = self._highlight_rows(log_h)  # None unless a `\find` or `\grep` is active
         current_find_attr = self.pair_cache.attr_for(0, self.console_fg, True)  # black on brand orange
         row_i = 0
         for wrapped_row, _is_continuation in rows:
@@ -330,20 +336,25 @@ class _TuiRenderMixin:
             row_tail_offset = screen_row_to_tail_offset(row_i, n_rows, self.view_offset)
             row_len = sum(len(seg[0]) for seg in wrapped_row)
             sel_span = selection_span_for_row(row_tail_offset, row_len, self.sel_anchor, self.sel_cursor)
-            find_spans = find_attr = None
-            if find_rows is not None and row_i < len(find_rows[0]):
-                seq, row_in_line = find_rows[0][row_i]
-                find_spans = row_highlight_spans(find_rows[1][seq], self.find_query, row_in_line,
-                                                 usable_width, row_len)
-                if seq == self.find_seq:
-                    find_attr = current_find_attr
+            find_spans = find_attr = grep_spans = None
+            if hl_rows is not None and row_i < len(hl_rows[0]):
+                seq, row_in_line = hl_rows[0][row_i]
+                plain = hl_rows[1][seq]
+                if self.find_query is not None:
+                    find_spans = row_highlight_spans(plain, self.find_query, row_in_line,
+                                                     usable_width, row_len)
+                    if seq == self.find_seq:
+                        find_attr = current_find_attr
+                if self.grep_query is not None:
+                    grep_spans = row_highlight_spans(plain, self.grep_query, row_in_line,
+                                                     usable_width, row_len)
             try:
                 scr.move(scr_row, 0)
                 scr.clrtoeol()
             except curses.error:
                 pass
             self._draw_segments(scr_row, 0, usable_width, wrapped_row, sel_span=sel_span,
-                                find_spans=find_spans, find_attr=find_attr)
+                                find_spans=find_spans, find_attr=find_attr, grep_spans=grep_spans)
             row_i += 1
         while row_i < log_h:  # blank out rows below the last one drawn
             scr_row = self.banner_h + row_i

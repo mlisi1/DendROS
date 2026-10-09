@@ -158,11 +158,17 @@ class _TuiConsoleMixin:
                     self.console_buffer = self.completer.tab(self.console_buffer, self.known_nodes,
                                                              backwards=True,
                                                              muted_nodes=self.muted_nodes)
-                return  # arrows/PageUp/... don't close the bar mid-typing
+                elif result[1] in ('up', 'down'):
+                    self.completer.reset()
+                    step = self.history.older if result[1] == 'up' else self.history.newer
+                    self.console_buffer = step(self.console_buffer)
+                return  # other arrows/PageUp/... don't close the bar mid-typing
         self.completer.reset()
+        self.history.reset()  # an edit ends a browse; the next Up saves the edited text as draft
         if ch in (10, 13, curses.KEY_ENTER):
             text = self.console_buffer
             self.console_buffer = ''
+            self.history.add(text)  # recorded even if it fails, so a typo can be recalled and fixed
             if self._apply_console_command(text):
                 self.console_active = False
         elif ch in (27, ord('\\')):

@@ -114,13 +114,13 @@ Tab completion is available for all subcommands, `dendros init` flags and `dendr
 
 ## TUI console commands
 
-Typed after ++backslash++ in [TUI mode](launch-tui.md). See [Console Commands](tui-console.md) for details and keys.
+Typed after ++backslash++ in [TUI mode](launch-tui.md); ++up++ / ++down++ recall earlier commands. See [Console Commands](tui-console.md) for details and keys.
 
 | Command | Description |
 |---|---|
 | `focus <node>` | Show only one node's lines (process name or logger name). |
 | `level [lvl]` | Show lines at `debug`/`info`/`warn`/`error`/`fatal` or worse; lines without a level stay visible. No argument removes the filter. |
-| `grep [text]` | Show only lines containing the text (smart case). No argument removes the filter. |
+| `grep [text]` | Show only lines containing the text (smart case), with the matches highlighted. No argument removes the filter. |
 | `find <text>` | Jump to lines containing the text; ++tab++ / ++shift+tab++ step older / newer. |
 | `mute <node>` | Hide one node's lines until `unmute` or `clear`. |
 | `unmute <node\|all>` | Show a muted node again, or all of them. |

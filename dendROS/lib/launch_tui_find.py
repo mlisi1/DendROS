@@ -98,10 +98,11 @@ class _TuiFindMixin:
         else:
             self.find_pinned = False  # indicator shows -/0 until \clear or new matches
 
-    def _find_render_rows(self, log_h):
-        """(seq, row_in_line) per visible row plus {seq: plain_text} for those rows, or
-        None when no find is active — see _redraw() in lib/launch_tui_render.py."""
-        if self.find_query is None:
+    def _highlight_rows(self, log_h):
+        """(seq, row_in_line) per visible row plus {seq: plain_text} for those rows — what the
+        renderer needs to place `\\find` and `\\grep` match highlights — or None when neither
+        is active. See _redraw() in lib/launch_tui_render.py."""
+        if self.find_query is None and self.grep_query is None:
             return None
         self._find_refresh()
         entries = self._find_entries
