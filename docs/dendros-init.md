@@ -11,7 +11,9 @@ cd ~/ros2_ws/src/my_bringup
 dendros init
 ```
 
-DendROS scans every `.py` and `.xml` file in `launch/`, extracts all `Node()` / `ComposableNode()` / `<node/>` declarations, groups them by source package, and writes `config/dendROS.yaml`. It also patches `CMakeLists.txt` / `setup.py` / `setup.cfg` to install the config.
+Run it from the **package root**, the directory that contains `package.xml`. From anywhere else it stops without writing anything; from a subfolder of a package it tells you which directory to run it from.
+
+DendROS scans every `.py` and `.xml` file in `launch/`, extracts all `Node()` / `ComposableNode()` / `<node/>` declarations, groups them by source package, and writes `config/dendROS.yaml`. It also patches `CMakeLists.txt` / `setup.py` / `setup.cfg` to install the config. If no nodes are found, nothing is written and no build file is touched.
 
 <div class="term">
   <div class="term-bar">

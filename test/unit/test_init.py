@@ -12,7 +12,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'dendROS'
 from lib.config_writer import make_label, write_config, merge_config, _bold_color
 from lib.node_extractor import extract_nodes_from_python, extract_nodes_from_xml, scan_launch_file
 from lib.build_modifier import modify_cmake, modify_setup_py, modify_setup_cfg
-from dendros_init import collect_nodes, find_package_root, get_package_name, main
+from dendros_init import collect_nodes, find_enclosing_package, find_package_root, get_package_name, main
+from conftest import strip_ansi
 
 
 # ── make_label ────────────────────────────────────────────────────────────────
@@ -713,11 +714,36 @@ class TestPackageDetection:
         (tmp_path / 'package.xml').write_text('<package><name>p</name></package>')
         assert find_package_root(cwd=tmp_path) == tmp_path
 
-    def test_find_root_from_subdirectory(self, tmp_path):
+    def test_subdirectory_is_not_a_package_root(self, tmp_path):
+        # Never walks up to an enclosing package (would write into the wrong package).
         (tmp_path / 'package.xml').write_text('<package><name>p</name></package>')
         sub = tmp_path / 'src' / 'module'
         sub.mkdir(parents=True)
-        assert find_package_root(cwd=sub) == tmp_path
+        assert find_package_root(cwd=sub) is None
+        assert find_enclosing_package(cwd=sub) == tmp_path
+
+    def test_enclosing_package_none_outside_packages(self, tmp_path):
+        assert find_enclosing_package(cwd=tmp_path) is None
+
+    def test_main_from_subdirectory_points_to_package_root(self, tmp_path, monkeypatch, capsys):
+        (tmp_path / 'package.xml').write_text('<package format="3"><name>my_robot</name></package>')
+        sub = tmp_path / 'launch'
+        sub.mkdir()
+        monkeypatch.chdir(sub)
+        monkeypatch.setenv('HOME', str(tmp_path))
+        with pytest.raises(SystemExit) as exc:
+            main([])
+        assert exc.value.code != 0
+        err = strip_ansi(capsys.readouterr().err)
+        assert 'inside my_robot' in err and str(tmp_path) in err
+        assert not (tmp_path / 'config').exists()
+
+    def test_main_outside_any_package(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv('HOME', str(tmp_path))
+        with pytest.raises(SystemExit):
+            main([])
+        assert 'not a ROS 2 package' in strip_ansi(capsys.readouterr().err)
 
     def test_returns_none_when_no_package_xml(self, tmp_path):
         assert find_package_root(cwd=tmp_path) is None
@@ -838,14 +864,54 @@ class TestInitMain:
         cmake = (tmp_path / 'CMakeLists.txt').read_text()
         assert 'install(DIRECTORY config/' not in cmake
 
-    def test_no_launch_dir_creates_empty_config(self, tmp_path, monkeypatch):
+    def test_no_launch_dir_writes_nothing(self, tmp_path, monkeypatch):
+        # No nodes to color: no config/ directory, no dendROS.yaml, failing exit status.
         (tmp_path / 'package.xml').write_text(
             '<package format="3"><name>no_launch_pkg</name></package>'
         )
         monkeypatch.chdir(tmp_path)
         monkeypatch.setenv('HOME', str(tmp_path))
-        main([])
-        assert (tmp_path / 'config' / 'dendROS.yaml').exists()
+        with pytest.raises(SystemExit) as exc:
+            main([])
+        assert exc.value.code != 0
+        assert not (tmp_path / 'config').exists()
+
+    def test_launch_files_without_nodes_write_nothing(self, tmp_path, monkeypatch, capsys):
+        (tmp_path / 'package.xml').write_text(
+            '<package format="3"><name>no_nodes_pkg</name></package>'
+        )
+        (tmp_path / 'launch').mkdir()
+        (tmp_path / 'launch' / 'empty.launch.py').write_text(
+            'from launch import LaunchDescription\n'
+            'def generate_launch_description():\n'
+            '    return LaunchDescription([])\n'
+        )
+        cmake = tmp_path / 'CMakeLists.txt'
+        cmake.write_text('cmake_minimum_required(VERSION 3.8)\nproject(no_nodes_pkg)\nament_package()\n')
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv('HOME', str(tmp_path))
+        with pytest.raises(SystemExit):
+            main([])
+        assert not (tmp_path / 'config').exists()
+        assert 'install(DIRECTORY config/' not in cmake.read_text()  # build files untouched
+        assert 'nothing written' in strip_ansi(capsys.readouterr().err)
+
+    def test_no_nodes_keeps_existing_config_when_overwriting(self, tmp_path, monkeypatch):
+        (tmp_path / 'package.xml').write_text(
+            '<package format="3"><name>no_launch_pkg</name></package>'
+        )
+        config = tmp_path / 'config' / 'dendROS.yaml'
+        config.parent.mkdir()
+        config.write_text('groups: {old: {color: red, nodes: [old_node]}}\n')
+        cfg_dir = tmp_path / '.config' / 'dendROS'
+        cfg_dir.mkdir(parents=True)
+        (cfg_dir / 'defaults.yaml').write_text('init_on_existing: overwrite\n')
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv('HOME', str(tmp_path))
+        with pytest.raises(SystemExit):
+            main([])
+        assert 'old_node' in config.read_text()
+
 
     def test_setup_py_is_modified(self, tmp_path, monkeypatch):
         self._make_package(tmp_path)
@@ -867,3 +933,42 @@ class TestInitMain:
         main([])
 
         assert 'config/dendROS.yaml' in setup_py.read_text()
+
+
+class TestInitMessageColors:
+    """dendros init's messages use ROS 2's severity colors: INFO default, WARN yellow,
+    ERROR red (message text only — the [dendROS] tag keeps its brand colors)."""
+
+    def _pkg(self, tmp_path, monkeypatch, launch=True):
+        (tmp_path / 'package.xml').write_text('<package format="3"><name>pkg</name></package>')
+        if launch:
+            (tmp_path / 'launch').mkdir()
+            (tmp_path / 'launch' / 'a.launch.py').write_text(
+                "from launch_ros.actions import Node\n"
+                "Node(package='pkg', executable='talker', name='talker')\n"
+            )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv('HOME', str(tmp_path))
+
+    def test_info_is_uncolored(self, tmp_path, monkeypatch, capsys):
+        self._pkg(tmp_path, monkeypatch)
+        main([])
+        out = capsys.readouterr().out
+        line = next(l for l in out.splitlines() if 'package: pkg' in l)
+        assert line.split('ROS]\033[0m ', 1)[1] == strip_ansi(line).split('] ', 1)[1]
+
+    def test_error_is_red(self, tmp_path, monkeypatch, capsys):
+        self._pkg(tmp_path, monkeypatch, launch=False)
+        with pytest.raises(SystemExit):
+            main([])
+        err = capsys.readouterr().err
+        line = next(l for l in err.splitlines() if 'nothing written' in l)
+        assert '\033[31mno nodes found' in line and line.endswith('\033[0m')
+
+    def test_warning_is_yellow(self, tmp_path, monkeypatch, capsys):
+        self._pkg(tmp_path, monkeypatch, launch=False)
+        with pytest.raises(SystemExit):
+            main([])
+        err = capsys.readouterr().err
+        line = next(l for l in err.splitlines() if 'no launch/ directory' in l)
+        assert '\033[33mno launch/ directory' in line and line.endswith('\033[0m')
