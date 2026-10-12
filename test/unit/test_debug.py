@@ -56,7 +56,7 @@ class TestDebugGoesToStderr:
         prefix = make_prefix(tmp_path, PKG, 'basic.yaml')
         _, stderr, _ = run_pipe(prefix, PKG, [INPUT_LINE],
                                 env_extra={'DENDROS_DEBUG': '1'})
-        assert '[dendROS]' in stderr
+        assert '[dendROS]' in strip_ansi(stderr)
 
     def test_no_debug_output_when_not_set(self, tmp_path):
         prefix = make_prefix(tmp_path, PKG, 'basic.yaml')
@@ -205,7 +205,7 @@ class TestConfigErrors:
     def test_malformed_yaml_includes_dendros_tag(self, tmp_path):
         prefix = self._make_bad_config(tmp_path, 'err_pkg2', 'groups: [\nbad yaml]]]')
         _, stderr, _ = run_pipe(prefix, 'err_pkg2', [INPUT_LINE])
-        assert '[dendROS]' in stderr
+        assert '[dendROS]' in strip_ansi(stderr)
 
     def test_malformed_yaml_includes_config_path(self, tmp_path):
         prefix = self._make_bad_config(tmp_path, 'err_pkg3', ': bad\n  yaml:')
@@ -230,8 +230,9 @@ class TestConfigErrors:
         plain = strip_ansi(stderr).strip()
         assert 'config error' not in plain
 
-    def test_error_message_uses_magenta_dendros_tag(self, tmp_path):
+    def test_error_message_uses_branded_dendros_tag(self, tmp_path):
         prefix = self._make_bad_config(tmp_path, 'err_pkg6', 'groups: [\nbad yaml]]]')
         _, stderr, _ = run_pipe(prefix, 'err_pkg6', [INPUT_LINE])
-        # The [dendROS] tag is styled with \033[35;1m (magenta bold)
-        assert '\033[35;1m' in stderr
+        # The [dendROS] tag uses the brand blue/orange split (lib.colors.DENDROS_TAG)
+        assert '\033[38;2;0;75;107;1m' in stderr
+        assert '\033[38;2;224;127;0;1m' in stderr

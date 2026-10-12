@@ -13,7 +13,7 @@ When you run `ros2 param describe /node param_name`, DendROS colorizes the outpu
       <div class="term-dot term-dot-yellow"></div>
       <div class="term-dot term-dot-green"></div>
     </div>
-    <div class="term-title">ros2 param describe /battery_monitor start_type_description_service</div>
+    <div class="term-title">ros2 param describe /path_planner use_sim_time</div>
   </div>
   <div class="term-body-image">
   <p align="center">

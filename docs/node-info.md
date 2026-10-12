@@ -13,7 +13,7 @@ When you run `ros2 node info /node_name`, DendROS automatically colorizes the ou
       <div class="term-dot term-dot-yellow"></div>
       <div class="term-dot term-dot-green"></div>
     </div>
-    <div class="term-title">ros2 node info /costmap_builder</div>
+    <div class="term-title">ros2 node info /sensor_fusion</div>
   </div>
   <div class="term-body-image">
   <p align="center">

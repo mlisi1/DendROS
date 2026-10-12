@@ -1,5 +1,19 @@
 _DENDROS_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 _DENDROS_PIPE="${_DENDROS_DIR}/dendROS_pipe.py"
+# Official DendROS brand colors — "[dend" in brand blue, "ROS]" in brand orange.
+# Must stay in sync with lib.colors.DENDROS_TAG.
+_DENDROS_TAG=$'\033[38;2;0;75;107;1m[dend\033[38;2;224;127;0;1mROS]\033[0m'
+
+# Deliver one console command (e.g. "focus talker") to a running ros2 launch TUI through
+# the one-shot mailbox file (lib.global_config.set_tui_command). $2 names it in the reply.
+_dendros_send_tui_command() {
+    python3 -c "
+import sys; sys.path.insert(0, '${_DENDROS_DIR}')
+from lib.global_config import set_tui_command
+set_tui_command(sys.argv[1].strip())
+" "$1"
+    echo "${_DENDROS_TAG} $2 command sent"
+}
 
 dendros() {
     case "${1:-}" in
@@ -7,11 +21,77 @@ dendros() {
         init)    python3 "${_DENDROS_DIR}/dendros_init.py" "${@:2}" ;;
         disable)
             export DENDROS_DISABLE=1
-            echo "[dendROS] colorization disabled (DENDROS_DISABLE=1)"
+            python3 -c "
+import sys; sys.path.insert(0, '${_DENDROS_DIR}')
+from lib.global_config import set_disable_flag
+set_disable_flag(True)
+"
+            echo "${_DENDROS_TAG} colorization disabled system-wide (all terminals)"
             ;;
         enable)
             unset DENDROS_DISABLE
-            echo "[dendROS] colorization enabled"
+            python3 -c "
+import sys; sys.path.insert(0, '${_DENDROS_DIR}')
+from lib.global_config import set_disable_flag
+set_disable_flag(False)
+"
+            echo "${_DENDROS_TAG} colorization enabled system-wide (all terminals)"
+            ;;
+        focus)
+            if [[ -z "${2:-}" ]]; then
+                echo "Usage: dendros focus <node_name>..."
+                return 1
+            fi
+            _dendros_send_tui_command "focus ${*:2}" focus
+            ;;
+        find)
+            if [[ -z "${2:-}" ]]; then
+                echo "Usage: dendros find <text>"
+                return 1
+            fi
+            _dendros_send_tui_command "find ${*:2}" find
+            ;;
+        grep)
+            # No text = drop the grep filter (keeps any focus), same as a bare `grep` in the console.
+            _dendros_send_tui_command "grep ${*:2}" grep
+            ;;
+        level)
+            # No level = drop the level filter, same as a bare `level` in the console.
+            _dendros_send_tui_command "level ${2:-}" level
+            ;;
+        mute|unmute)
+            if [[ -z "${2:-}" ]]; then
+                [[ "$1" == unmute ]] && echo "Usage: dendros unmute <node_name|all>" \
+                                     || echo "Usage: dendros mute <node_name>"
+                return 1
+            fi
+            _dendros_send_tui_command "$1 $2" "$1"
+            ;;
+        reopen)  DENDROS_SHELL_PID=$$ python3 "${_DENDROS_DIR}/dendros_reopen.py" ;;
+        clear)
+            _dendros_send_tui_command clear clear
+            ;;
+        mark)
+            # Label optional: a bare `dendros mark` inserts just the timestamp.
+            _dendros_send_tui_command "mark ${*:2}" mark
+            ;;
+        tee)
+            # The TUI runs in the launch's directory, not this one: resolve a relative path
+            # here, so `dendros tee out.log` lands where the user typed it.
+            local _flags="" _path="" _arg
+            for _arg in "${@:2}"; do
+                case "$_arg" in
+                    -c|--color|-a|--append) _flags+="$_arg " ;;
+                    *) _path+="${_path:+ }$_arg" ;;
+                esac
+            done
+            if [[ -z "$_path" ]]; then
+                echo "Usage: dendros tee <file> [-c] [-a]"
+                return 1
+            fi
+            [[ "$_path" == "~"* ]] && _path="${HOME}${_path:1}"
+            [[ "$_path" != /* ]] && _path="${PWD}/${_path}"
+            _dendros_send_tui_command "tee ${_flags}${_path}" tee
             ;;
         *)
             echo "Usage: dendros <command>"
@@ -21,8 +101,24 @@ dendros() {
             echo "  init      Generate a stock dendROS.yaml from the package's launch files"
             echo "            Options: --recursive/-r  also scan included packages"
             echo "                     --labels/-l     auto-generate group labels"
-            echo "  disable   Disable colorization in this shell (sets DENDROS_DISABLE=1)"
-            echo "  enable    Re-enable colorization in this shell (unsets DENDROS_DISABLE)"
+            echo "  disable   Disable colorization system-wide (all terminals, incl. already-running launches)"
+            echo "  enable    Re-enable colorization system-wide (all terminals)"
+            echo "  focus     Filter an already-running ros2 launch TUI to one or more nodes' output"
+            echo "            (same as typing 'focus <node_name>...' in the TUI's \\ console)"
+            echo "  find      Jump to text in an already-running ros2 launch TUI (Tab/Shift+Tab to step)"
+            echo "            (same as typing 'find <text>' in the TUI's \\ console)"
+            echo "  grep      Show only lines containing text in an already-running ros2 launch TUI"
+            echo "            (combines with focus; no text = drop the grep filter)"
+            echo "  level     Show only lines at a severity or worse (debug|info|warn|error|fatal) in a running TUI"
+            echo "            (lines without a level, e.g. tracebacks, stay visible; no level = drop the filter)"
+            echo "  mute      Hide one node's lines in a running TUI (not a mode: stays until unmute/clear)"
+            echo "  unmute    Show a muted node again in a running TUI ('unmute all' for every one)"
+            echo "  clear     Restore the full scrollback (drops focus, level, grep, find and mutes) in a running TUI"
+            echo "  mark      Insert a timestamped separator line, with an optional label, into a running TUI"
+            echo "            (e.g. 'dendros mark sending goal' right before you act; find it later with find)"
+            echo "  tee       Save the lines a running TUI currently shows (filters applied) to a file"
+            echo "            (dendros tee <file> [-c keep colors] [-a append])"
+            echo "  reopen    Reopen this terminal's last ros2 launch TUI run (read-only scrollback)"
             ;;
     esac
 }
@@ -31,13 +127,20 @@ _dendros_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
 
     if [[ $COMP_CWORD -eq 1 ]]; then
-        COMPREPLY=($(compgen -W "config init disable enable" -- "$cur"))
+        COMPREPLY=($(compgen -W "config init disable enable focus find grep level mute unmute clear mark tee reopen" -- "$cur"))
         return
     fi
 
     case "${COMP_WORDS[1]}" in
         init)
             COMPREPLY=($(compgen -W "--recursive --labels -r -l" -- "$cur"))
+            ;;
+        level)
+            COMPREPLY=($(compgen -W "debug info warn error fatal" -- "$cur"))
+            ;;
+        tee)
+            compopt -o filenames 2>/dev/null
+            COMPREPLY=($(compgen -f -- "$cur") $(compgen -W "-c -a" -- "$cur"))
             ;;
         *)
             COMPREPLY=()
@@ -47,8 +150,10 @@ _dendros_complete() {
 complete -F _dendros_complete dendros
 
 ros2() {
-    # Set DENDROS_DISABLE=1 to bypass colorization and use the real ros2 directly
-    if [[ -n "${DENDROS_DISABLE:-}" && "${DENDROS_DISABLE}" != "0" ]]; then
+    # Set DENDROS_DISABLE=1 (local to this shell) or run `dendros disable`
+    # (system-wide, all terminals) to bypass colorization and use the real ros2 directly.
+    if [[ -n "${DENDROS_DISABLE:-}" && "${DENDROS_DISABLE}" != "0" ]] \
+       || [[ -f "$HOME/.config/dendROS/disable.flag" ]]; then
         local _BIN
         _BIN="$(type -P ros2 2>/dev/null)"
         [[ -z "$_BIN" && -n "${ROS_DISTRO:-}" ]] && _BIN="/opt/ros/${ROS_DISTRO}/bin/ros2"
@@ -63,7 +168,7 @@ ros2() {
     fi
 
     if [[ "$1" == "launch" || "$1" == "run" ]]; then
-        RCUTILS_COLORIZED_OUTPUT=1 PYTHONUNBUFFERED=1 "$_ROS2_BIN" "$@" 2>&1 | python3 "$_DENDROS_PIPE" "$@"
+        RCUTILS_COLORIZED_OUTPUT=1 PYTHONUNBUFFERED=1 "$_ROS2_BIN" "$@" 2>&1 | DENDROS_SHELL_PID=$$ python3 "$_DENDROS_PIPE" "$@"
         return ${PIPESTATUS[0]}
     elif [[ "$1" == "node" && "$2" == "list" ]]; then
         "$_ROS2_BIN" "$@" | python3 "${_DENDROS_DIR}/dendros_node_list.py"

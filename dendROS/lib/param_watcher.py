@@ -20,6 +20,8 @@ import shutil
 import subprocess
 import threading
 
+from lib.colors import DENDROS_TAG as _DENDROS
+
 try:
     import yaml
 except ImportError:
@@ -28,9 +30,6 @@ except ImportError:
 _RESET = '\033[0m'
 # White-bg + black-text strip used in the inverted alert style
 _WB = '\033[107;30m'
-
-# [dendROS] header matches the logo title: "[dend" in logo-blue, "ROS]" in logo-orange
-_DENDROS = '\033[38;2;0;75;107;1m[dend\033[38;2;224;127;0;1mROS]\033[0m'
 
 # Inverted-style header: logo colors as BACKGROUNDS, black text (hollow/cutout letters).
 # \033[30m sets black fg once; subsequent bg changes leave fg unchanged.

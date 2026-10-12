@@ -2,6 +2,9 @@
 
 The `color:` field accepts three formats.
 
+!!! warning "Colors look different from terminal to terminal"
+    Standard names (`red`, `blue`, `bold cyan`, …) and raw ANSI codes are drawn with **your terminal's own color theme**, so the same config can look different in Terminator, Konsole or GNOME Terminal. Some terminals also brighten bold text. Use hex colors (`#RRGGBB`) when you need the exact same shade everywhere. See [Troubleshooting](troubleshooting.md#colors) for side-by-side examples.
+
 ---
 
 ## Named colors
@@ -151,10 +154,9 @@ color: "92"     # bright green  (same as "light green")
     </div>
     <div class="term-title">color preview</div>
   </div>
-  <div class="term-body"><span class="t-blue">[node-1]</span> <span class="t-blue t-badge">[LOC]</span>  bold blue
-<span class="t-green">[node-1]</span> <span class="t-green t-badge">[NAV]</span>  bold green
-<span class="t-orange">[node-1]</span> <span class="t-orange t-badge">[HW]</span>   orange
-<span class="t-cyan">[node-1]</span> <span class="t-cyan t-badge">[SEN]</span>  bold cyan
-<span style="color:#9370DB;font-weight:bold">[node-1]</span> <span style="color:#9370DB;font-weight:bold">[AI]</span>   bold purple
-<span class="t-dim">[node-1]</span> <span class="t-dim t-badge">[DBG]</span>  dim cyan</div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/color_preview.png" width="900" alt="One node per color syntax"/>
+</p>
+</div>
 </div>

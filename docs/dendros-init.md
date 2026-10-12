@@ -11,7 +11,9 @@ cd ~/ros2_ws/src/my_bringup
 dendros init
 ```
 
-DendROS scans every `.py` and `.xml` file in `launch/`, extracts all `Node()` / `ComposableNode()` / `<node/>` declarations, groups them by source package, and writes `config/dendROS.yaml`. It also patches `CMakeLists.txt` / `setup.py` / `setup.cfg` to install the config.
+Run it from the **package root**, the directory that contains `package.xml`. From anywhere else it stops without writing anything; from a subfolder of a package it tells you which directory to run it from.
+
+DendROS scans every `.py` and `.xml` file in `launch/`, extracts all `Node()` / `ComposableNode()` / `<node/>` declarations, groups them by source package, and writes `config/dendROS.yaml`. It also patches `CMakeLists.txt` / `setup.py` / `setup.cfg` to install the config. If no nodes are found, nothing is written and no build file is touched.
 
 <div class="term">
   <div class="term-bar">
@@ -72,15 +74,11 @@ Follows `IncludeLaunchDescription` / `<include>` references into external packag
     </div>
     <div class="term-title">dendros init --recursive</div>
   </div>
-  <div class="term-body"><span class="t-dim">[dendROS] package: my_bringup</span>
-<span class="t-dim">[dendROS] scanning (recursive) launch files…</span>
-<span class="t-dim">[dendROS]   main.launch.py: 2 node(s)</span>
-<span class="t-dim">[dendROS] found references: nav2_bringup, slam_toolbox, xsens_driver</span>
-<span class="t-dim">[dendROS]   nav2_bringup [install]: 8 node(s)</span>
-<span class="t-dim">[dendROS]   slam_toolbox [source]: 1 node(s)</span>
-<span class="t-warn">[dendROS]   xsens_driver: not found</span>
-<span class="t-dim">[dendROS] found 11 node(s) in 3 group(s)</span>
-<span class="t-green">[dendROS] created config/dendROS.yaml</span></div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/init_recursive.png" width="900" alt="dendros init --recursive output"/>
+</p>
+</div>
 </div>
 
 ---
@@ -104,7 +102,7 @@ Without `--labels`, every group gets `label: ""` as a placeholder.
 
 ## Behavior options
 
-All options are configurable via `dendros config` → *Init settings*:
+All options are in the **Init** tab of `dendros config`:
 
 | Setting | Values | Description |
 |---|---|---|

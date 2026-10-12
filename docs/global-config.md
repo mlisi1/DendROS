@@ -1,6 +1,6 @@
-# dendros config
+# Global Settings
 
-`dendros config` opens a full-screen interactive TUI for managing global defaults.
+Global settings are the defaults for every package and every terminal. `dendros config` opens a full-screen editor for them.
 
 ```bash
 dendros config
@@ -13,9 +13,6 @@ Settings are grouped into tabs — **Output**, **CLI**, **Unmatched**, **System*
 ---
 
 ## Interface
-
-!!! note
-    Screenshot below predates the tabbed layout — pending a refresh.
 
 <div class="term">
   <div class="term-bar">
@@ -60,17 +57,20 @@ Settings are grouped into tabs — **Output**, **CLI**, **Unmatched**, **System*
 |---|---|---|
 | **Color mode** | `tag_only` / `full_line` | `tag_only` colors prefix + badge, preserving severity colors. `full_line` colors the entire line. |
 | **Show tag (launch/run)** | `on` / `off` | Show `[TAG]` badges in `ros2 launch` and `ros2 run` output. Overridable per-group with `show_tag: false`. |
-| **Tag position** | `after` / `before` | Badge position: `after` → `[node-N] [TAG] …` · `before` → `[TAG] [node-N] …`. |
+| **Tag position** | `after` / `before` | Badge position: `before` (default) → `[TAG] [node-N] …` · `after` → `[node-N] [TAG] …`. |
 | **Tag style** | `normal` / `inverted` | `normal` = colored text on default background. `inverted` = colored background with empty letters (like crash alert banners). Overridable per-group with `tag_style:`. |
 | **Colorize launch msgs** | `on` / `off` | When off, `[INFO] [node-N]: process started …` lines pass through unchanged. |
 | **Show timestamp** | `on` / `off` | Show the `[timestamp]` bracket in node log lines (`[node-N] [INFO] [timestamp] [logger]: msg`). Off strips it. |
 | **Show logger name** | `on` / `off` | Show the `[logger_name]` bracket — the ROS graph name registered via `get_logger()`, which can differ from the `[node-N]` launch process name. Off strips it. |
+| **Launch mode** | `classic` / `tui` | `tui` (default) opens `ros2 launch` in the full-screen viewer with scrollback, search and filters. `classic` prints its output to the terminal as usual. `ros2 run` always uses classic. See [TUI Mode](launch-tui.md). |
+| **TUI scrollback lines** | integer | How many lines TUI mode keeps. Default `5000`. Only used when launch mode is `tui`. |
+| **Ignore bold** | `on` / `off` | Compatibility fix: some terminals brighten bold *foreground* text but never brighten backgrounds, so a group's bold color can look like two different shades between a node's regular text and its inverted `[TAG]` badge. Turn on if colors look inconsistent in your terminal. Applies everywhere colors are resolved — `ros2 launch`/`run`, the TUI, and all CLI commands. See [Troubleshooting](troubleshooting.md#colors). |
 
 ### CLI commands
 
 | Setting | Values | Description |
 |---|---|---|
-| **Show tag (CLI)** | `on` / `off` | Show `[TAG]` badges in `ros2 node list`, `ros2 node info`, `ros2 service list`, `ros2 action list`, and `ros2 topic list`. |
+| **Show tag (CLI)** | `on` / `off` | Show `[TAG]` badges in every colorized `ros2` CLI command: `node list`, `node info`, `topic list`, `service list`, `action list`, `param list` and `param describe`. |
 | **Show default services** | `on` / `off` | When off, standard ROS 2 system services (`set_parameters`, `get_parameters`, `get_loggers`, …) are hidden from `ros2 service list` output entirely. When on, they appear dimmed. |
 | **Topic list sort** | `default` / `group` | `default` preserves ros2's alphabetical order. `group` places system topics first, then groups topics by their publisher's color group (groups in first-occurrence order, alphabetical within each group), with unmatched topics last. See [ros2 topic list](topic-list.md). |
 
@@ -96,8 +96,8 @@ Crash alert and traceback highlighting — how node failures surface in the term
 | Setting | Values | Description |
 |---|---|---|
 | **Crash alert** | `on` / `off` | Print an inline banner when a node dies unexpectedly. See [Crash Alert](crash-alert.md). |
-| **Crash alert color** | `node` / `red` | `node` uses the group color; `red` always uses bold red. |
-| **Crash alert interval** | integer (seconds) | Seconds between periodic banner reprints. `0` = only on new crash events. |
+| **Alert color** | `node` / `red` | Crash alert color: `node` uses the group color; `red` always uses bold red. |
+| **Alert interval (s)** | integer (seconds) | Seconds between periodic crash banner reprints. `0` = only on new crash events. |
 | **Traceback color** | `fancy` / `red` / `off` | `fancy` = bold red header + dim red frames; `red` = all bold red; `off` = passthrough. See [Traceback Highlighting](traceback-highlighting.md). |
 
 ### Parameter change alert
@@ -127,7 +127,7 @@ Crash alert and traceback highlighting — how node failures surface in the term
 color_mode: tag_only
 show_tag_launch: true
 show_tag_cli: true
-tag_position: after
+tag_position: before
 tag_style: normal
 unmatched_color: null
 unmatched_tag: null
@@ -139,6 +139,9 @@ config_merge: true
 colorize_launch_msgs: true
 show_timestamp: true
 show_logger_name: true
+ignore_bold: false
+launch_mode: tui
+tui_scrollback_lines: 5000
 crash_alert: true
 crash_alert_color: node
 crash_alert_interval: 30

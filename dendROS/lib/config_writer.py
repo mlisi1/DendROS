@@ -46,7 +46,7 @@ def write_config(path, node_groups, use_palette=True, use_bold=False, use_label=
             f'  {src_pkg}:',
             f'    color: {color}',
             f'    label: "{label}"',
-            f'    nodes:',
+            '    nodes:',
         ]
         for node in sorted(nodes):
             lines.append(f'      - {node}')

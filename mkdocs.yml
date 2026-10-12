@@ -68,22 +68,29 @@ nav:
   - Getting Started:
     - Installation: installation.md
     - Quick Start: quickstart.md
+    - Troubleshooting: troubleshooting.md
   - Configuration:
-    - Config File: configuration.md
+    - Package Config: configuration.md
     - Colors: colors.md
     - Config Merging: config-merging.md
-  - Features:
+    - dendros init: dendros-init.md
+    - Global Settings: global-config.md
+  - Launch & Run:
     - Crash Alert: crash-alert.md
     - Traceback Highlighting: traceback-highlighting.md
     - Parameter Change Alert: param-change-alert.md
+    - Enable & Disable: runtime-control.md
+  - TUI Mode:
+    - Overview: launch-tui.md
+    - Console Commands: tui-console.md
+    - Remote Control & Reopen: tui-remote.md
+  - ROS 2 CLI:
+    - Overview: ros2-cli.md
     - ros2 node list: node-list.md
     - ros2 node info: node-info.md
+    - ros2 topic list: topic-list.md
     - ros2 service list: service-list.md
     - ros2 action list: action-list.md
-    - ros2 topic list: topic-list.md
     - ros2 param list: param-list.md
     - ros2 param describe: param-describe.md
-  - Tools:
-    - dendros init: dendros-init.md
-    - dendros config: global-config.md
   - Reference: reference.md

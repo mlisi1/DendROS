@@ -38,14 +38,11 @@ dendros init
     </div>
     <div class="term-title">dendros init --recursive --labels</div>
   </div>
-  <div class="term-body"><span class="t-dim">[dendROS] package: my_bringup</span>
-<span class="t-dim">[dendROS] scanning (recursive) launch files…</span>
-<span class="t-dim">[dendROS]   main.launch.py: 2 node(s)</span>
-<span class="t-dim">[dendROS] found references to: nav2_bringup, slam_toolbox</span>
-<span class="t-dim">[dendROS]   nav2_bringup/bringup_launch.py [install]: 8 node(s)</span>
-<span class="t-dim">[dendROS]   slam_toolbox/online_async_launch.py [source]: 1 node(s)</span>
-<span class="t-dim">[dendROS] found 11 node(s) in 3 group(s)</span>
-<span class="t-green">[dendROS] created config/dendROS.yaml</span></div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/init_recursive_labels.png" width="900" alt="dendros init --recursive --labels output"/>
+</p>
+</div>
 </div>
 
 ---
@@ -90,7 +87,7 @@ ros2 launch my_bringup main.launch.py
 ```
 
 !!! success "Done"
-    Your terminal output is now colorized. No other changes to your launch files or ROS 2 setup are needed.
+    `ros2 launch` now opens in the DendROS viewer, with your groups colored. No other changes to your launch files or ROS 2 setup are needed.
 
 <div class="term">
   <div class="term-bar">
@@ -99,47 +96,76 @@ ros2 launch my_bringup main.launch.py
       <div class="term-dot term-dot-yellow"></div>
       <div class="term-dot term-dot-green"></div>
     </div>
-    <div class="term-title">Colored Terminal Output</div>
+    <div class="term-title">ros2 launch my_bringup main.launch.py</div>
   </div>
   <div class="term-body-image">
   <p align="center">
-<img src="../assets/images/screenshots/terminal_output.png" width="900" alt="Terminal Output"/>
+<img src="../assets/images/screenshots/tui_scroll.gif" width="900" alt="A launch in the DendROS viewer"/>
 </p>
 </div>
 </div>
 
+Scroll with the mouse wheel or ++page-up++ / ++page-down++, drag to copy, ++ctrl+c++ to stop the launch and ++q++ to close the viewer. See [TUI Mode](launch-tui.md).
 
 ---
 
-## Troubleshooting
+## Step 5 — Filter and search
 
-??? warning "No colors showing"
-    Run with debug mode:
-    ```bash
-    DENDROS_DEBUG=1 ros2 launch my_bringup main.launch.py
-    ```
-    If you see `passthrough mode`, the config was not discovered. Verify:
+Press ++backslash++ in the viewer and type a command:
 
-    - The package was built and you sourced `install/setup.bash`.
-    - `config/dendROS.yaml` is installed. Check `CMakeLists.txt` for:
-      ```cmake
-      install(DIRECTORY config/ DESTINATION share/${PROJECT_NAME})
-      ```
+```text
+\focus slam_toolbox
+\level warn
+```
 
-??? warning "Nodes not matching expected colors"
-    Check the debug summary — it prints each group and its patterns. Compare against raw output:
-    ```bash
-    DENDROS_DISABLE=1 ros2 launch my_bringup main.launch.py 2>&1 | grep '^\['
-    ```
-    Node names are matched after stripping the `-N` suffix. Use wildcards (`nav2_*`) for nodes you don't know in advance.
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">focus + level + grep</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_combine.gif" width="900" alt="Stacking filters in the viewer"/>
+</p>
+</div>
+</div>
 
-??? note "Temporarily disable"
-    For a single invocation, prefix the command:
-    ```bash
-    DENDROS_DISABLE=1 ros2 launch my_bringup main.launch.py
-    ```
-    To toggle colorization for the whole shell session:
-    ```bash
-    dendros disable   # off until you run dendros enable
-    dendros enable
-    ```
+See [Console Commands](tui-console.md) for all of them.
+
+??? note "Prefer the classic scrolling output?"
+    Set **Launch mode** to `classic` in the **Output** tab of `dendros config`, or `launch_mode: classic` in `~/.config/dendROS/defaults.yaml`. `ros2 launch` then prints colorized output straight to the terminal, as `ros2 run` always does:
+
+    <div class="term">
+      <div class="term-bar">
+        <div class="term-dots">
+          <div class="term-dot term-dot-red"></div>
+          <div class="term-dot term-dot-yellow"></div>
+          <div class="term-dot term-dot-green"></div>
+        </div>
+        <div class="term-title">launch_mode: classic</div>
+      </div>
+      <div class="term-body-image">
+      <p align="center">
+    <img src="../assets/images/screenshots/quickstart_launch.gif" width="900" alt="Classic colorized launch output"/>
+    </p>
+    </div>
+    </div>
+
+---
+
+## Turning it off
+
+`dendros disable` turns DendROS off in every terminal, including launches that are already running; `dendros enable` turns it back on. To skip it for a single command, prefix it with `DENDROS_DISABLE=1`. See [Enable & Disable](runtime-control.md).
+
+---
+
+## Next steps
+
+- [Package Config](configuration.md): groups, badges, keyword highlighting
+- [Colors](colors.md): every accepted color format
+- [Global Settings](global-config.md): defaults for all packages
+- [Troubleshooting](troubleshooting.md): no colors, wrong colors, terminal quirks

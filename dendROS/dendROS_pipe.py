@@ -23,7 +23,7 @@ except ImportError:
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib.colors import make_dim
+from lib.colors import make_dim, DENDROS_TAG, set_ignore_bold
 from lib.colorizers import PREFIX_RE, LAUNCH_RE, _LOG_LEVELS, colorize_line, colorize_launch_msg, strip_log_metadata
 from lib.config_loader import load_config, merge_color_maps, resolve_node, resolve_node_mode, resolve_node_style
 from lib.keywords import build_keyword_highlights, resolve_node_keywords, apply_keyword_highlights
@@ -31,7 +31,7 @@ from lib.discovery import (
     extract_package_name, extract_launch_file, find_config,
     find_launch_file, extract_included_packages,
 )
-from lib.global_config import load_global_config, get_node_colors_path
+from lib.global_config import load_global_config, get_node_colors_path, is_disable_flag_set
 import lib.crash_alert as ca
 import lib.traceback_color as tc
 import lib.param_watcher as pw
@@ -52,7 +52,7 @@ _LOGGER_RE = re.compile(
 
 
 def _dbg(msg):
-    print(f'\033[35;1m[dendROS]\033[0m {msg}', file=sys.stderr, flush=True)
+    print(f'{DENDROS_TAG} {msg}', file=sys.stderr, flush=True)
 
 
 def _save_node_colors(color_map, tag_map, style_map):
@@ -89,6 +89,7 @@ def main():
     if global_cfg.get('debug', False):
         _DEBUG = True
 
+    set_ignore_bold(global_cfg.get('ignore_bold', False))
     tc.set_mode(global_cfg.get('traceback_color', 'fancy'))
 
     try:
@@ -123,7 +124,7 @@ def main():
             color_map, tag_map, mode_map, style_map, keyword_map, pkg_defaults = load_config(config_path)
             defaults = {**base, **pkg_defaults}
         except Exception as e:
-            print(f'\033[35;1m[dendROS]\033[0m config error ({config_path}): {e}',
+            print(f'{DENDROS_TAG} config error ({config_path}): {e}',
                   file=sys.stderr, flush=True)
 
     config_merge = global_cfg.get('config_merge', True)
@@ -147,7 +148,7 @@ def main():
                     if _DEBUG:
                         _dbg(f'merged: {inc_pkg} ({inc_config_path})  +{len(inc_color)} node{"s" if len(inc_color) != 1 else ""}')
                 except Exception as e:
-                    print(f'\033[35;1m[dendROS]\033[0m config error ({inc_config_path}): {e}',
+                    print(f'{DENDROS_TAG} config error ({inc_config_path}): {e}',
                           file=sys.stderr, flush=True)
 
     if config_path:
@@ -207,6 +208,16 @@ def main():
     _stdout_tty = sys.stdout.isatty()
     _stdout_fd  = sys.stdout.fileno() if _stdout_tty else -1
 
+    _disable_state = {'passthrough': False, 'last_check': 0.0}
+
+    def _refresh_disabled_state():
+        """Poll the system-wide disable flag at most once/sec (cheap stat, rate-limited)."""
+        now = time.monotonic()
+        if now - _disable_state['last_check'] < 1.0:
+            return
+        _disable_state['last_check'] = now
+        _disable_state['passthrough'] = is_disable_flag_set()
+
     def _emit(text):
         if _stdout_tty and _termios is not None:
             try:
@@ -218,7 +229,17 @@ def main():
         sys.stdout.flush()
 
     def _colorize(line):
-        """Apply full colorization pipeline to one line; return the colored line."""
+        """Apply full colorization pipeline to one line; return (colored_line, node_name,
+        logger_name). node_name/logger_name are the launch process tag / ROS graph logger
+        name discovered for this line (both None when neither pattern matches at all) —
+        both are captured from the RAW pre-colorization line, so they're authoritative
+        regardless of tag_position/show_tag/show_timestamp/show_logger_name (unlike trying
+        to reverse-parse them back out of the final colorized+badged text, which is
+        ambiguous — e.g. tag_position: before puts the badge in the same leading-bracket
+        position a process tag would otherwise occupy). Consumed by the TUI's `\\` console
+        (lib/launch_tui_console.py) to filter by node identity without any such guessing."""
+        node_name = None
+        logger_name = None
         m = PREFIX_RE.match(line)
         if m and m.group(1) not in _LOG_LEVELS:
             node_name = m.group(1)
@@ -281,7 +302,7 @@ def main():
                 ca.mark_traceback(node_name)
                 dim = make_dim(code) if code else '2'
                 tb_prefix = f'\033[{dim}m{m.group(0)}\033[0m '
-                return tc.colorize_traceback(content, tb_prefix)
+                return tc.colorize_traceback(content, tb_prefix), node_name, logger_name
 
             if code:
                 effective_mode  = resolve_node_mode(node_name, mode_map) or color_mode
@@ -290,8 +311,9 @@ def main():
                 node_kws = resolve_node_keywords(node_name, keyword_map)
                 pkg_kws  = build_keyword_highlights(defaults.get('highlight') or defaults.get('highlights') or [], code)
                 all_kws  = node_kws + pkg_kws
-                return apply_keyword_highlights(colored, all_kws) if all_kws else colored
-            return line
+                colored = apply_keyword_highlights(colored, all_kws) if all_kws else colored
+                return colored, node_name, logger_name
+            return line, node_name, logger_name
         elif colorize_launch_msgs:
             # RCUTILS_COLORIZED_OUTPUT=1 (set by dendROS.sh) causes rcutils to embed
             # ANSI codes in the level bracket even when output is piped.  Strip them
@@ -308,15 +330,24 @@ def main():
                     node_kws = resolve_node_keywords(node_name, keyword_map)
                     pkg_kws  = build_keyword_highlights(defaults.get('highlight') or defaults.get('highlights') or [], code)
                     all_kws  = node_kws + pkg_kws
-                    return apply_keyword_highlights(launch_colored, all_kws) if all_kws else launch_colored
-        return tc.colorize_traceback(line)
+                    launch_colored = apply_keyword_highlights(launch_colored, all_kws) if all_kws else launch_colored
+                    return launch_colored, node_name, logger_name
+                # falls through: node_name stays set (this line is still identifiable)
+                # even though no color was resolved for it
+        return tc.colorize_traceback(line), node_name, logger_name
 
-    def _iter_stdin():
+    def _iter_stdin(raw=None):
         """Yield lines from stdin, treating \\r, \\n, and \\r\\n as line terminators.
 
         Using the raw binary stream bypasses Python's internal readline buffer so
         \\r-terminated updates (e.g. teleop_twist_keyboard speed display) are
         yielded and passed through immediately, not held until the next \\n.
+
+        `raw` defaults to sys.stdin.buffer.raw. TUI mode passes in a duplicate of the
+        original stdin fd instead: curses.wrapper() reopens fd 0/1 against /dev/tty for
+        keyboard/screen control (fd 0 here is the piped ros2 launch output, not the
+        keyboard), so the reader must keep reading the launch output from a preserved fd
+        rather than from sys.stdin, which after that swap points at the terminal instead.
 
         When Ctrl+C is pressed, SIGINT interrupts the blocking read() syscall and
         Python raises KeyboardInterrupt *inside the generator*.  A generator that
@@ -324,9 +355,14 @@ def main():
         except-KeyboardInterrupt handler then has nothing left to drain.  Fix: catch
         the first interrupt and continue so node-shutdown tracebacks still appear.
         A second interrupt (or any I/O error) ends the generator immediately.
+
+        (In TUI mode this KeyboardInterrupt handling never actually triggers here — SIGINT
+        is only ever delivered to the main thread, and this generator is driven from a
+        background reader thread there. See lib/launch_tui.py's module docstring.)
         """
         buf = b''
-        raw = sys.stdin.buffer.raw
+        if raw is None:
+            raw = sys.stdin.buffer.raw
         _sigint_seen = False
         while True:
             try:
@@ -361,10 +397,66 @@ def main():
                     yield buf[:end].decode('utf-8', errors='replace')
                     buf = buf[end:]
 
-    stdin_lines = _iter_stdin()
+    launch_mode = global_cfg.get('launch_mode', 'tui')
+    use_tui = bool(argv) and argv[0] == 'launch' and launch_mode == 'tui' and _stdout_tty
+
+    tui_stdin_raw = None
+    if use_tui:
+        # curses needs the real controlling terminal for keyboard/screen I/O, but fd 0
+        # here is the piped `ros2 launch` output, not the keyboard — reopening /dev/tty
+        # onto fds 0/1 (what curses.wrapper() uses by default) would otherwise steal the
+        # log stream out from under our own reader. Preserve a duplicate of the original
+        # stdin fd first so the reader can keep consuming launch output from it directly.
+        preserved_fd = None
+        try:
+            preserved_fd = os.dup(0)
+            tty_fd = os.open('/dev/tty', os.O_RDWR)
+            os.dup2(tty_fd, 0)
+            os.dup2(tty_fd, 1)
+            os.close(tty_fd)
+            tui_stdin_raw = os.fdopen(preserved_fd, 'rb', buffering=0)
+        except OSError as e:
+            if preserved_fd is not None:
+                try:
+                    os.close(preserved_fd)
+                except OSError:
+                    pass
+            if _DEBUG:
+                _dbg(f'TUI unavailable, no controlling terminal ({e}), falling back to classic mode')
+            use_tui = False
+
+    stdin_lines = _iter_stdin(tui_stdin_raw)
+
+    if use_tui:
+        try:
+            from lib.launch_tui_run import run_tui
+        except Exception as e:
+            if _DEBUG:
+                _dbg(f'TUI unavailable ({e}), falling back to classic mode')
+            use_tui = False
+
+    if use_tui:
+        try:
+            run_tui(
+                stdin_lines, _colorize, ca, pw,
+                param_alert, param_alert_style,
+                color_map, tag_map, style_map, tag_style, show_tag,
+                global_cfg,
+                launch_argv=argv,
+            )
+            return
+        except Exception as e:
+            if _DEBUG:
+                _dbg(f'TUI crashed ({e}), falling back to classic passthrough for the rest of this run')
+            # stdin_lines is the same generator — classic loop below picks up where the TUI left off
 
     try:
         for line in stdin_lines:
+            _refresh_disabled_state()
+            if _disable_state['passthrough']:
+                _emit(line)
+                continue
+
             new_death = False
 
             if ca._crash_alert_enabled:
@@ -378,7 +470,8 @@ def main():
                     if restarted:
                         ca.handle_restart(restarted)
 
-            _emit(_colorize(line))
+            colored, _, _ = _colorize(line)
+            _emit(colored)
 
             if param_alert:
                 for notif in pw.drain(color_map, tag_map, style_map, tag_style, show_tag,
@@ -395,7 +488,11 @@ def main():
     except KeyboardInterrupt:
         try:
             for line in stdin_lines:  # same generator — continues from where interrupted
-                _emit(_colorize(line))
+                if _disable_state['passthrough']:
+                    _emit(line)
+                else:
+                    colored, _, _ = _colorize(line)
+                    _emit(colored)
         except Exception:
             pass
     except BrokenPipeError:

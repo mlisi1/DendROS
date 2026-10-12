@@ -12,7 +12,7 @@ except ImportError:
     yaml = None
 
 from lib.config_loader import load_config, merge_color_maps, resolve_node, resolve_node_style
-from lib.colors import RESET, _resolve_color
+from lib.colors import RESET, _resolve_color, set_ignore_bold
 from lib.global_config import load_global_config, get_node_colors_path
 
 
@@ -63,6 +63,7 @@ def _badge(label, ansi_code, style):
 
 def main():
     cfg = load_global_config()
+    set_ignore_bold(cfg.get('ignore_bold', False))
     show_tag       = cfg['show_tag_cli']
     tag_position   = cfg['tag_position']
     tag_style      = cfg['tag_style']
@@ -83,7 +84,7 @@ def main():
         # Fallback: scan AMENT_PREFIX_PATH for installed configs
         config_paths = _scan_configs()
         if debug:
-            print(f'[dendROS node list] no shared colors found, scanning AMENT_PREFIX_PATH',
+            print('[dendROS node list] no shared colors found, scanning AMENT_PREFIX_PATH',
                   file=sys.stderr)
             print(f'[dendROS node list] AMENT_PREFIX_PATH={os.environ.get("AMENT_PREFIX_PATH", "<not set>")}',
                   file=sys.stderr)

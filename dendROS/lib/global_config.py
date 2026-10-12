@@ -39,6 +39,9 @@ DEFAULTS = {
     "param_change_alert_style": "inline",
     "show_timestamp":           True,
     "show_logger_name":         True,
+    "launch_mode":              "tui",
+    "tui_scrollback_lines":     5000,
+    "ignore_bold":              False,
 }
 
 
@@ -50,6 +53,86 @@ def get_global_config_path():
 def get_node_colors_path():
     """Return path to the shared node→color map written by the pipe and read by ros2 node list."""
     return os.path.join(os.path.dirname(get_global_config_path()), 'node_colors.yaml')
+
+
+def get_disable_flag_path():
+    """Return path to the system-wide disable flag, shared across all terminals."""
+    return os.path.join(os.path.dirname(get_global_config_path()), 'disable.flag')
+
+
+def is_disable_flag_set():
+    """Check whether colorization is disabled system-wide (cheap: single stat call)."""
+    return os.path.isfile(get_disable_flag_path())
+
+
+def set_disable_flag(enabled):
+    """Set or clear the system-wide disable flag (atomic; safe for concurrent readers)."""
+    path = get_disable_flag_path()
+    if enabled:
+        import tempfile
+        cfg_dir = os.path.dirname(path)
+        try:
+            os.makedirs(cfg_dir, exist_ok=True)
+            fd, tmp = tempfile.mkstemp(dir=cfg_dir, suffix='.tmp')
+            os.close(fd)
+            os.replace(tmp, path)
+        except Exception:
+            pass
+    else:
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+        except Exception:
+            pass
+
+
+def get_tui_command_path():
+    """Path to the one-shot TUI console command mailbox, shared across all terminals.
+
+    Unlike disable.flag (a persistent boolean — existence is the whole signal), this file
+    carries a text payload (e.g. 'focus talker' or 'clear') and is meant to be applied
+    exactly once: whichever running `ros2 launch` TUI session polls it first consumes
+    (reads + deletes) it via pop_tui_command(). If multiple TUI sessions are running
+    concurrently there is no session targeting — the same accepted limitation as
+    dendros disable/enable, which are also global rather than session-scoped.
+    """
+    return os.path.join(os.path.dirname(get_global_config_path()), 'tui_command.flag')
+
+
+def set_tui_command(command_text):
+    """Atomically publish a one-shot TUI console command for a running TUI session to
+    consume (e.g. from `dendros focus <node>` / `dendros clear` in another shell). Last
+    write wins if a previous command hasn't been picked up yet — no queueing, same
+    existence/overwrite model as set_disable_flag(), just with content."""
+    path = get_tui_command_path()
+    cfg_dir = os.path.dirname(path)
+    try:
+        import tempfile
+        os.makedirs(cfg_dir, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=cfg_dir, suffix='.tmp')
+        with os.fdopen(fd, 'w') as f:
+            f.write(command_text)
+        os.replace(tmp, path)
+    except Exception:
+        pass
+
+
+def pop_tui_command():
+    """Read and immediately delete the pending TUI command, if any. One-shot: applied by
+    at most one session under normal conditions and never replayed on a future launch.
+    Returns the raw command text, or None if no command is pending."""
+    path = get_tui_command_path()
+    try:
+        with open(path) as f:
+            text = f.read()
+    except (FileNotFoundError, OSError):
+        return None
+    try:
+        os.remove(path)
+    except (FileNotFoundError, OSError):
+        pass
+    return text
 
 
 def load_global_config():

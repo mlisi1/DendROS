@@ -71,16 +71,16 @@ services:
 bash uninstall.sh
 ```
 
-Removes `/usr/local/dendROS/` and the `.bashrc` lines cleanly. Nothing else is touched.
+Removes `/usr/local/dendROS/`, the two lines the installer added to `.bashrc`, and DendROS's runtime files in `~/.config/dendROS/` (saved TUI runs, the color cache). Your settings in `~/.config/dendROS/defaults.yaml` are kept, so a reinstall picks them up; delete that folder to remove them too. Open a new terminal afterwards: shells that are already open still have the `ros2` wrapper loaded.
 
 ---
 
 ## Verify
 
-After sourcing `.bashrc`, use `DENDROS_DEBUG=1` to confirm DendROS found your config:
+After sourcing `.bashrc`, run any launch. The ROS 2 demo nodes work well for this:
 
 ```bash
-DENDROS_DEBUG=1 ros2 launch my_pkg my_launch.py
+ros2 launch demo_nodes_cpp talker_listener_launch.py
 ```
 
 <div class="term">
@@ -90,16 +90,26 @@ DENDROS_DEBUG=1 ros2 launch my_pkg my_launch.py
       <div class="term-dot term-dot-yellow"></div>
       <div class="term-dot term-dot-green"></div>
     </div>
-    <div class="term-title">Colored Terminal Output</div>
+    <div class="term-title">ros2 launch demo_nodes_cpp talker_listener_launch.py</div>
   </div>
   <div class="term-body-image">
   <p align="center">
-<img src="../assets/images/screenshots/terminal_output.png" width="900" alt="Terminal Output"/>
+<img src="../assets/images/screenshots/verify_tui.png" width="900" alt="A launch opening in the DendROS viewer on a fresh install"/>
 </p>
 </div>
 </div>
 
-If you see `passthrough mode` instead, the config was not found. Check that:
+If the launch opens in the full-screen viewer with `[dendROS]` and the version in the header, DendROS is active. Press ++ctrl+c++ to stop the launch and ++q++ to close the viewer.
+
+This package has no `dendROS.yaml` yet, so its lines aren't colored. Continue with the [Quick Start](quickstart.md) to create a config for your own package.
+
+To check which config DendROS finds for a package, use [debug output](runtime-control.md#debug-output-dendros_debug):
+
+```bash
+DENDROS_DEBUG=1 ros2 launch my_bringup main.launch.py | cat
+```
+
+If a package that does have a `dendROS.yaml` still reports `passthrough mode`, its config was not found. Check that:
 
 - The package was built and `install/setup.bash` was sourced.
 - `config/dendROS.yaml` is installed to `share/my_bringup/config/` — verify your `CMakeLists.txt` installs the `config/` directory.

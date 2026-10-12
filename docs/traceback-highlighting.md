@@ -85,7 +85,7 @@ This preserves node identification while making the traceback structure visually
 
 ## Configuring via `dendros config`
 
-The setting is exposed in the TUI under **System**:
+The setting is in the **Diagnostics** tab:
 
 | Setting | Values |
 |---|---|

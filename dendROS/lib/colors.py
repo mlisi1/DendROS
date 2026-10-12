@@ -6,6 +6,18 @@ RESET = '\033[0m'
 _ANSI_RE = re.compile(r'\033\[[0-9;]*m')
 _HEX_RE = re.compile(r'^(@?)#([0-9a-fA-F]{6})$')
 
+# Official DendROS brand colors — must stay in sync with lib.logo._TITLE_BLUE/_TITLE_ORANGE.
+_DENDROS_BLUE = (0, 75, 107)
+_DENDROS_ORANGE = (224, 127, 0)
+
+# Canonical "[dendROS]" tag: "[dend" in brand blue, "ROS]" in brand orange, both bold.
+# Every place that prints the [dendROS] tag should use this instead of an ad-hoc color.
+DENDROS_TAG = (
+    f'\033[38;2;{_DENDROS_BLUE[0]};{_DENDROS_BLUE[1]};{_DENDROS_BLUE[2]};1m[dend'
+    f'\033[38;2;{_DENDROS_ORANGE[0]};{_DENDROS_ORANGE[1]};{_DENDROS_ORANGE[2]};1mROS]'
+    f'{RESET}'
+)
+
 _COLOR_CODES = {
     'black': 30, 'red': 31, 'green': 32, 'yellow': 33,
     'blue':  34, 'magenta': 35, 'cyan': 36, 'white':  37,
@@ -47,6 +59,44 @@ _HEX_ALIASES = {
 }
 
 
+# Compatibility workaround: some terminals brighten bold *foreground* text but never
+# brighten backgrounds, so a group's bold color can look like two different shades between
+# a node's regular (bold fg) text and its inverted [TAG] badge (bold-as-bg after the
+# reverse-video swap) — or even between classic-mode output and a CLI command's output.
+# Since curses/terminfo has no way to ask a terminal whether it does this, `ignore_bold`
+# is a manual global-config escape hatch: set_ignore_bold() is called once at each
+# entry-point's startup from its own global config read, and _resolve_color() strips the
+# bold modifier from its result for the rest of that process's lifetime — covering every
+# caller (classic launch/run, the TUI, and all `ros2 node/service/action/param/topic`
+# CLI colorizers) uniformly, since they all funnel through this one function.
+_IGNORE_BOLD = False
+
+
+def set_ignore_bold(value):
+    global _IGNORE_BOLD
+    _IGNORE_BOLD = bool(value)
+
+
+def _strip_bold_token(code):
+    """Remove a bare '1' (bold) SGR parameter from a ';'-joined code string. The operands of
+    extended colors (38/48;2;R;G;B and 38/48;5;N) are copied through untouched — a channel
+    value or palette index of 1 is not bold."""
+    params = code.split(';')
+    kept = []
+    i = 0
+    while i < len(params):
+        p = params[i]
+        if p in ('38', '48') and i + 1 < len(params):
+            n_operands = {'2': 4, '5': 2}.get(params[i + 1], 0)
+            kept.extend(params[i:i + 1 + n_operands])
+            i += 1 + n_operands
+            continue
+        if p != '1':
+            kept.append(p)
+        i += 1
+    return ';'.join(kept) if kept else '0'
+
+
 def _ansi(code):
     return f'\033[{code}m'
 
@@ -70,7 +120,15 @@ def _resolve_color(value):
                             "bold #FF6600"       (same as @#FF6600)
       Named colors:         "yellow", "light blue", "dark red", "bold green"
                             "bold light cyan"
+
+    When the `ignore_bold` global config is enabled (set_ignore_bold(True)), the bold
+    modifier is stripped from the result regardless of how it was requested.
     """
+    code = _resolve_color_impl(value)
+    return _strip_bold_token(code) if _IGNORE_BOLD else code
+
+
+def _resolve_color_impl(value):
     s = str(value).strip()
     sl = s.lower()
 

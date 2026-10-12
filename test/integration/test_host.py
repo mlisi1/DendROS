@@ -10,6 +10,7 @@ import os
 import re
 import sys
 import subprocess
+import tempfile
 import pytest
 
 ANSI_RE = re.compile(r'\033\[([0-9;]*)m')
@@ -33,17 +34,28 @@ def install_tree_present():
     return os.path.isfile(config)
 
 
-def run_host_pipe(lines, env_extra=None, timeout=15):
+def run_host_pipe(lines, env_extra=None, timeout=15, global_cfg=None):
     env = os.environ.copy()
     env['AMENT_PREFIX_PATH'] = INSTALL_TREE
     env.pop('ROS_DISTRO', None)
+    for var in ('DENDROS_DISABLE', 'DENDROS_DEBUG'):
+        env.pop(var, None)
     if env_extra:
         env.update(env_extra)
     stdin_data = ''.join(lines).encode()
-    result = subprocess.run(
-        [sys.executable, PIPE_PATH, 'launch', PKG_NAME],
-        input=stdin_data, capture_output=True, env=env, timeout=timeout,
-    )
+    # Isolated HOME (same as the unit tests' run_pipe): the developer's own
+    # ~/.config/dendROS/defaults.yaml and disable flag must not leak into the run.
+    with tempfile.TemporaryDirectory() as home:
+        env['HOME'] = home
+        if global_cfg is not None:     # YAML text for ~/.config/dendROS/defaults.yaml
+            cfg_dir = os.path.join(home, '.config', 'dendROS')
+            os.makedirs(cfg_dir)
+            with open(os.path.join(cfg_dir, 'defaults.yaml'), 'w') as f:
+                f.write(global_cfg)
+        result = subprocess.run(
+            [sys.executable, PIPE_PATH, 'launch', PKG_NAME],
+            input=stdin_data, capture_output=True, env=env, timeout=timeout,
+        )
     return result.stdout.decode(), result.stderr.decode(), result.returncode
 
 
@@ -219,9 +231,19 @@ class TestMixedInputHost:
                 assert ANSI_RE.search(line), f"launch line should be colored: {line!r}"
 
     def test_line_count_preserved(self):
+        # mixed.txt ends with a "process has died" line: turn the crash alert off so
+        # this checks colorization alone (no line dropped, none added).
+        lines = fixture_lines('mixed.txt')
+        stdout, _, _ = run_host_pipe(lines, global_cfg='crash_alert: false\n')
+        assert len(stdout.splitlines()) == len(lines)
+
+    def test_crash_alert_adds_one_banner_line_by_default(self):
         lines = fixture_lines('mixed.txt')
         stdout, _, _ = run_host_pipe(lines)
-        assert len(stdout.splitlines()) == len(lines)
+        out_lines = stdout.splitlines()
+        assert len(out_lines) == len(lines) + 1
+        banner = strip_ansi(out_lines[-1])
+        assert 'CRASH ALERT' in banner and 'listener' in banner and 'exit -11' in banner
 
     def test_plain_lines_unchanged(self):
         lines = fixture_lines('mixed.txt')
@@ -269,8 +291,9 @@ class TestDebugHost:
     def test_debug_on_stderr_not_stdout(self):
         stdout, stderr, _ = run_host_pipe([self.LINE],
                                           env_extra={'DENDROS_DEBUG': '1'})
-        assert '[dendROS]' not in stdout
-        assert '[dendROS]' in stderr
+        assert '[dendROS]' not in strip_ansi(stdout)
+        # the brand tag switches color between "[dend" and "ROS]": strip ANSI first
+        assert '[dendROS]' in strip_ansi(stderr)
 
     def test_config_path_in_debug(self):
         _, stderr, _ = run_host_pipe([self.LINE], env_extra={'DENDROS_DEBUG': '1'})

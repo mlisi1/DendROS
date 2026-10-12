@@ -6,15 +6,17 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from lib.colors import DENDROS_TAG, RESET
+
 try:
     import yaml
 except ImportError:
-    print("[dendROS] PyYAML required: pip3 install pyyaml", file=sys.stderr)
+    print(f'{DENDROS_TAG} PyYAML required: pip3 install pyyaml', file=sys.stderr)
     sys.exit(1)
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from lib.config_writer import make_label, write_config, merge_config
+from lib.config_writer import write_config, merge_config
 from lib.build_modifier import modify_cmake, modify_setup_py, modify_setup_cfg
 from lib.discovery import (
     list_launch_files, extract_included_packages,
@@ -25,23 +27,36 @@ from lib.node_extractor import scan_launch_file
 
 
 # ── output ────────────────────────────────────────────────────────────────────
+# Severity colors match ROS 2's own console output (rcutils): INFO in the terminal's default
+# color, WARN yellow, ERROR red — so init's messages read like the logs they sit next to.
+_WARN_COLOR  = '\033[33m'
+_ERROR_COLOR = '\033[31m'
 
 def _info(msg):
-    print(f'\033[35;1m[dendROS]\033[0m {msg}')
+    print(f'{DENDROS_TAG} {msg}', flush=True)  # keep order with stderr when piped
 
 def _warn(msg):
-    print(f'\033[33;1m[dendROS]\033[0m {msg}', file=sys.stderr)
+    print(f'{DENDROS_TAG} {_WARN_COLOR}{msg}{RESET}', file=sys.stderr)
 
 def _error(msg):
-    print(f'\033[31;1m[dendROS]\033[0m {msg}', file=sys.stderr)
+    print(f'{DENDROS_TAG} {_ERROR_COLOR}{msg}{RESET}', file=sys.stderr)
 
 
 # ── package detection ─────────────────────────────────────────────────────────
 
 def find_package_root(cwd=None):
-    """Walk up from cwd (or Path.cwd()) to find the directory containing package.xml."""
+    """The package root is the current directory itself, when it holds a package.xml — never
+    an ancestor: walking up would let a run from some unrelated subfolder silently write a
+    config (and patch the build files) of whatever package happens to enclose it."""
     current = Path(cwd) if cwd else Path.cwd()
-    for directory in [current] + list(current.parents):
+    return current if (current / 'package.xml').exists() else None
+
+
+def find_enclosing_package(cwd=None):
+    """Nearest ancestor directory holding a package.xml, or None — only used to point the
+    user at the right directory when init is run from inside a package's subfolder."""
+    current = Path(cwd) if cwd else Path.cwd()
+    for directory in current.parents:
         if (directory / 'package.xml').exists():
             return directory
     return None
@@ -140,7 +155,13 @@ def main(argv=None):
 
     pkg_root = find_package_root()
     if pkg_root is None:
-        _error('no package.xml found in the current directory or any parent.')
+        enclosing = find_enclosing_package()
+        if enclosing is not None:
+            _error(f'not a package root (no package.xml here). This is inside '
+                   f'{get_package_name(enclosing) or "a package"}: run `dendros init` from {enclosing}')
+        else:
+            _error('not a ROS 2 package (no package.xml here). Run `dendros init` from the '
+                   'root of the package whose launch files you want to scan.')
         sys.exit(1)
 
     pkg_name = get_package_name(pkg_root)
@@ -173,7 +194,12 @@ def main(argv=None):
     total = sum(len(v) for v in node_groups.values())
     _info(f'found {total} node(s) in {len(node_groups)} group(s)')
     if total == 0:
-        _warn('no nodes found — the generated config will be empty.')
+        # Nothing to color: don't leave an empty config/ + dendROS.yaml (and patched build
+        # files) behind in the package.
+        _error('no nodes found in the launch files — nothing written.'
+               + ('' if recursive or not launch_dir.exists()
+                  else ' Try --recursive if they come from included launch files.'))
+        sys.exit(1)
 
     config_dir.mkdir(parents=True, exist_ok=True)
     existed_before = config_path.exists()

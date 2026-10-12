@@ -166,7 +166,10 @@
   background: var(--md-code-bg-color);
 }
 
-.feature-card .fc-icon { font-size: 1.5rem; margin-bottom: 0.35rem; }
+.feature-card .fc-icon { font-size: 1.5rem; margin-bottom: 0.35rem; color: #e07f00; line-height: 1; }
+.feature-card .fc-icon p { margin: 0; font-size: inherit; color: inherit; }
+.feature-card .fc-icon .twemoji { height: 2rem; width: 2rem; }
+.feature-card .fc-icon .twemoji svg { height: 2rem; width: 2rem; max-height: none; fill: currentColor; }
 .feature-card strong   { display: block; margin-bottom: 0.25rem; }
 .feature-card p        { font-size: 0.84rem; color: var(--md-default-fg-color--light); margin: 0; }
 
@@ -213,4 +216,20 @@
 .md-typeset .admonition p:last-child,
 .md-typeset details p:last-child {
   margin-bottom: 0.75rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Back-to-top button — brand orange so it stands out on the dark scheme
+   ───────────────────────────────────────────────────────────────── */
+
+[data-md-color-scheme="slate"] .md-top {
+  background-color: #e07f00;
+  color: #10181c;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+[data-md-color-scheme="slate"] .md-top:hover,
+[data-md-color-scheme="slate"] .md-top:focus {
+  background-color: #ff9d1f;
+  color: #10181c;
 }

@@ -13,7 +13,7 @@ except ImportError:
     yaml = None
 
 from lib.config_loader import load_config, merge_color_maps, resolve_node, resolve_node_style
-from lib.colors import RESET, _resolve_color
+from lib.colors import RESET, _resolve_color, set_ignore_bold
 from lib.global_config import load_global_config, get_node_colors_path
 
 _PARAM_NAME_RE = re.compile(r'^(Parameter name):\s+(.*)')
@@ -88,7 +88,7 @@ def _colorize_line(raw, ansi_code, label, node_style,
     m = _PARAM_NAME_RE.match(raw)
     if m:
         param_name = m.group(2).strip()
-        dim_label = f'\033[2mParameter name:\033[0m'
+        dim_label = '\033[2mParameter name:\033[0m'
 
         if ansi_code:
             colored = f'\033[{ansi_code};1m{param_name}\033[0m'
@@ -121,6 +121,7 @@ def _colorize_line(raw, ansi_code, label, node_style,
 
 def main():
     cfg = load_global_config()
+    set_ignore_bold(cfg.get('ignore_bold', False))
     show_tag      = cfg['show_tag_cli']
     tag_style     = cfg['tag_style']
     unmatched_clr = cfg['unmatched_color']
