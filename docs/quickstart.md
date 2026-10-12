@@ -87,7 +87,7 @@ ros2 launch my_bringup main.launch.py
 ```
 
 !!! success "Done"
-    Your terminal output is now colorized. No other changes to your launch files or ROS 2 setup are needed.
+    `ros2 launch` now opens in the DendROS viewer, with your groups colored. No other changes to your launch files or ROS 2 setup are needed.
 
 <div class="term">
   <div class="term-bar">
@@ -100,22 +100,18 @@ ros2 launch my_bringup main.launch.py
   </div>
   <div class="term-body-image">
   <p align="center">
-<img src="../assets/images/screenshots/quickstart_launch.gif" width="900" alt="Colorized launch output"/>
+<img src="../assets/images/screenshots/tui_scroll.gif" width="900" alt="A launch in the DendROS viewer"/>
 </p>
 </div>
 </div>
 
+Scroll with the mouse wheel or ++page-up++ / ++page-down++, drag to copy, ++ctrl+c++ to stop the launch and ++q++ to close the viewer. See [TUI Mode](launch-tui.md).
+
 ---
 
-## Step 5 — Try TUI mode (optional, recommended)
+## Step 5 — Filter and search
 
-For big launches, switch `ros2 launch` to the full-screen viewer, where you can scroll back, search, filter by node or severity, and copy with the mouse:
-
-```bash
-dendros config    # Output tab → Launch mode → tui, then s to save
-```
-
-Launch again, then press ++backslash++ and type a command:
+Press ++backslash++ in the viewer and type a command:
 
 ```text
 \focus slam_toolbox
@@ -129,16 +125,35 @@ Launch again, then press ++backslash++ and type a command:
       <div class="term-dot term-dot-yellow"></div>
       <div class="term-dot term-dot-green"></div>
     </div>
-    <div class="term-title">TUI mode: focus + level + grep</div>
+    <div class="term-title">focus + level + grep</div>
   </div>
   <div class="term-body-image">
   <p align="center">
-<img src="../assets/images/screenshots/tui_combine.gif" width="900" alt="Stacking TUI filters"/>
+<img src="../assets/images/screenshots/tui_combine.gif" width="900" alt="Stacking filters in the viewer"/>
 </p>
 </div>
 </div>
 
-See [TUI Mode](launch-tui.md) and [Console Commands](tui-console.md).
+See [Console Commands](tui-console.md) for all of them.
+
+??? note "Prefer the classic scrolling output?"
+    Set **Launch mode** to `classic` in the **Output** tab of `dendros config`, or `launch_mode: classic` in `~/.config/dendROS/defaults.yaml`. `ros2 launch` then prints colorized output straight to the terminal, as `ros2 run` always does:
+
+    <div class="term">
+      <div class="term-bar">
+        <div class="term-dots">
+          <div class="term-dot term-dot-red"></div>
+          <div class="term-dot term-dot-yellow"></div>
+          <div class="term-dot term-dot-green"></div>
+        </div>
+        <div class="term-title">launch_mode: classic</div>
+      </div>
+      <div class="term-body-image">
+      <p align="center">
+    <img src="../assets/images/screenshots/quickstart_launch.gif" width="900" alt="Classic colorized launch output"/>
+    </p>
+    </div>
+    </div>
 
 ---
 

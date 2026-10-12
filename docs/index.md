@@ -24,7 +24,7 @@
 </div>
 </div>
 
-DendROS wraps the `ros2` command and gives every group of nodes its own color, in `ros2 launch`, `ros2 run` and the `ros2` introspection commands. New in 1.1, `ros2 launch` can open in a **full-screen viewer**: scroll back, search, filter by node or severity, and copy with the mouse while the launch keeps running. Colors come from a small YAML file in your package. Packages without one are left untouched, and nothing changes in your launch files.
+DendROS wraps the `ros2` command and gives every group of nodes its own color, in `ros2 launch`, `ros2 run` and the `ros2` introspection commands. New in 1.1, `ros2 launch` opens in a **full-screen viewer**: scroll back, search, filter by node or severity, and copy with the mouse while the launch keeps running. Colors come from a small YAML file in your package. Packages without one are left untouched, and nothing changes in your launch files.
 
 ---
 

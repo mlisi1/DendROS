@@ -157,9 +157,9 @@ Common problems and how to fix them. When in doubt, start with [debug mode](runt
 ## TUI mode
 
 ??? warning "`ros2 launch` still shows classic output"
-    Check that `launch_mode: tui` is set in `~/.config/dendROS/defaults.yaml` (or **Launch
-    mode** in the **Output** tab of `dendros config`). TUI mode also falls back to classic
-    output on purpose when:
+    TUI mode is the default. Check that `launch_mode` isn't set to `classic` in
+    `~/.config/dendROS/defaults.yaml` (or **Launch mode** in the **Output** tab of
+    `dendros config`). TUI mode also falls back to classic output on purpose when:
 
     - the command is `ros2 run` (TUI mode is for `ros2 launch` only)
     - stdout is redirected or piped (`| tee`, `> file`)

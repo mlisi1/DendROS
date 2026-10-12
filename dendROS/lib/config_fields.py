@@ -154,8 +154,8 @@ _DESCS = {
         "off — strip the logger name bracket for a shorter log line",
     ),
     "launch_mode": (
-        "classic — pipe ros2 launch output straight to the terminal, colorized inline (default)",
-        "tui     — open a full-screen scrollback view with a pinned crash/param alert banner."
+        "classic — pipe ros2 launch output straight to the terminal, colorized inline",
+        "tui     — open a full-screen scrollback view with a pinned crash/param alert banner (default)."
         " ros2 launch only; automatically falls back to classic for ros2 run or non-interactive stdout",
     ),
     "tui_scrollback_lines": (

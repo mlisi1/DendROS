@@ -397,7 +397,7 @@ def main():
                     yield buf[:end].decode('utf-8', errors='replace')
                     buf = buf[end:]
 
-    launch_mode = global_cfg.get('launch_mode', 'classic')
+    launch_mode = global_cfg.get('launch_mode', 'tui')
     use_tui = bool(argv) and argv[0] == 'launch' and launch_mode == 'tui' and _stdout_tty
 
     tui_stdin_raw = None

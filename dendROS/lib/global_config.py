@@ -39,7 +39,7 @@ DEFAULTS = {
     "param_change_alert_style": "inline",
     "show_timestamp":           True,
     "show_logger_name":         True,
-    "launch_mode":              "classic",
+    "launch_mode":              "tui",
     "tui_scrollback_lines":     5000,
     "ignore_bold":              False,
 }

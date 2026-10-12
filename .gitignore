@@ -11,6 +11,7 @@ test/reports/
 
 *.md
 !docs/*.md
+!CHANGELOG.md
 
 # MkDocs build output
 site/

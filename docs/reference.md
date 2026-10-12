@@ -55,7 +55,7 @@ Stored in `~/.config/dendROS/defaults.yaml`, managed via `dendros config`:
 | `show_timestamp` | `true` | Show the `[timestamp]` bracket in node log lines globally. |
 | `show_logger_name` | `true` | Show the `[logger_name]` bracket in node log lines globally. |
 | `ignore_bold` | `false` | Strip the bold modifier everywhere colors are resolved (launch/run, TUI, all CLI commands). Compatibility fix for terminals that brighten bold foreground text but not backgrounds — see [Troubleshooting](troubleshooting.md#colors). |
-| `launch_mode` | `classic` | `classic` or `tui` — open `ros2 launch` in the full-screen viewer. See [TUI Mode](launch-tui.md). |
+| `launch_mode` | `tui` | `tui` opens `ros2 launch` in the full-screen viewer; `classic` prints to the terminal. See [TUI Mode](launch-tui.md). |
 | `tui_scrollback_lines` | `5000` | Lines kept by TUI mode. |
 | `crash_alert` | `true` | Print an inline banner when a node dies unexpectedly. |
 | `crash_alert_color` | `node` | `node` = use group color; `red` = always bold red. |
@@ -78,7 +78,7 @@ The `ros2()` shell wrapper intercepts specific subcommands; everything else call
 
 | Subcommand | Behavior |
 |---|---|
-| `ros2 launch …` | Output piped through the DendROS colorizer; opens the full-screen viewer when `launch_mode: tui`. |
+| `ros2 launch …` | Output piped through the DendROS colorizer; opens in the full-screen viewer unless `launch_mode: classic`. |
 | `ros2 run …` | Output piped through the DendROS colorizer. |
 | `ros2 node list` | Output piped through `dendros_node_list.py` — nodes colored by group. See [ros2 node list](node-list.md). |
 | `ros2 node info …` | Output piped through `dendros_node_info.py` — node name, sections, and entries colorized by group. See [ros2 node info](node-info.md). |

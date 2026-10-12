@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>dendros</name>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
   <description>Color-coded, per-node output for ros2 CLI — a shell wrapper around ros2 with configurable colorization, crash alerts, and tooling.</description>
   <maintainer email="michele.lisi@phd.unipi.it">Michele Lisi</maintainer>
   <license>MIT</license>

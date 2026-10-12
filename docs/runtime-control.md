@@ -101,7 +101,7 @@ DENDROS_DEBUG=1 ros2 launch my_bringup main.launch.py
 </div>
 </div>
 
-Prints which config files were found, the groups they define and the resulting node-to-color map to stderr at startup. Useful when colors don't show up, see [Troubleshooting](troubleshooting.md). Set **Debug mode** in [`dendros config`](global-config.md#system) to turn it on permanently.
+Prints which config files were found, the groups they define and the resulting node-to-color map to stderr at startup. In [TUI mode](launch-tui.md) the summary is printed before the viewer opens, so it is back on screen once you quit the viewer; add `| cat` to the command to get classic output and see it right away. Useful when colors don't show up, see [Troubleshooting](troubleshooting.md). Set **Debug mode** in [`dendros config`](global-config.md#system) to turn it on permanently.
 
 ---
 

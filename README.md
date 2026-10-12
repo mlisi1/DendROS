@@ -38,7 +38,7 @@ all the same color. By the time you find the line you were looking for, it has s
 hardware in orange — defined once in a small YAML file that lives inside your package.
 No launch file edits. No new ROS 2 dependencies. Packages without a config pass through completely unchanged.
 
-And since 1.1, `ros2 launch` can open in a **full-screen viewer** where you scroll, search and filter the log while the launch keeps running.
+And since 1.1, `ros2 launch` opens in a **full-screen viewer** where you scroll, search and filter the log while the launch keeps running.
 
 <br clear="right"/>
 
@@ -48,7 +48,7 @@ And since 1.1, `ros2 launch` can open in a **full-screen viewer** where you scro
 <img src="docs/assets/images/screenshots/showcase.gif" width="720" alt="DendROS TUI mode: filtering a live launch, colorized ros2 CLI, and remote commands"/>
 </p>
 
-Set `launch_mode: tui` and `ros2 launch` becomes a full-screen log viewer:
+`ros2 launch` now opens in a full-screen log viewer:
 
 - **Scroll back and copy** — the whole run stays in the scrollback; drag with the mouse to copy. Crash and parameter alerts stay pinned in the header.
 - **Filter and search with `\`** — `focus` on some nodes, filter by `level` or `grep`, `find` text and step through the matches, `mute` the noisy ones. Filters stack, and `Esc` peels them off one at a time.
@@ -56,7 +56,7 @@ Set `launch_mode: tui` and `ros2 launch` becomes a full-screen log viewer:
 - **Drive it from another terminal** — `dendros focus planner_server`, `dendros grep timeout`, … reach the running launch, so you don't have to switch panes.
 - **`dendros reopen`** — closed it too early? Bring back the last run, scrollback and all.
 
-It's opt-in, and it falls back to the classic output on its own when the output is piped or redirected, so scripts and CI are not affected. [→ TUI Mode](https://mlisi1.github.io/DendROS/launch-tui/) · [→ Console commands](https://mlisi1.github.io/DendROS/tui-console/)
+It falls back to the classic output on its own when the output is piped or redirected, so scripts and CI are not affected. Prefer the plain scrolling output? Set `launch_mode: classic`. [→ TUI Mode](https://mlisi1.github.io/DendROS/launch-tui/) · [→ Console commands](https://mlisi1.github.io/DendROS/tui-console/)
 
 <p align="center">
 <img src="docs/assets/images/screenshots/tui_combine.gif" width="700" alt="Stacking focus, level and grep filters in the TUI"/>
@@ -129,11 +129,7 @@ source install/setup.bash
 ros2 launch my_bringup main.launch.py
 ```
 
-Optional, but recommended: switch to TUI mode.
-
-```bash
-dendros config        # Output tab → Launch mode → tui, then s to save
-```
+The launch opens in the viewer: press `\` to filter and search, `Ctrl-C` to stop the launch, `q` to close.
 
 Something not colored? `DENDROS_DEBUG=1 ros2 launch …` prints which config DendROS found. See the [step-by-step walkthrough](https://mlisi1.github.io/DendROS/quickstart/) and [Troubleshooting](https://mlisi1.github.io/DendROS/troubleshooting/).
 

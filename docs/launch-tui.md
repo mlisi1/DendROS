@@ -2,13 +2,15 @@
 
 TUI mode turns `ros2 launch` into a full-screen log viewer. The output is the same as in classic mode, with the same colors, badges, crash alerts and highlights, but you can scroll back through it, search it, filter it and copy from it while the launch keeps running.
 
+It is the default since DendROS 1.1. To go back to plain scrolling output, set the launch mode to `classic`:
+
 ```yaml
 # ~/.config/dendROS/defaults.yaml
-launch_mode: tui            # classic | tui
+launch_mode: tui            # tui (default) | classic
 tui_scrollback_lines: 5000  # how many lines the TUI keeps
 ```
 
-Or switch **Launch mode** to `tui` in the **Output** tab of [`dendros config`](global-config.md).
+Or change **Launch mode** in the **Output** tab of [`dendros config`](global-config.md).
 
 ---
 
@@ -170,7 +172,7 @@ Both settings are in the **Output** tab:
 
 | Setting | Values | Description |
 |---|---|---|
-| **Launch mode** | `classic` / `tui` | `tui` opens `ros2 launch` in the full-screen viewer. |
+| **Launch mode** | `classic` / `tui` | `tui` (default) opens `ros2 launch` in the full-screen viewer; `classic` prints to the terminal. |
 | **TUI scrollback lines** | integer | How many lines the TUI keeps. Default `5000`. |
 
 ---

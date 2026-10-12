@@ -282,8 +282,9 @@ class TestDebugModeDocker:
     def test_debug_on_stderr_not_stdout(self, docker_image):
         stdout, stderr, _ = run_in_docker([self.LINE],
                                           env_extra={'DENDROS_DEBUG': '1'})
-        assert '[dendROS]' not in stdout
-        assert '[dendROS]' in stderr
+        assert '[dendROS]' not in strip_ansi(stdout)
+        # the brand tag switches color between "[dend" and "ROS]": strip ANSI first
+        assert '[dendROS]' in strip_ansi(stderr)
 
     def test_stdout_unchanged_in_debug_mode(self, docker_image):
         stdout_debug, _, _  = run_in_docker([self.LINE], env_extra={'DENDROS_DEBUG': '1'})
