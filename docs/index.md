@@ -15,16 +15,16 @@
       <div class="term-dot term-dot-yellow"></div>
       <div class="term-dot term-dot-green"></div>
     </div>
-    <div class="term-title">Colored Terminal Output</div>
+    <div class="term-title">DendROS in action</div>
   </div>
   <div class="term-body-image">
   <p align="center">
-<img src="./assets/images/screenshots/terminal_output.png" width="900" alt="Colored terminal output"/>
+<img src="./assets/images/screenshots/showcase.gif" width="900" alt="DendROS TUI launch, colorized ros2 CLI and remote commands"/>
 </p>
 </div>
 </div>
 
-DendROS shadows the `ros2` command with a shell function. When you run `ros2 launch` or `ros2 run`, the output is piped through a lightweight Python colorizer that reads a small YAML config from your package, matches the `[node-N]` prefix on each line, and applies group colors. The common `ros2` introspection commands (`node list`, `topic list`, …) get the same colors, and `ros2 launch` can optionally open in a full-screen viewer where you can scroll, search and filter the log. Packages without a config are completely unaffected — no changes to launch files, no exit-code clobbering, no buffering.
+DendROS wraps the `ros2` command and gives every group of nodes its own color, in `ros2 launch`, `ros2 run` and the `ros2` introspection commands. New in 1.1, `ros2 launch` can open in a **full-screen viewer**: scroll back, search, filter by node or severity, and copy with the mouse while the launch keeps running. Colors come from a small YAML file in your package. Packages without one are left untouched, and nothing changes in your launch files.
 
 ---
 
@@ -32,59 +32,34 @@ DendROS shadows the `ros2` command with a shell function. When you run `ros2 lau
 
 <div class="feature-grid" markdown>
 <div class="feature-card" markdown>
-<div class="fc-icon">🎨</div>
-<strong>Group-based coloring</strong>
-<p>Assign colors to logical groups — localization, navigation, hardware. Every node in a group shares its color and badge label.</p>
-</div>
-<div class="feature-card" markdown>
-<div class="fc-icon">🔍</div>
-<strong>Smart node matching</strong>
-<p>Exact names, namespaced paths, and <code>fnmatch</code> wildcards. <code>nav2_*</code> covers every Nav2 node in one pattern.</p>
-</div>
-<div class="feature-card" markdown>
-<div class="fc-icon">🛠️</div>
-<strong>Scaffold in one command</strong>
-<p><code>dendros init</code> scans your launch files and writes a ready-to-edit <code>dendROS.yaml</code> automatically.</p>
-</div>
-<div class="feature-card" markdown>
-<div class="fc-icon">⚙️</div>
-<strong>Interactive config TUI</strong>
-<p><code>dendros config</code> opens a curses TUI for managing global defaults — no YAML editing required.</p>
-</div>
-<div class="feature-card" markdown>
-<div class="fc-icon">🚨</div>
-<strong>Crash alert</strong>
-<p>Inline banner flags crashed nodes the moment they die, lists exit codes, and reprints periodically so you never miss it.</p>
-</div>
-<div class="feature-card" markdown>
-<div class="fc-icon">🔴</div>
-<strong>Traceback highlighting</strong>
-<p>Python tracebacks colored automatically — bold red header, dim red frames, even when prefixed with a node name.</p>
-</div>
-<div class="feature-card" markdown>
-<div class="fc-icon">📟</div>
+<div class="fc-icon" markdown>:material-monitor-dashboard:</div>
 <strong>Full-screen launch viewer</strong>
-<p>Optional TUI mode for <code>ros2 launch</code>: scrollback, mouse copy, and a console to <code>focus</code> a node, filter by <code>level</code>, <code>grep</code>, <code>find</code> and <code>mute</code>. [TUI Mode →](launch-tui.md)</p>
+<p>TUI mode turns <code>ros2 launch</code> into a scrollable log with mouse copy, a pinned crash banner and a live scrollbar. [TUI Mode →](launch-tui.md)</p>
 </div>
 <div class="feature-card" markdown>
-<div class="fc-icon">🛰️</div>
-<strong>Remote control &amp; reopen</strong>
-<p>Filter a running launch from another terminal with <code>dendros focus</code>, and bring back the last run with <code>dendros reopen</code>. [More →](tui-remote.md)</p>
+<div class="fc-icon" markdown>:material-filter-variant:</div>
+<strong>Filter and search the live log</strong>
+<p>Press <code>\</code> to <code>focus</code> on nodes, filter by <code>level</code> or <code>grep</code>, <code>find</code> text, <code>mute</code> noise, <code>mark</code> a moment and <code>tee</code> the view to a file. [Console →](tui-console.md)</p>
 </div>
 <div class="feature-card" markdown>
-<div class="fc-icon">🖥️</div>
-<strong>All ros2 CLI commands wrapped</strong>
-<p>Node list, node info, service list, action list, topic list, param list, param describe — all colorized with the same group colors and badges, zero config overhead. [See all →](ros2-cli.md)</p>
+<div class="fc-icon" markdown>:material-remote:</div>
+<strong>Remote control and reopen</strong>
+<p>Drive a running launch from another terminal with <code>dendros focus</code>, and bring back the last run with <code>dendros reopen</code>. [More →](tui-remote.md)</p>
 </div>
 <div class="feature-card" markdown>
-<div class="fc-icon">🔔</div>
-<strong>Parameter change alert</strong>
-<p>Inline notification whenever a node's parameter changes at runtime — shows node, param name, and old→new value directly in the launch log.</p>
+<div class="fc-icon" markdown>:material-palette-swatch:</div>
+<strong>Group colors and badges</strong>
+<p>One color and badge per group of nodes, with wildcards and keyword highlighting. <code>dendros init</code> writes the config for you. [Package Config →](configuration.md)</p>
 </div>
 <div class="feature-card" markdown>
-<div class="fc-icon">🚫</div>
-<strong>Truly non-invasive</strong>
-<p>No launch file changes. Exit codes preserved. <code>dendros disable</code> switches it off everywhere, even in launches already running.</p>
+<div class="fc-icon" markdown>:material-alert-decagram:</div>
+<strong>Crashes, tracebacks, parameters</strong>
+<p>A banner when a node dies, highlighted Python tracebacks, and an inline notice when a parameter changes. [Crash Alert →](crash-alert.md)</p>
+</div>
+<div class="feature-card" markdown>
+<div class="fc-icon" markdown>:material-graph-outline:</div>
+<strong>Colorized ros2 CLI</strong>
+<p><code>ros2 node</code>, <code>topic</code>, <code>service</code>, <code>action</code> and <code>param</code> listings use the same group colors and badges. [See all →](ros2-cli.md)</p>
 </div>
 </div>
 

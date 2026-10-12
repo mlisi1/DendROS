@@ -38,14 +38,11 @@ dendros init
     </div>
     <div class="term-title">dendros init --recursive --labels</div>
   </div>
-  <div class="term-body"><span class="t-dim">[dendROS] package: my_bringup</span>
-<span class="t-dim">[dendROS] scanning (recursive) launch files…</span>
-<span class="t-dim">[dendROS]   main.launch.py: 2 node(s)</span>
-<span class="t-dim">[dendROS] found references to: nav2_bringup, slam_toolbox</span>
-<span class="t-dim">[dendROS]   nav2_bringup/bringup_launch.py [install]: 8 node(s)</span>
-<span class="t-dim">[dendROS]   slam_toolbox/online_async_launch.py [source]: 1 node(s)</span>
-<span class="t-dim">[dendROS] found 11 node(s) in 3 group(s)</span>
-<span class="t-green">[dendROS] created config/dendROS.yaml</span></div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/init_recursive_labels.png" width="900" alt="dendros init --recursive --labels output"/>
+</p>
+</div>
 </div>
 
 ---
@@ -99,18 +96,18 @@ ros2 launch my_bringup main.launch.py
       <div class="term-dot term-dot-yellow"></div>
       <div class="term-dot term-dot-green"></div>
     </div>
-    <div class="term-title">Colored Terminal Output</div>
+    <div class="term-title">ros2 launch my_bringup main.launch.py</div>
   </div>
   <div class="term-body-image">
   <p align="center">
-<img src="../assets/images/screenshots/terminal_output.png" width="900" alt="Terminal Output"/>
+<img src="../assets/images/screenshots/quickstart_launch.gif" width="900" alt="Colorized launch output"/>
 </p>
 </div>
 </div>
 
 ---
 
-## Step 5 — Try TUI mode (optional)
+## Step 5 — Try TUI mode (optional, recommended)
 
 For big launches, switch `ros2 launch` to the full-screen viewer, where you can scroll back, search, filter by node or severity, and copy with the mouse:
 
@@ -124,6 +121,22 @@ Launch again, then press ++backslash++ and type a command:
 \focus slam_toolbox
 \level warn
 ```
+
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">TUI mode: focus + level + grep</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_combine.gif" width="900" alt="Stacking TUI filters"/>
+</p>
+</div>
+</div>
 
 See [TUI Mode](launch-tui.md) and [Console Commands](tui-console.md).
 

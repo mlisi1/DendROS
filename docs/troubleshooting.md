@@ -16,8 +16,12 @@ Common problems and how to fix them. When in doubt, start with [debug mode](runt
     - The package was built and you sourced `install/setup.bash`.
     - `config/dendROS.yaml` is installed. Check `CMakeLists.txt` for:
       ```cmake
-      install(DIRECTORY config/ DESTINATION share/${PROJECT_NAME})
+      install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
       ```
+      Write `config` without a trailing slash. `config/` copies the file to
+      `share/<pkg>/dendROS.yaml`, where DendROS doesn't look; it must end up at
+      `share/<pkg>/config/dendROS.yaml`. `dendros init` in DendROS 1.0 wrote the line with
+      the slash, so check packages you set up with it.
 
 ??? warning "Nodes not matching expected colors"
     Check the debug summary — it prints each group and its patterns. Compare against raw output:
@@ -178,7 +182,8 @@ Common problems and how to fix them. When in doubt, start with [debug mode](runt
     shown as the nearest of those 256 colors. Classic mode shows them exactly.
 
 ??? warning "`dendros focus` says unknown node"
-    A node can only be focused or muted after it has printed at least one line. Use Tab
+    A node can only be focused or muted once a line about it has appeared (its `process
+    started` line counts). Use Tab
     completion in the console bar (`\focus ` then ++tab++) to see the names the TUI knows.
 
 ??? warning "`dendros reopen` says there's no saved run"

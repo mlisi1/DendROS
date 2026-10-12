@@ -20,6 +20,22 @@ dendros mark sending goal
 dendros tee ~/planner.log
 ```
 
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">dendros focus / find / mark / clear</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_remote.gif" width="900" alt="Driving a running TUI from another terminal"/>
+</p>
+</div>
+</div>
+
 | Command | Same as |
 |---|---|
 | `dendros focus <node>...` | `\focus <node>...` |
@@ -49,14 +65,24 @@ dendros reopen
 
 When a TUI launch ends, DendROS saves its log. `dendros reopen` opens that log again in the same viewer, so you can keep reading it after you've quit, or after the terminal has been cleared.
 
-<div class="screenshot-placeholder">
-<div class="sp-icon">⏪</div>
-<p class="sp-label">dendros reopen: reviewing a finished run</p>
-<p class="sp-hint">screenshots/tui_reopen.png</p>
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">dendros reopen</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_reopen.png" width="900" alt="dendros reopen: reviewing a finished run"/>
+</p>
+</div>
 </div>
 
 - The header shows which launch it was and when it ended, for example `-- last run: my_bringup main.launch.py, ended 14:32 --`.
-- Scrolling, copying and every console command work as in a live run. ++q++ quits.
+- Scrolling, copying and every console command except `mark` work as in a live run. ++q++ quits.
 - The crash banner from the end of the run is shown again.
 - Nodes that were muted when the run ended are still muted. Muting or unmuting during the review is saved, so the next `dendros reopen` matches.
 - The whole log is saved, including lines that were hidden by filters or mutes.
@@ -80,7 +106,11 @@ If there is nothing to reopen, DendROS says so:
     </div>
     <div class="term-title">dendros reopen</div>
   </div>
-  <div class="term-body"><span class="t-blue">[dend</span><span class="t-orange">ROS]</span> no saved TUI run for this terminal</div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/reopen_none.png" width="900" alt="dendros reopen with nothing saved"/>
+</p>
+</div>
 </div>
 
 ---

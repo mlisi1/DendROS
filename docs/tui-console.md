@@ -23,16 +23,26 @@ In [TUI mode](launch-tui.md), press ++backslash++ to open the console bar at the
 
 Filtering never deletes anything. Lines that arrive while a filter is active are still recorded, and they reappear as soon as you remove the filter.
 
-All of these commands can also be sent from another terminal, see [Remote Control & Reopen](tui-remote.md).
+All of these commands except `help` can also be sent from another terminal, see [Remote Control & Reopen](tui-remote.md).
 
 ---
 
 ## What it looks like
 
-<div class="screenshot-placeholder">
-<div class="sp-icon">⌨️</div>
-<p class="sp-label">Console bar with Tab completion</p>
-<p class="sp-hint">screenshots/tui_console.png</p>
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">Console</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_console.png" width="900" alt="Console bar with Tab completion"/>
+</p>
+</div>
 </div>
 
 ---
@@ -45,6 +55,22 @@ Shows only the lines of the nodes you list.
 \focus talker
 \focus planner_server controller_server bt_navigator
 ```
+
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">\focus sensor_fusion lidar_driver</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_focus.gif" width="900" alt="\focus sensor_fusion lidar_driver"/>
+</p>
+</div>
+</div>
 
 Separate names with spaces (commas work too). A line is shown if it belongs to any of the listed nodes. Running `focus` again replaces the list.
 
@@ -68,6 +94,22 @@ Shows only lines at the given severity or worse. Levels, from lowest to highest:
 \level          # remove the level filter
 ```
 
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">\level warn</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_level.gif" width="900" alt="\level warn"/>
+</p>
+</div>
+</div>
+
 Lines without a severity, such as Python tracebacks, `print()` output and DendROS alerts, always stay visible, so a crash is never hidden by a level filter.
 
 ---
@@ -80,6 +122,22 @@ Shows only lines containing the text.
 \grep goal
 \grep           # remove the grep filter
 ```
+
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">\grep EKF</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_grep.gif" width="900" alt="\grep EKF"/>
+</p>
+</div>
+</div>
 
 Matching uses smart case: all-lowercase text matches regardless of case, and any uppercase letter makes the match case-sensitive.
 
@@ -99,6 +157,22 @@ grep is a live filter. If nothing matches yet, the view is empty until a matchin
 \grep timeout
 ```
 
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">focus + level + grep</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_combine.gif" width="900" alt="focus + level + grep"/>
+</p>
+</div>
+</div>
+
 The active filters are shown in the header, for example `focus planner_server · level warn · grep "timeout"`.
 
 Running the same command again replaces its value, so `\focus controller_server` switches the focus without touching the level or grep filter.
@@ -112,6 +186,22 @@ Searches the whole scrollback and jumps to the newest match. Unlike `grep`, noth
 ```text
 \find exception
 ```
+
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">\find reset</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_find.gif" width="900" alt="\find reset"/>
+</p>
+</div>
+</div>
 
 | Key | Effect |
 |---|---|
@@ -137,6 +227,22 @@ Hides a noisy node's lines, without switching into a mode.
 \unmute all
 ```
 
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">\mute / \unmute all</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_mute.gif" width="900" alt="\mute / \unmute all"/>
+</p>
+</div>
+</div>
+
 Nodes are matched like in `focus`: muting a container hides its components, muting a component hides only that component.
 
 The header shows how many nodes are muted, for example `2 nodes muted`. ++escape++ does not unmute anything; only `unmute` and `clear` do. Mutes are saved with the run, so [`dendros reopen`](tui-remote.md#reopen-the-last-run) shows the run with the same nodes muted.
@@ -150,6 +256,22 @@ Inserts a separator line into the log, with the current time and an optional lab
 ```text
 \mark sending goal
 ```
+
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">\mark sending goal</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_mark.gif" width="900" alt="\mark sending goal"/>
+</p>
+</div>
+</div>
 
 ```text
 [bt_navigator-5] [INFO] [...]: BT tick #3: NavigateToPose running
@@ -177,6 +299,22 @@ Saves the current view to a file: every line in the scrollback that passes the a
 \tee -a ~/bugs/planner_timeout.log       # append instead of overwriting
 ```
 
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">\tee ~/lidar.log</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_tee.gif" width="900" alt="\tee ~/lidar.log"/>
+</p>
+</div>
+</div>
+
 - It's a snapshot of what's there right now; it doesn't keep writing as new lines arrive.
 - The header shows how many lines were written, or why the file couldn't be written.
 - A relative path is relative to the directory the launch was started from. With `dendros tee` it's relative to the terminal you type it in.
@@ -191,11 +329,43 @@ A typical bug report: `\focus planner_server`, `\level warn`, then `\tee planner
 
 Removes every filter (`focus`, `level`, `grep`), every mute, and ends any `find`. The view goes back to the full, live log.
 
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">\clear</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_clear.gif" width="900" alt="\clear"/>
+</p>
+</div>
+</div>
+
 ---
 
 ## `help`
 
 Opens an overlay listing every command and key. Scroll it with the arrow keys, ++page-up++ / ++page-down++ or the mouse wheel; close it with ++escape++, ++q++ or ++backslash++.
+
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">\help</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_help.gif" width="900" alt="\help"/>
+</p>
+</div>
+</div>
 
 ---
 
@@ -212,6 +382,22 @@ Esc  → removes the grep filter
 Esc  → removes the focus
 ```
 
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">Esc, one mode per press</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_escape.gif" width="900" alt="Esc, one mode per press"/>
+</p>
+</div>
+</div>
+
 The header hint always names the mode the next ++escape++ will exit, for example `Esc exit grep`.
 
 ---
@@ -219,6 +405,22 @@ The header hint always names the mode the next ++escape++ will exit, for example
 ## Tab completion
 
 In the console bar, ++tab++ completes:
+
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">Tab completion</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_complete.gif" width="900" alt="Tab completion"/>
+</p>
+</div>
+</div>
 
 - command names
 - node names, for `focus` (each further name too, skipping ones already listed) and `mute`
@@ -232,6 +434,22 @@ If several completions match, the first ++tab++ fills in the part they have in c
 ## Command history
 
 In the console bar, ++up++ and ++down++ step through the commands you've entered during this launch, like in a shell. Whatever you were typing comes back when you press ++down++ past the newest one.
+
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">Command history</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_history.gif" width="900" alt="Command history"/>
+</p>
+</div>
+</div>
 
 Every submitted command is kept, including ones that failed, so a typo can be recalled and fixed. History lasts for the whole launch, including across `dendros disable`/`enable`, but isn't saved between launches.
 

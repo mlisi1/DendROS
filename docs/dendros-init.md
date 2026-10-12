@@ -74,15 +74,11 @@ Follows `IncludeLaunchDescription` / `<include>` references into external packag
     </div>
     <div class="term-title">dendros init --recursive</div>
   </div>
-  <div class="term-body"><span class="t-dim">[dendROS] package: my_bringup</span>
-<span class="t-dim">[dendROS] scanning (recursive) launch files…</span>
-<span class="t-dim">[dendROS]   main.launch.py: 2 node(s)</span>
-<span class="t-dim">[dendROS] found references: nav2_bringup, slam_toolbox, xsens_driver</span>
-<span class="t-dim">[dendROS]   nav2_bringup [install]: 8 node(s)</span>
-<span class="t-dim">[dendROS]   slam_toolbox [source]: 1 node(s)</span>
-<span class="t-warn">[dendROS]   xsens_driver: not found</span>
-<span class="t-dim">[dendROS] found 11 node(s) in 3 group(s)</span>
-<span class="t-green">[dendROS] created config/dendROS.yaml</span></div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/init_recursive.png" width="900" alt="dendros init --recursive output"/>
+</p>
+</div>
 </div>
 
 ---
@@ -106,7 +102,7 @@ Without `--labels`, every group gets `label: ""` as a placeholder.
 
 ## Behavior options
 
-All options are configurable via `dendros config` → *Init settings*:
+All options are in the **Init** tab of `dendros config`:
 
 | Setting | Values | Description |
 |---|---|---|

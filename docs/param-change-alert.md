@@ -70,7 +70,7 @@ param_change_alert: false
 | `param_change_alert_style` | Appearance |
 |---|---|
 | `inline` (default) | Compact single line: `[dendROS]` tag + colored node identity + bold param name |
-| `inverted` | Full white-background strip from `[dendROS]` to end of line; node identity shown as a colored background island; harder to miss in busy logs |
+| `inverted` | White-background strip from right after the `[dendROS]` tag to the end of the line; node identity shown as a colored background island; harder to miss in busy logs |
 
 ---
 

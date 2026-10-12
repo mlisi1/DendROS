@@ -14,10 +14,20 @@ Or switch **Launch mode** to `tui` in the **Output** tab of [`dendros config`](g
 
 ## What it looks like
 
-<div class="screenshot-placeholder">
-<div class="sp-icon">🖥️</div>
-<p class="sp-label">TUI mode: live launch output</p>
-<p class="sp-hint">screenshots/tui_overview.png</p>
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">TUI Mode</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_overview.png" width="900" alt="TUI mode: live launch output"/>
+</p>
+</div>
 </div>
 
 The screen has three parts:
@@ -25,6 +35,24 @@ The screen has three parts:
 - **Header** (top row): the DendROS title and version, the crash and parameter-change banners (pinned, so they can't scroll away), any active filters and searches, and a hint for the keys that are useful right now.
 - **Log body**: the launch output, wrapped to the terminal width, with a scrollbar on the right.
 - **Console bar** (bottom row, only while open): where you type [console commands](tui-console.md).
+
+When a node dies, the crash banner stays pinned in the header, however far the log scrolls:
+
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">Crash banner</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_crash.png" width="900" alt="Crash alert pinned in the TUI header"/>
+</p>
+</div>
+</div>
 
 ---
 
@@ -50,6 +78,22 @@ So scripts, CI jobs and redirected output keep working exactly as before.
 | ++home++ | Jump to the oldest line |
 | ++end++ | Jump back to the live tail and follow new output |
 
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">Scrolling</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_scroll.gif" width="900" alt="Mouse wheel, PageUp, Home, End"/>
+</p>
+</div>
+</div>
+
 While you're scrolled up, new output keeps arriving below without moving your view. Scrolling back to the bottom (or pressing ++end++) resumes following the tail.
 
 Long lines are wrapped at the terminal width. Resizing the terminal re-wraps everything, including the scrollback.
@@ -61,6 +105,22 @@ The TUI keeps the last `tui_scrollback_lines` lines (default 5000). Older lines 
 ## Selecting and copying
 
 Click and drag with the mouse to select text. Releasing the button copies the selection to the clipboard, and a **Copied** toast flashes in the header. The selection stays in place while new output arrives and while you scroll.
+
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">Selecting and copying</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_select.gif" width="900" alt="Mouse selection and the Copied toast"/>
+</p>
+</div>
+</div>
 
 DendROS tries two ways to reach the clipboard at the same time:
 
@@ -85,6 +145,22 @@ Closed it too early? [`dendros reopen`](tui-remote.md#reopen-the-last-run) bring
 ## Disabling mid-run
 
 [`dendros disable`](runtime-control.md) from any terminal closes the TUI within about a second and switches the launch to plain passthrough output. `dendros enable` reopens the TUI with the full scrollback, including whatever was printed while it was disabled.
+
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">dendros disable / enable</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/tui_disable.gif" width="900" alt="The TUI closing on disable and reopening on enable"/>
+</p>
+</div>
+</div>
 
 ---
 

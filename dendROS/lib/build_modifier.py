@@ -2,8 +2,10 @@
 
 import re
 
+# No trailing slash on `config`: with one, CMake installs the directory's *contents*
+# straight into share/<pkg>/, and discovery looks for share/<pkg>/config/dendROS.yaml.
 _CMAKE_INSTALL_SNIPPET = (
-    '\ninstall(DIRECTORY config/\n'
+    '\ninstall(DIRECTORY config\n'
     '  DESTINATION share/${PROJECT_NAME}\n'
     ')\n'
 )

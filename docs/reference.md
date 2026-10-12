@@ -21,7 +21,7 @@
 |---|---|---|---|
 | `color_mode` | `tag_only` | string | `tag_only` or `full_line`. |
 | `show_group_tag` | `true` | bool | Show badges in `ros2 launch` / `ros2 run` output for all groups in this package. |
-| `tag_position` | `after` | string | `after` or `before` — badge position relative to `[node-N]`. |
+| `tag_position` | `before` | string | `before` or `after` — badge position relative to `[node-N]`. |
 | `tag_style` | `normal` | string | `normal` or `inverted` — badge appearance. |
 | `unmatched_color` | `null` | string\|null | Color for nodes not in any group. |
 | `unmatched_tag` | `null` | string\|null | Badge for unmatched nodes. Only shown when `unmatched_color` is set. |
@@ -41,8 +41,8 @@ Stored in `~/.config/dendROS/defaults.yaml`, managed via `dendros config`:
 |---|---|---|
 | `color_mode` | `tag_only` | Global default output mode. |
 | `show_tag_launch` | `true` | Show badges in `ros2 launch` / `ros2 run` output globally. |
-| `show_tag_cli` | `true` | Show badges in `ros2 node list`, `node info`, `service list`, `action list` globally. |
-| `tag_position` | `after` | Badge position relative to `[node-N]` in launch/run output. |
+| `show_tag_cli` | `true` | Show badges in every colorized `ros2` CLI command (`node list`/`info`, `topic list`, `service list`, `action list`, `param list`/`describe`). |
+| `tag_position` | `before` | `before` or `after` — badge position relative to `[node-N]` in launch/run output and `ros2 node list`/`info`. |
 | `tag_style` | `normal` | `normal` or `inverted` — badge appearance globally. |
 | `unmatched_color` | `null` | Global fallback color for unmatched nodes. |
 | `unmatched_tag` | `null` | Global badge for unmatched nodes. |
@@ -63,7 +63,7 @@ Stored in `~/.config/dendROS/defaults.yaml`, managed via `dendros config`:
 | `traceback_color` | `fancy` | `fancy` = bold red header + dim red frames; `red` = all bold red; `off` = passthrough. |
 | `param_change_alert` | `true` | Print inline notification on runtime parameter changes. |
 | `param_change_alert_scope` | `tracked` | `tracked` = only config-listed nodes; `all` = entire graph. |
-| `param_change_alert_style` | `inline` | `inline` = compact line; `inverted` = white-background strip. |
+| `param_change_alert_style` | `inline` | `inline` = compact line; `inverted` = white-background strip across the line. |
 | `init_modify_build` | `true` | `dendros init`: patch build files. |
 | `init_on_existing` | `abort` | `dendros init`: `abort`, `merge`, or `overwrite`. |
 | `init_color` | `palette` | `dendros init`: `palette` or `null`. |

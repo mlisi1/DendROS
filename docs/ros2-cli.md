@@ -18,7 +18,7 @@ Every other `ros2` subcommand is passed to the real `ros2` binary untouched.
 
 ## Where the colors come from
 
-1. **A running launch.** Every `ros2 launch`/`ros2 run` started through DendROS writes its node-to-color map to `~/.config/dendROS/node_colors.yaml`. CLI commands in any other terminal read it, so `ros2 node list` matches the colors of the launch you're looking at, including nodes discovered by their logger name.
+1. **A running launch.** Every `ros2 launch`/`ros2 run` of a package with a `dendROS.yaml` writes its node-to-color map to `~/.config/dendROS/node_colors.yaml`. CLI commands in any other terminal read it, so `ros2 node list` matches the colors of the launch you're looking at, including nodes discovered by their logger name.
 2. **Installed configs.** Without a running launch, DendROS reads the `dendROS.yaml` files of every package on `AMENT_PREFIX_PATH`.
 
 Nodes that match no group follow the [unmatched](global-config.md#unmatched-nodes) settings.
@@ -33,7 +33,7 @@ Nodes that match no group follow the [unmatched](global-config.md#unmatched-node
 | **Tag style** | `tag_style` | `normal` or `inverted` badges, shared with launch output. |
 | **Ignore bold** | `ignore_bold` | Strip bold from every color (terminal compatibility). |
 
-Command-specific settings (`show_default_services`, `topic_sort`) are described on each command's page. All settings are in the **CLI** tab of [`dendros config`](global-config.md#cli-commands).
+Command-specific settings (`show_default_services`, `topic_sort`) are described on each command's page. **Show tag (CLI)** and the command-specific settings are in the **CLI** tab of [`dendros config`](global-config.md#cli-commands); **Tag style** and **Ignore bold** are in the **Output** tab.
 
 ---
 

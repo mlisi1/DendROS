@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <a href="https://mlisi1.github.io/DendROS"><strong>📖 Documentation</strong></a>
+  <a href="https://mlisi1.github.io/DendROS"><strong>Documentation</strong></a>
 </p>
 
 <br>
@@ -37,72 +37,63 @@ all the same color. By the time you find the line you were looking for, it has s
 **DendROS assigns each group of nodes its own color.** You could have localization in blue, navigation in green,
 hardware in orange — defined once in a small YAML file that lives inside your package.
 No launch file edits. No new ROS 2 dependencies. Packages without a config pass through completely unchanged.
-It also features some quality of life improvements for ROS outputs.
 
-
-
+And since 1.1, `ros2 launch` can open in a **full-screen viewer** where you scroll, search and filter the log while the launch keeps running.
 
 <br clear="right"/>
 
+## New in 1.1: TUI mode
 
+<p align="center">
+<img src="docs/assets/images/screenshots/showcase.gif" width="720" alt="DendROS TUI mode: filtering a live launch, colorized ros2 CLI, and remote commands"/>
+</p>
 
+Set `launch_mode: tui` and `ros2 launch` becomes a full-screen log viewer:
+
+- **Scroll back and copy** — the whole run stays in the scrollback; drag with the mouse to copy. Crash and parameter alerts stay pinned in the header.
+- **Filter and search with `\`** — `focus` on some nodes, filter by `level` or `grep`, `find` text and step through the matches, `mute` the noisy ones. Filters stack, and `Esc` peels them off one at a time.
+- **`mark` and `tee`** — drop a timestamped marker before you poke the robot, then save exactly what you see to a file for the bug report.
+- **Drive it from another terminal** — `dendros focus planner_server`, `dendros grep timeout`, … reach the running launch, so you don't have to switch panes.
+- **`dendros reopen`** — closed it too early? Bring back the last run, scrollback and all.
+
+It's opt-in, and it falls back to the classic output on its own when the output is piped or redirected, so scripts and CI are not affected. [→ TUI Mode](https://mlisi1.github.io/DendROS/launch-tui/) · [→ Console commands](https://mlisi1.github.io/DendROS/tui-console/)
+
+<p align="center">
+<img src="docs/assets/images/screenshots/tui_combine.gif" width="700" alt="Stacking focus, level and grep filters in the TUI"/>
+</p>
 
 ## Features
 
+- ### **Color by group**
+  One config file per package maps node groups to colors, badges, and display rules. Wildcards cover whole families of nodes (`nav2_*`), and keywords can be highlighted per group or package-wide.
 
-- ### **Color by group** 
-  One config file per package maps node groups to colors, badges, and display rules
-
-
-- ### **Full-screen launch viewer (TUI mode)**
-  Set `launch_mode: tui` and `ros2 launch` opens in a full-screen viewer: scroll back through the whole run, select and copy with the mouse, and press `\` to `focus` one node, filter by `level` or `grep`, `find` text, or `mute` noisy nodes. The same commands work from another terminal (`dendros focus planner_server`), and `dendros reopen` brings back the last run after it ended. [→ TUI Mode](https://mlisi1.github.io/DendROS/launch-tui/)
-
-- ### **All main `ros2` CLI commands wrapped**
-  `ros2 node list`, `ros2 node info`, `ros2 service list`, `ros2 action list`, `ros2 topic list`, `ros2 param list`, and `ros2 param describe` — all colorized with the same group colors and badges, no extra config required. [→ Full list](https://mlisi1.github.io/DendROS/ros2-cli/)
+<p align="center">
+<img src="docs/assets/images/screenshots/highlight.png" width="700" alt="Group colors, badges and keyword highlighting"/>
+</p>
 
 - ### **One command to get started**
-   Too lazy to look up how DendROS config works? We got you covered: `dendros init` scans your launch files and generates an initial config for you
+   Too lazy to look up how DendROS config works? We got you covered: `dendros init` scans your launch files and generates an initial config for you.
 
 <p align="center">
-<img src="docs/assets/images/screenshots/dendros_init.png" width="600" alt="Colored Terminal Output"/>
+<img src="docs/assets/images/screenshots/init_recursive_labels.png" width="700" alt="dendros init --recursive --labels"/>
 </p>
 
-- ### **Crash alert** 
-  An inline banner flags crashed nodes the moment they die, lists the exit code, and repeats periodically so you don't miss it in fast-scrolling output
+- ### **The main `ros2` CLI commands, colorized**
+  `ros2 node list`, `node info`, `topic list`, `service list`, `action list`, `param list` and `param describe` use the same group colors and badges, with no extra config. [→ Full list](https://mlisi1.github.io/DendROS/ros2-cli/)
 
 <p align="center">
-<img src="docs/assets/images/screenshots/crash_alert.png" width="600" alt="Colored Terminal Output"/>
+<img src="docs/assets/images/screenshots/topic_list_sorted.png" width="700" alt="ros2 topic list colored by publisher group"/>
 </p>
 
-- ### **Traceback highlighting**
-  Python tracebacks are colored automatically: bold red for the header and exception line, dim red for the frames; configurable per session
+- ### **Crashes, tracebacks and parameter changes**
+  A banner flags crashed nodes the moment they die and lists the exit code. Python tracebacks are colored automatically. When a parameter changes at runtime, a notice shows the node, the parameter and old → new value.
 
 <p align="center">
-<img src="docs/assets/images/screenshots/highlighted_traceback.png" width="600" alt="Colored Terminal Output"/>
-</p>
-
-- ### **Keyword highlighting**
-  Mark specific words or patterns in bold or in a custom color — per group, or package-wide. 
-
-<p align="center">
-<img src="docs/assets/images/screenshots/highlight.png" width="600" alt="Colored Terminal Output"/>
-</p>
-
-
-
-
-- ### **Parameter change alert**
-  When a node's parameter changes at runtime — via `ros2 param set` or any parameter service client — an inline notification appears in the launch terminal showing the node, parameter name, and old→new value. Two styles: compact inline and a full-width inverted block that's hard to miss in busy logs.
-
-<p align="center">
-<img src="docs/assets/images/screenshots/param_alert_inline.png" width="600" alt="param change alert inline"/>
+<img src="docs/assets/images/screenshots/crash_alert.png" width="700" alt="Crash alert banner"/>
 </p>
 <p align="center">
-<img src="docs/assets/images/screenshots/param_alert_inverted.png" width="600" alt="param change alert inverted"/>
+<img src="docs/assets/images/screenshots/param_alert_inverted.png" width="700" alt="Parameter change alert"/>
 </p>
-
-- ### **Truly non-invasive** 
-  Shell-level pipe; you won't lose autocompletion or aliases for launch files. `dendros disable` switches DendROS off in every terminal, even for launches that are already running
 
 <img
   align="right"
@@ -110,8 +101,11 @@ It also features some quality of life improvements for ROS outputs.
   width="140"
   style="transform: scaleX(-1);">
 
-- ### **Works everywhere** 
-  Host install, Docker, any ROS 2 distribution
+- ### **Truly non-invasive**
+  Shell-level pipe; you won't lose autocompletion or aliases for launch files, and exit codes are preserved. `dendros disable` switches DendROS off in every terminal, even for launches that are already running.
+
+- ### **Works everywhere**
+  Host install, Docker, any ROS 2 distribution.
 
 ## Install
 
@@ -121,7 +115,7 @@ cd DendROS && bash install.sh && source ~/.bashrc
 ```
 
 ## Quick start
-Go to your bringup launch file package (or any package containing launch files) and run ```dendros init``` to generate an initial config file listing the nodes called in the launch file. You can use ```--recursive``` (or ```-r```) to include nodes called by nested launch files. 
+Go to the root of your bringup package (the folder with `package.xml` and `launch/`) and run ```dendros init``` to generate an initial config file listing the nodes called in the launch file. You can use ```--recursive``` (or ```-r```) to include nodes called by nested launch files, and ```--labels``` (or ```-l```) to get badge labels generated too.
 ```bash
 cd ~/ros2_ws/src/my_bringup
 dendros init          # scan your launch files → write config/dendROS.yaml
@@ -135,6 +129,14 @@ source install/setup.bash
 ros2 launch my_bringup main.launch.py
 ```
 
+Optional, but recommended: switch to TUI mode.
+
+```bash
+dendros config        # Output tab → Launch mode → tui, then s to save
+```
+
+Something not colored? `DENDROS_DEBUG=1 ros2 launch …` prints which config DendROS found. See the [step-by-step walkthrough](https://mlisi1.github.io/DendROS/quickstart/) and [Troubleshooting](https://mlisi1.github.io/DendROS/troubleshooting/).
+
 ## Global settings
 
 If you want to customize the global configs, `dendros config` opens an interactive TUI to tune defaults across all your packages, grouped into tabs (`Tab`/`h`/`l` to switch, arrow keys to navigate a tab's fields and change the selected option). See the [full keyboard reference](https://mlisi1.github.io/DendROS/global-config/#keyboard-reference).
@@ -143,6 +145,6 @@ If you want to customize the global configs, `dendros config` opens an interacti
   <img src="docs/assets/images/screenshots/dendros_config.png" width="780" alt="dendros config TUI"/>
 </p>
 
-
+## License
 
 MIT — see [LICENSE](LICENSE).

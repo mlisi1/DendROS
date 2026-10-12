@@ -599,7 +599,7 @@ class TestModifyCmake:
         cmake.write_text('cmake_minimum_required(VERSION 3.5)\nament_package()\n')
         assert modify_cmake(str(cmake)) is True
         content = cmake.read_text()
-        assert 'install(DIRECTORY config/' in content
+        assert 'install(DIRECTORY config\n' in content
         # Block must appear before ament_package()
         assert content.index('install(DIRECTORY') < content.index('ament_package()')
 
@@ -607,7 +607,7 @@ class TestModifyCmake:
         cmake = tmp_path / 'CMakeLists.txt'
         cmake.write_text('cmake_minimum_required(VERSION 3.5)\n')
         assert modify_cmake(str(cmake)) is True
-        assert 'install(DIRECTORY config/' in cmake.read_text()
+        assert 'install(DIRECTORY config\n' in cmake.read_text()
 
     def test_skips_when_config_already_installed(self, tmp_path):
         cmake = tmp_path / 'CMakeLists.txt'
@@ -793,7 +793,7 @@ class TestInitMain:
         assert 'nav_node' in data['groups']['nav2_bringup']['nodes']
 
         cmake = (tmp_path / 'CMakeLists.txt').read_text()
-        assert 'install(DIRECTORY config/' in cmake
+        assert 'install(DIRECTORY config\n' in cmake
 
     def test_aborts_when_config_exists(self, tmp_path, monkeypatch):
         self._make_package(tmp_path)
@@ -862,7 +862,7 @@ class TestInitMain:
         main([])
 
         cmake = (tmp_path / 'CMakeLists.txt').read_text()
-        assert 'install(DIRECTORY config/' not in cmake
+        assert 'install(DIRECTORY config\n' not in cmake
 
     def test_no_launch_dir_writes_nothing(self, tmp_path, monkeypatch):
         # No nodes to color: no config/ directory, no dendROS.yaml, failing exit status.
@@ -893,7 +893,7 @@ class TestInitMain:
         with pytest.raises(SystemExit):
             main([])
         assert not (tmp_path / 'config').exists()
-        assert 'install(DIRECTORY config/' not in cmake.read_text()  # build files untouched
+        assert 'install(DIRECTORY config\n' not in cmake.read_text()  # build files untouched
         assert 'nothing written' in strip_ansi(capsys.readouterr().err)
 
     def test_no_nodes_keeps_existing_config_when_overwriting(self, tmp_path, monkeypatch):

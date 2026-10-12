@@ -19,17 +19,45 @@ dendros enable    # colorized output again
 
 `dendros enable` reverses it. Running launches pick it up within about a second, and a TUI launch reopens with its full scrollback, including the lines printed while DendROS was disabled.
 
-<div class="term">
-  <div class="term-bar">
-    <div class="term-dots">
-      <div class="term-dot term-dot-red"></div>
-      <div class="term-dot term-dot-yellow"></div>
-      <div class="term-dot term-dot-green"></div>
+=== "Classic mode"
+
+    The running launch drops to plain `ros2` output, then colorizes again.
+
+    <div class="term">
+      <div class="term-bar">
+        <div class="term-dots">
+          <div class="term-dot term-dot-red"></div>
+          <div class="term-dot term-dot-yellow"></div>
+          <div class="term-dot term-dot-green"></div>
+        </div>
+        <div class="term-title">dendros disable / enable</div>
+      </div>
+      <div class="term-body-image">
+      <p align="center">
+    <img src="../assets/images/screenshots/dendros_disable.gif" width="900" alt="Disabling and re-enabling a running classic launch from another terminal"/>
+    </p>
     </div>
-    <div class="term-title">dendros disable</div>
-  </div>
-  <div class="term-body"><span class="t-blue">[dend</span><span class="t-orange">ROS]</span> colorization disabled system-wide (all terminals)</div>
-</div>
+    </div>
+
+=== "TUI mode"
+
+    The full-screen viewer closes and the launch continues as plain output. On `enable` it reopens with the whole scrollback.
+
+    <div class="term">
+      <div class="term-bar">
+        <div class="term-dots">
+          <div class="term-dot term-dot-red"></div>
+          <div class="term-dot term-dot-yellow"></div>
+          <div class="term-dot term-dot-green"></div>
+        </div>
+        <div class="term-title">dendros disable / enable</div>
+      </div>
+      <div class="term-body-image">
+      <p align="center">
+    <img src="../assets/images/screenshots/tui_disable.gif" width="900" alt="The TUI closing on disable and reopening on enable"/>
+    </p>
+    </div>
+    </div>
 
 The setting persists until you run `dendros enable`, including across reboots.
 
@@ -56,6 +84,22 @@ With `DENDROS_DISABLE=1` the real `ros2` binary is called directly, without any 
 ```bash
 DENDROS_DEBUG=1 ros2 launch my_bringup main.launch.py
 ```
+
+<div class="term">
+  <div class="term-bar">
+    <div class="term-dots">
+      <div class="term-dot term-dot-red"></div>
+      <div class="term-dot term-dot-yellow"></div>
+      <div class="term-dot term-dot-green"></div>
+    </div>
+    <div class="term-title">DENDROS_DEBUG=1 ros2 launch dendros_demo interconnected.launch.py</div>
+  </div>
+  <div class="term-body-image">
+  <p align="center">
+<img src="../assets/images/screenshots/terminal_output.png" width="900" alt="DENDROS_DEBUG output for a package with a config"/>
+</p>
+</div>
+</div>
 
 Prints which config files were found, the groups they define and the resulting node-to-color map to stderr at startup. Useful when colors don't show up, see [Troubleshooting](troubleshooting.md). Set **Debug mode** in [`dendros config`](global-config.md#system) to turn it on permanently.
 

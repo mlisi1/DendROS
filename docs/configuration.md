@@ -97,13 +97,17 @@ The numeric suffix (`-1`, `-2`) is stripped before matching.
 |---|---|---|
 | `color_mode` | `tag_only` | `tag_only` or `full_line`. |
 | `show_group_tag` | `true` | Show `[TAG]` badges for this package. |
-| `tag_position` | `after` | `after` → `[node-N] [TAG] …` · `before` → `[TAG] [node-N] …`. |
+| `tag_position` | `before` | `before` → `[TAG] [node-N] …` · `after` → `[node-N] [TAG] …`. |
 | `tag_style` | `normal` | `normal` (colored text) or `inverted` (colored background, empty letters). |
 | `highlight` | `[]` | List of keyword entries applied to all matched nodes in this package. See [Keyword highlighting](#keyword-highlighting). |
 | `unmatched_color` | `null` | Color for unmatched nodes. `null` = pass through. |
 | `unmatched_tag` | `null` | Badge for unmatched nodes (e.g. `"?"` → `[?]`). Requires `unmatched_color`. |
 | `dim_unmatched` | `false` | Dim unmatched nodes. Only when `unmatched_color: null`. |
 | `colorize_launch_msgs` | `true` | Colorize `[INFO] [node-N]: process started …` lifecycle lines. |
+| `show_timestamp` | `true` | Show the `[timestamp]` bracket in this package's node log lines. |
+| `show_logger_name` | `true` | Show the `[logger_name]` bracket in this package's node log lines. |
+
+The defaults shown are the global ones: any key you leave out falls back to [Global Settings](global-config.md).
 
 ---
 
@@ -114,13 +118,13 @@ The numeric suffix (`-1`, `-2`) is stripped before matching.
     Colors only the `[node-N]` prefix and `[TAG]` badge.
     ROS 2 severity colors are **preserved** — `[WARN]` stays yellow, `[ERROR]` stays red.
 
-    <div class="term"><div class="term-bar"><div class="term-dots"><div class="term-dot term-dot-red"></div><div class="term-dot term-dot-yellow"></div><div class="term-dot term-dot-green"></div></div><div class="term-title">color_mode: tag_only</div></div><div class="term-body"><span class="t-blue">[slam_toolbox-1]</span> <span class="t-blue t-badge">[LOC]</span> <span class="t-info">[INFO]</span> <span class="t-dim">[1234.1]:</span> map loaded<br><span class="t-green">[controller_server-1]</span> <span class="t-green t-badge">[NAV]</span> <span class="t-warn">[WARN]</span> <span class="t-dim">[1234.2]:</span> Costmap is empty</div></div>
+    <div class="term"><div class="term-bar"><div class="term-dots"><div class="term-dot term-dot-red"></div><div class="term-dot term-dot-yellow"></div><div class="term-dot term-dot-green"></div></div><div class="term-title">color_mode: tag_only</div></div><div class="term-body-image"><p align="center"><img src="../assets/images/screenshots/color_mode_tag_only.png" width="900" alt="color_mode tag_only"/></p></div></div>
 
 === "full_line"
 
     Colors the **entire line** in the group's color. Severity colors are overridden.
 
-    <div class="term"><div class="term-bar"><div class="term-dots"><div class="term-dot term-dot-red"></div><div class="term-dot term-dot-yellow"></div><div class="term-dot term-dot-green"></div></div><div class="term-title">color_mode: full_line</div></div><div class="term-body"><span class="t-blue">[slam_toolbox-1] [LOC] [INFO] [1234.1]: map loaded</span><br><span class="t-green">[controller_server-1] [NAV] [WARN] [1234.2]: Costmap is empty</span></div></div>
+    <div class="term"><div class="term-bar"><div class="term-dots"><div class="term-dot term-dot-red"></div><div class="term-dot term-dot-yellow"></div><div class="term-dot term-dot-green"></div></div><div class="term-title">color_mode: full_line</div></div><div class="term-body-image"><p align="center"><img src="../assets/images/screenshots/color_mode_full_line.png" width="900" alt="color_mode full_line"/></p></div></div>
 
 Priority order (most specific wins): per-group `color_mode:` → per-package `defaults.color_mode:` → global `dendros config`.
 
