@@ -84,7 +84,7 @@ def find_launch_file(pkg_name, launch_file_name):
 
 
 def extract_included_packages(launch_file_path):
-    """Return package names referenced in a launch file (Python or XML), deduplicated."""
+    """Return package names referenced in a launch file (Python, XML or YAML), deduplicated."""
     if not launch_file_path or not os.path.isfile(launch_file_path):
         return []
     try:
@@ -111,13 +111,13 @@ def extract_included_packages(launch_file_path):
 
 
 def list_launch_files(launch_dir):
-    """Return .py and .xml files from a launch directory."""
+    """Return .py, .xml, .yaml and .yml files from a launch directory."""
     if not os.path.isdir(launch_dir):
         return []
     return [
         os.path.join(launch_dir, f)
         for f in sorted(os.listdir(launch_dir))
-        if f.endswith('.py') or f.endswith('.xml')
+        if f.endswith(('.py', '.xml', '.yaml', '.yml'))
     ]
 
 
