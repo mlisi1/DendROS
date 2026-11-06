@@ -13,7 +13,7 @@ dendros init
 
 Run it from the **package root**, the directory that contains `package.xml`. From anywhere else it stops without writing anything; from a subfolder of a package it tells you which directory to run it from.
 
-DendROS scans every `.py`, `.xml`, `.yaml` and `.yml` file in `launch/`, extracts all `Node()` / `ComposableNode()` / `<node/>` / `node:` declarations (names built from substitutions such as `$(var ...)` fall back to the executable), groups them by source package, and writes `config/dendROS.yaml`. It also patches `CMakeLists.txt` / `setup.py` / `setup.cfg` to install the config. If no nodes are found, nothing is written and no build file is touched.
+DendROS scans every `.py`, `.xml`, `.yaml` and `.yml` file in `launch/`, extracts all `Node()` / `ComposableNode()` / `<node/>` / `node:` declarations (names built from substitutions such as `$(var ...)` fall back to the executable), groups them by source package, and writes `config/dendROS.yaml`. YAML files without a top-level `launch:` key, such as parameter files kept in `launch/`, are skipped. It also patches `CMakeLists.txt` / `setup.py` / `setup.cfg` to install the config. If no nodes are found, nothing is written and no build file is touched.
 
 <div class="term">
   <div class="term-bar">
@@ -57,7 +57,7 @@ defaults:
 dendros init --recursive   # or: dendros init -r
 ```
 
-Follows `IncludeLaunchDescription` / `<include>` references into external packages (BFS, cycle-safe).
+Follows `IncludeLaunchDescription` / `<include>` / `include:` references into external packages (BFS, cycle-safe). In YAML launch files only `$(find-pkg-share <pkg>)` counts as a reference, and parameter files in `launch/` are never followed, even if they contain one.
 
 **Package lookup order:**
 

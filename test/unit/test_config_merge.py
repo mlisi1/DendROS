@@ -115,6 +115,42 @@ class TestExtractIncludedPackages:
         """))
         assert extract_included_packages(str(f)) == ['nav2_bringup']
 
+    def test_yaml_find_pkg_share(self, tmp_path):
+        f = tmp_path / 'test_launch.yaml'
+        f.write_text(textwrap.dedent("""\
+            launch:
+              - include:
+                  file: "$(find-pkg-share nav2_bringup)/launch/bringup.yaml"
+              - include:
+                  file: "$(find-pkg-share slam_toolbox)/launch/online.yaml"
+        """))
+        assert extract_included_packages(str(f)) == ['nav2_bringup', 'slam_toolbox']
+
+    def test_yaml_ignores_python_patterns(self, tmp_path):
+        f = tmp_path / 'test_launch.yml'
+        f.write_text(textwrap.dedent("""\
+            launch:
+              - arg: {name: note, default: "get_package_share_directory('not_a_pkg')"}
+              - include:
+                  file: "$(find-pkg-share nav2_bringup)/launch/bringup.yaml"
+        """))
+        assert extract_included_packages(str(f)) == ['nav2_bringup']
+
+    def test_yaml_params_file_returns_empty(self, tmp_path):
+        # A params file kept in launch/ is not a launch file, so it includes nothing
+        f = tmp_path / 'params.yaml'
+        f.write_text(textwrap.dedent("""\
+            my_node:
+              ros__parameters:
+                map: "$(find-pkg-share maps_pkg)/maps/map.yaml"
+        """))
+        assert extract_included_packages(str(f)) == []
+
+    def test_malformed_yaml_returns_empty(self, tmp_path):
+        f = tmp_path / 'test_launch.yaml'
+        f.write_text('launch: [include: {file: "$(find-pkg-share foo)"')
+        assert extract_included_packages(str(f)) == []
+
     def test_nonexistent_file_returns_empty(self):
         assert extract_included_packages('/nonexistent/file.py') == []
 

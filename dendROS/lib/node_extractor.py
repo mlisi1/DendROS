@@ -95,15 +95,23 @@ def _yaml_node_entry(attrs):
     }
 
 
-def extract_nodes_from_yaml(content):
-    """Parse a YAML launch file and return a list of {name, package, namespace} dicts."""
+def load_yaml_launch(content):
+    """Parse YAML content and return the tree if it is a launch file, else None."""
     try:
         tree = yaml.safe_load(content)
     except yaml.YAMLError:
-        return []
+        return None
     # The YAML frontend has a single `launch` root; anything else (e.g. a params file
     # kept in launch/) is not a launch file.
     if not isinstance(tree, dict) or list(tree) != ['launch']:
+        return None
+    return tree
+
+
+def extract_nodes_from_yaml(content):
+    """Parse a YAML launch file and return a list of {name, package, namespace} dicts."""
+    tree = load_yaml_launch(content)
+    if tree is None:
         return []
 
     results = []

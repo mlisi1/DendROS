@@ -25,7 +25,7 @@ dendros init
 !!! tip "Recursive mode"
     If your launch file includes other packages, use `--recursive` to follow them:
     ```bash
-    dendros init --recursive          # follow IncludeLaunchDescription / <include>
+    dendros init --recursive          # follow IncludeLaunchDescription / <include> / include:
     dendros init --recursive --labels # also auto-generate short badge labels
     ```
 

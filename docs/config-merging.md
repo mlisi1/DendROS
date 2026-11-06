@@ -59,6 +59,16 @@ When `ros2 launch` is intercepted, DendROS:
     <include file="$(find-pkg-share nav2_bringup)/launch/bringup.launch.py"/>
     ```
 
+=== "YAML (.yaml / .yml)"
+
+    ```yaml
+    launch:
+      - include:
+          file: "$(find-pkg-share nav2_bringup)/launch/bringup.launch.py"
+    ```
+
+    Only files with a top-level `launch:` key are parsed; parameter files are ignored.
+
 ---
 
 ## Conflict resolution

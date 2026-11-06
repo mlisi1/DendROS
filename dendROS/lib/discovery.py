@@ -4,6 +4,8 @@ import os
 import re
 import subprocess
 
+from lib.node_extractor import load_yaml_launch
+
 # Launch file include patterns (shared between pipe and init)
 _PY_INCLUDE_RE = re.compile(
     r'''(?:get_package_share_directory|FindPackageShare)\s*\(\s*['"]([a-zA-Z0-9_.-]+)['"]\s*\)'''
@@ -98,6 +100,9 @@ def extract_included_packages(launch_file_path):
         raw = _XML_INCLUDE_RE.findall(content)
     elif ext == '.py':
         raw = _PY_INCLUDE_RE.findall(content)
+    elif ext in ('.yaml', '.yml'):
+        # Skip params files kept in launch/: only real launch files can include packages.
+        raw = _XML_INCLUDE_RE.findall(content) if load_yaml_launch(content) is not None else []
     else:
         raw = _PY_INCLUDE_RE.findall(content) + _XML_INCLUDE_RE.findall(content)
 

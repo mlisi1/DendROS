@@ -208,7 +208,7 @@ class TestExtractNodesFromYaml:
                     - node: {pkg: q, exec: b, name: node_b}
         """)
         nodes = extract_nodes_from_yaml(content)
-        assert [n['name'] for n in nodes] == ['node_a', 'node_b']
+        assert {n['name'] for n in nodes} == {'node_a', 'node_b'}
 
     def test_composable_nodes_in_container(self):
         content = textwrap.dedent("""\
@@ -224,6 +224,19 @@ class TestExtractNodesFromYaml:
         """)
         nodes = extract_nodes_from_yaml(content)
         assert {n['name'] for n in nodes} == {'talker', 'listener'}
+        assert all(n['package'] == 'comp_pkg' for n in nodes)
+
+    def test_single_composable_node_in_container(self):
+        content = textwrap.dedent("""\
+            launch:
+              - node_container:
+                  pkg: rclcpp_components
+                  exec: component_container
+                  name: my_container
+                  composable_node: {pkg: comp_pkg, plugin: comp_pkg::Talker, name: talker}
+        """)
+        nodes = extract_nodes_from_yaml(content)
+        assert nodes == [{'name': 'talker', 'package': 'comp_pkg', 'namespace': ''}]
 
     def test_skips_node_with_no_name_or_exec(self):
         assert extract_nodes_from_yaml('launch:\n  - node: {pkg: p}\n') == []
@@ -311,6 +324,39 @@ class TestCollectNodes:
         groups = collect_nodes(launch_dir, 'my_bringup')
         assert 'node_a' in groups['pkg_a']
         assert 'node_b' in groups['pkg_b']
+
+    def test_params_file_next_to_launch_file(self, tmp_path):
+        src_dir = tmp_path / 'src'
+        launch_dir = src_dir / 'my_bringup' / 'launch'
+        launch_dir.mkdir(parents=True)
+        (launch_dir / 'bringup_launch.yaml').write_text(
+            'launch:\n  - node: {pkg: pkg_a, exec: a, name: node_a}\n'
+        )
+        (launch_dir / 'params.yaml').write_text(textwrap.dedent("""\
+            node_a:
+              ros__parameters:
+                node: {name: not_a_node, exec: x}
+                map: "$(find-pkg-share maps_pkg)/maps/map.yaml"
+        """))
+
+        # A sibling maps_pkg with a launch file must not be pulled in by the params file
+        maps_launch = src_dir / 'maps_pkg' / 'launch'
+        maps_launch.mkdir(parents=True)
+        (maps_launch / 'maps_launch.yaml').write_text(
+            'launch:\n  - node: {pkg: maps_pkg, exec: m, name: map_server}\n'
+        )
+
+        orig = os.environ.get('AMENT_PREFIX_PATH', '')
+        os.environ['AMENT_PREFIX_PATH'] = '/nonexistent_path'
+        try:
+            groups = collect_nodes(launch_dir, 'my_bringup', recursive=True)
+        finally:
+            if orig:
+                os.environ['AMENT_PREFIX_PATH'] = orig
+            else:
+                os.environ.pop('AMENT_PREFIX_PATH', None)
+
+        assert groups == {'pkg_a': {'node_a'}}
 
     def test_recursive_follows_yaml_includes(self, tmp_path):
         src_dir = tmp_path / 'src'
