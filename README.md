@@ -115,7 +115,7 @@ cd DendROS && bash install.sh && source ~/.bashrc
 ```
 
 ## Quick start
-Go to the root of your bringup package (the folder with `package.xml` and `launch/`) and run ```dendros init``` to generate an initial config file listing the nodes called in the launch file. You can use ```--recursive``` (or ```-r```) to include nodes called by nested launch files, and ```--labels``` (or ```-l```) to get badge labels generated too.
+Go to the root of your bringup package (the folder with `package.xml` and `launch/`) and run ```dendros init``` to generate an initial config file listing the nodes called in the launch files (Python, XML and YAML are all supported). You can use ```--recursive``` (or ```-r```) to include nodes called by nested launch files, and ```--labels``` (or ```-l```) to get badge labels generated too.
 ```bash
 cd ~/ros2_ws/src/my_bringup
 dendros init          # scan your launch files → write config/dendROS.yaml

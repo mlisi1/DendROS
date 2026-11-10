@@ -10,7 +10,9 @@ import yaml
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'dendROS'))
 
 from lib.config_writer import make_label, write_config, merge_config, _bold_color
-from lib.node_extractor import extract_nodes_from_python, extract_nodes_from_xml, scan_launch_file
+from lib.node_extractor import (
+    extract_nodes_from_python, extract_nodes_from_xml, extract_nodes_from_yaml, scan_launch_file,
+)
 from lib.build_modifier import modify_cmake, modify_setup_py, modify_setup_cfg
 from dendros_init import collect_nodes, find_enclosing_package, find_package_root, get_package_name, main
 from conftest import strip_ansi
@@ -156,6 +158,101 @@ class TestExtractNodesFromXml:
         assert extract_nodes_from_xml('') == []
 
 
+# ── extract_nodes_from_yaml ───────────────────────────────────────────────────
+
+class TestExtractNodesFromYaml:
+    def test_basic_node(self):
+        content = textwrap.dedent("""\
+            launch:
+              - node:
+                  pkg: my_pkg
+                  exec: talker
+                  name: my_talker
+        """)
+        nodes = extract_nodes_from_yaml(content)
+        assert nodes == [{'name': 'my_talker', 'package': 'my_pkg', 'namespace': ''}]
+
+    def test_exec_used_as_fallback_name(self):
+        content = 'launch:\n  - node: {pkg: p, exec: talker}\n'
+        nodes = extract_nodes_from_yaml(content)
+        assert nodes[0]['name'] == 'talker'
+
+    def test_substituted_name_falls_back_to_exec(self):
+        content = 'launch:\n  - node: {pkg: p, exec: talker, name: "$(var node_name)"}\n'
+        nodes = extract_nodes_from_yaml(content)
+        assert nodes[0]['name'] == 'talker'
+
+    def test_substituted_name_and_exec_skipped(self):
+        content = 'launch:\n  - node: {pkg: p, exec: "$(var e)", name: "$(var n)"}\n'
+        assert extract_nodes_from_yaml(content) == []
+
+    def test_substituted_package_is_none(self):
+        content = 'launch:\n  - node: {pkg: "$(var p)", exec: talker}\n'
+        nodes = extract_nodes_from_yaml(content)
+        assert nodes[0]['package'] is None
+
+    def test_namespace_captured(self):
+        content = 'launch:\n  - node: {pkg: p, exec: e, name: n, namespace: /ns}\n'
+        nodes = extract_nodes_from_yaml(content)
+        assert nodes[0]['namespace'] == '/ns'
+
+    def test_nodes_inside_groups(self):
+        content = textwrap.dedent("""\
+            launch:
+              - group:
+                  - push-ros-namespace: {namespace: robot}
+                  - node: {pkg: p, exec: a, name: node_a}
+              - group:
+                  scoped: true
+                  children:
+                    - node: {pkg: q, exec: b, name: node_b}
+        """)
+        nodes = extract_nodes_from_yaml(content)
+        assert {n['name'] for n in nodes} == {'node_a', 'node_b'}
+
+    def test_composable_nodes_in_container(self):
+        content = textwrap.dedent("""\
+            launch:
+              - node_container:
+                  pkg: rclcpp_components
+                  exec: component_container
+                  name: my_container
+                  namespace: ''
+                  composable_node:
+                    - {pkg: comp_pkg, plugin: comp_pkg::Talker, name: talker}
+                    - {pkg: comp_pkg, plugin: comp_pkg::Listener, name: listener}
+        """)
+        nodes = extract_nodes_from_yaml(content)
+        assert {n['name'] for n in nodes} == {'talker', 'listener'}
+        assert all(n['package'] == 'comp_pkg' for n in nodes)
+
+    def test_single_composable_node_in_container(self):
+        content = textwrap.dedent("""\
+            launch:
+              - node_container:
+                  pkg: rclcpp_components
+                  exec: component_container
+                  name: my_container
+                  composable_node: {pkg: comp_pkg, plugin: comp_pkg::Talker, name: talker}
+        """)
+        nodes = extract_nodes_from_yaml(content)
+        assert nodes == [{'name': 'talker', 'package': 'comp_pkg', 'namespace': ''}]
+
+    def test_skips_node_with_no_name_or_exec(self):
+        assert extract_nodes_from_yaml('launch:\n  - node: {pkg: p}\n') == []
+
+    def test_non_launch_yaml_returns_empty(self):
+        # e.g. a parameters file kept in launch/
+        content = 'my_node:\n  ros__parameters:\n    node: {name: x, exec: y}\n'
+        assert extract_nodes_from_yaml(content) == []
+
+    def test_malformed_yaml_returns_empty(self):
+        assert extract_nodes_from_yaml('launch: [node: {') == []
+
+    def test_empty_returns_empty(self):
+        assert extract_nodes_from_yaml('') == []
+
+
 # ── scan_launch_file ──────────────────────────────────────────────────────────
 
 class TestScanLaunchFile:
@@ -171,9 +268,21 @@ class TestScanLaunchFile:
         nodes = scan_launch_file(str(f))
         assert len(nodes) == 1
 
-    def test_unknown_extension_returns_empty(self, tmp_path):
+    def test_yaml_file(self, tmp_path):
         f = tmp_path / 'test.launch.yaml'
-        f.write_text('nodes: []')
+        f.write_text('launch:\n  - node: {pkg: p, exec: talker, name: n}\n')
+        nodes = scan_launch_file(str(f))
+        assert len(nodes) == 1
+
+    def test_yml_file(self, tmp_path):
+        f = tmp_path / 'test_launch.yml'
+        f.write_text('launch:\n  - node: {pkg: p, exec: talker, name: n}\n')
+        nodes = scan_launch_file(str(f))
+        assert len(nodes) == 1
+
+    def test_unknown_extension_returns_empty(self, tmp_path):
+        f = tmp_path / 'test.launch.txt'
+        f.write_text("Node(package='p', executable='talker', name='n')")
         assert scan_launch_file(str(f)) == []
 
     def test_nonexistent_file_returns_empty(self):
@@ -206,6 +315,76 @@ class TestCollectNodes:
     def test_missing_launch_dir_returns_empty(self, tmp_path):
         groups = collect_nodes(tmp_path / 'nonexistent', 'my_pkg')
         assert groups == {}
+
+    def test_yaml_launch_files_scanned(self, tmp_path):
+        launch_dir = tmp_path / 'launch'
+        launch_dir.mkdir()
+        (launch_dir / 'a_launch.yaml').write_text('launch:\n  - node: {pkg: pkg_a, exec: a, name: node_a}\n')
+        (launch_dir / 'b_launch.yml').write_text('launch:\n  - node: {pkg: pkg_b, exec: b, name: node_b}\n')
+        groups = collect_nodes(launch_dir, 'my_bringup')
+        assert 'node_a' in groups['pkg_a']
+        assert 'node_b' in groups['pkg_b']
+
+    def test_params_file_next_to_launch_file(self, tmp_path):
+        src_dir = tmp_path / 'src'
+        launch_dir = src_dir / 'my_bringup' / 'launch'
+        launch_dir.mkdir(parents=True)
+        (launch_dir / 'bringup_launch.yaml').write_text(
+            'launch:\n  - node: {pkg: pkg_a, exec: a, name: node_a}\n'
+        )
+        (launch_dir / 'params.yaml').write_text(textwrap.dedent("""\
+            node_a:
+              ros__parameters:
+                node: {name: not_a_node, exec: x}
+                map: "$(find-pkg-share maps_pkg)/maps/map.yaml"
+        """))
+
+        # A sibling maps_pkg with a launch file must not be pulled in by the params file
+        maps_launch = src_dir / 'maps_pkg' / 'launch'
+        maps_launch.mkdir(parents=True)
+        (maps_launch / 'maps_launch.yaml').write_text(
+            'launch:\n  - node: {pkg: maps_pkg, exec: m, name: map_server}\n'
+        )
+
+        orig = os.environ.get('AMENT_PREFIX_PATH', '')
+        os.environ['AMENT_PREFIX_PATH'] = '/nonexistent_path'
+        try:
+            groups = collect_nodes(launch_dir, 'my_bringup', recursive=True)
+        finally:
+            if orig:
+                os.environ['AMENT_PREFIX_PATH'] = orig
+            else:
+                os.environ.pop('AMENT_PREFIX_PATH', None)
+
+        assert groups == {'pkg_a': {'node_a'}}
+
+    def test_recursive_follows_yaml_includes(self, tmp_path):
+        src_dir = tmp_path / 'src'
+        bringup_launch = src_dir / 'my_bringup' / 'launch'
+        bringup_launch.mkdir(parents=True)
+        (bringup_launch / 'main_launch.yml').write_text(textwrap.dedent("""\
+            launch:
+              - include:
+                  file: "$(find-pkg-share dep_pkg)/launch/dep_launch.yml"
+        """))
+
+        dep_launch = src_dir / 'dep_pkg' / 'launch'
+        dep_launch.mkdir(parents=True)
+        (dep_launch / 'dep_launch.yml').write_text(
+            'launch:\n  - node: {pkg: dep_pkg, exec: dep_node, name: dep_node}\n'
+        )
+
+        orig = os.environ.get('AMENT_PREFIX_PATH', '')
+        os.environ['AMENT_PREFIX_PATH'] = '/nonexistent_path'
+        try:
+            groups = collect_nodes(bringup_launch, 'my_bringup', recursive=True)
+        finally:
+            if orig:
+                os.environ['AMENT_PREFIX_PATH'] = orig
+            else:
+                os.environ.pop('AMENT_PREFIX_PATH', None)
+
+        assert 'dep_node' in groups.get('dep_pkg', set())
 
     def test_recursive_scans_included_packages(self, tmp_path):
         # Set up fake AMENT_PREFIX_PATH

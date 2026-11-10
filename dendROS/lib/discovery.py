@@ -4,6 +4,8 @@ import os
 import re
 import subprocess
 
+from lib.node_extractor import load_yaml_launch
+
 # Launch file include patterns (shared between pipe and init)
 _PY_INCLUDE_RE = re.compile(
     r'''(?:get_package_share_directory|FindPackageShare)\s*\(\s*['"]([a-zA-Z0-9_.-]+)['"]\s*\)'''
@@ -84,7 +86,7 @@ def find_launch_file(pkg_name, launch_file_name):
 
 
 def extract_included_packages(launch_file_path):
-    """Return package names referenced in a launch file (Python or XML), deduplicated."""
+    """Return package names referenced in a launch file (Python, XML or YAML), deduplicated."""
     if not launch_file_path or not os.path.isfile(launch_file_path):
         return []
     try:
@@ -98,6 +100,9 @@ def extract_included_packages(launch_file_path):
         raw = _XML_INCLUDE_RE.findall(content)
     elif ext == '.py':
         raw = _PY_INCLUDE_RE.findall(content)
+    elif ext in ('.yaml', '.yml'):
+        # Skip params files kept in launch/: only real launch files can include packages.
+        raw = _XML_INCLUDE_RE.findall(content) if load_yaml_launch(content) is not None else []
     else:
         raw = _PY_INCLUDE_RE.findall(content) + _XML_INCLUDE_RE.findall(content)
 
@@ -111,13 +116,13 @@ def extract_included_packages(launch_file_path):
 
 
 def list_launch_files(launch_dir):
-    """Return .py and .xml files from a launch directory."""
+    """Return .py, .xml, .yaml and .yml files from a launch directory."""
     if not os.path.isdir(launch_dir):
         return []
     return [
         os.path.join(launch_dir, f)
         for f in sorted(os.listdir(launch_dir))
-        if f.endswith('.py') or f.endswith('.xml')
+        if f.endswith(('.py', '.xml', '.yaml', '.yml'))
     ]
 
 
