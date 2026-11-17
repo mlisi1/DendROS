@@ -114,6 +114,12 @@ class _TuiConsoleMixin:
                 return
         except curses.error:
             pass
+        if curses.COLORS < 256:
+            # 8/16-color terminal (e.g. TERM=xterm inside `docker exec`): slot 24 doesn't exist,
+            # and its nearest base color is cyan, which yellow text is unreadable on.
+            self.console_bg = curses.COLOR_BLUE
+            self.console_fg = curses.COLOR_YELLOW
+            return
         # No palette support at all: the same slots, unprogrammed, are still the closest
         # blue/orange (plain quantization would pick teal 23 for the blue).
         self.console_bg = _CONSOLE_BG_COLOR_SLOT

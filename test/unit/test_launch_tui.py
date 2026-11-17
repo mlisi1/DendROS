@@ -26,6 +26,8 @@ from lib.tui_pure import (
     decode_sgr_mouse,
     decode_navigation_key,
     PairCache,
+    fit_color,
+    index_to_rgb,
     segments_to_ansi,
 )
 from lib.tui_ringlog import RingLog
@@ -210,8 +212,10 @@ class TestSegmentsFromAnsi:
 class FakeCurses:
     """Minimal curses double: just what PairCache actually touches."""
 
-    def __init__(self, color_pairs=8):
+    def __init__(self, color_pairs=8, colors=None):
         self.COLOR_PAIRS = color_pairs
+        if colors is not None:
+            self.COLORS = colors
         self.A_BOLD = 1 << 20
         self.init_pair_calls = []
 
@@ -291,6 +295,71 @@ class TestPairCache:
         pair = cache.get_pair(7, -1)
         attr = cache.attr_for(fg=7, bg=None, bold=False)
         assert attr == fc.color_pair(pair)
+
+
+class TestFitColor:
+    """Low-color terminals: curses.init_pair() raises for any color >= COLORS
+    (TERM=xterm in `docker exec` has 8), which used to crash the TUI into classic mode."""
+
+    def test_in_range_untouched(self):
+        assert fit_color(5, 8) == (5, False)
+        assert fit_color(200, 256) == (200, False)
+        assert fit_color(-1, 8) == (-1, False)
+
+    def test_bright_becomes_base_plus_bold_on_8_colors(self):
+        assert fit_color(9, 8) == (1, True)
+        assert fit_color(15, 8) == (7, True)
+
+    def test_bright_kept_on_16_colors(self):
+        assert fit_color(12, 16) == (12, False)
+
+    def test_256_index_to_nearest_base(self):
+        assert fit_color(196, 8) == (1, True)    # (255,0,0) -> bright red -> red + bold
+        assert fit_color(196, 16) == (9, False)
+        assert fit_color(160, 8) == (1, False)   # (215,0,0) -> red
+        assert fit_color(16, 8) == (0, False)    # cube black
+        assert fit_color(232, 8) == (0, False)   # darkest gray
+        assert fit_color(172, 8) == (3, False)   # brand-ish orange -> yellow
+
+    def test_monochrome_uses_default(self):
+        assert fit_color(3, 2) == (-1, False)
+        assert fit_color(200, 0) == (-1, False)
+
+    def test_index_to_rgb(self):
+        assert index_to_rgb(16) == (0, 0, 0)
+        assert index_to_rgb(231) == (255, 255, 255)
+        assert index_to_rgb(172) == (215, 135, 0)
+        assert index_to_rgb(255) == (238, 238, 238)
+
+
+class TestPairCacheLowColor:
+    def test_no_init_pair_out_of_range_on_8_colors(self):
+        fc = FakeCurses(color_pairs=64, colors=8)
+        cache = PairCache(fc)
+        for fg in (-1, 0, 7, 8, 15, 16, 100, 172, 231, 255):
+            for bg in (None, 4, 24, 236):
+                cache.attr_for(fg, bg, False)
+        assert all(-1 <= fg < 8 and -1 <= bg < 8 for _, fg, bg in fc.init_pair_calls)
+
+    def test_bright_fg_gets_bold(self):
+        fc = FakeCurses(colors=8)
+        cache = PairCache(fc)
+        attr = cache.attr_for(fg=9, bg=None, bold=False)
+        assert attr & fc.A_BOLD
+        assert fc.init_pair_calls[-1][1:] == (1, -1)
+
+    def test_bright_bg_never_bolds(self):
+        fc = FakeCurses(colors=8)
+        cache = PairCache(fc)
+        attr = cache.attr_for(fg=2, bg=9, bold=False)
+        assert not (attr & fc.A_BOLD)
+        assert fc.init_pair_calls[-1][1:] == (2, 1)
+
+    def test_256_colors_unchanged(self):
+        fc = FakeCurses(colors=256)
+        cache = PairCache(fc)
+        cache.attr_for(fg=172, bg=24, bold=False)
+        assert fc.init_pair_calls[-1][1:] == (172, 24)
 
 
 # ── wrap_line ────────────────────────────────────────────────────────────────

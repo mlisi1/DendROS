@@ -19,6 +19,7 @@ import sys
 import threading
 import time
 
+from lib.colors import DENDROS_TAG
 from lib.config_loader import resolve_node
 from lib.global_config import is_disable_flag_set, pop_tui_command
 from lib.launch_tui import _tui_main
@@ -139,12 +140,15 @@ def run_tui(stdin_lines, colorize_fn, ca_module, pw_module, param_alert, param_a
                 ca_module.enter_shutdown_mode()
                 session['interrupted'] = True
 
-    def _fall_back_to_classic():
+    def _fall_back_to_classic(err):
         # curses failed mid-run (it couldn't start, or crashed). The reader thread is
         # still the only consumer of stdin_lines — main() must not loop over the same
         # generator — so switch the reader itself to classic-style output and print what
         # the abandoned session had queued but not drawn yet.
         ca_module.set_sink(None)
+        # Always say so: a silent switch to classic output looks like the TUI was never on.
+        print(f'{DENDROS_TAG} TUI stopped ({err}), falling back to classic output for the rest '
+              f'of this run', file=sys.stderr, flush=True)
         with session['lock']:
             q = session['q']
             session['q'] = None
@@ -176,8 +180,8 @@ def run_tui(stdin_lines, colorize_fn, ca_module, pw_module, param_alert, param_a
                 ca_module.enter_shutdown_mode()
                 session['interrupted'] = True
                 continue
-            except Exception:
-                _fall_back_to_classic()
+            except Exception as e:
+                _fall_back_to_classic(e)
                 return
             if result != 'disabled':
                 return  # normal quit — fully done

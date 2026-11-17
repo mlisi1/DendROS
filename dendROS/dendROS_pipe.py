@@ -431,8 +431,7 @@ def main():
         try:
             from lib.launch_tui_run import run_tui
         except Exception as e:
-            if _DEBUG:
-                _dbg(f'TUI unavailable ({e}), falling back to classic mode')
+            _dbg(f'TUI unavailable ({e}), falling back to classic mode')
             use_tui = False
 
     if use_tui:
@@ -446,8 +445,8 @@ def main():
             )
             return
         except Exception as e:
-            if _DEBUG:
-                _dbg(f'TUI crashed ({e}), falling back to classic passthrough for the rest of this run')
+            # Always say so: a silent switch to classic output looks like the TUI was never on.
+            _dbg(f'TUI crashed ({e}), falling back to classic output for the rest of this run')
             # stdin_lines is the same generator — classic loop below picks up where the TUI left off
 
     try:

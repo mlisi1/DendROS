@@ -3,6 +3,13 @@
 All notable changes to DendROS are listed here, newest first.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- TUI mode now works on 8- and 16-colour terminals (e.g. `TERM=xterm`, which `docker exec` and `docker compose exec` set). It used to crash at startup and silently fall back to classic output. Colours the terminal lacks are mapped to the nearest base colour, with bright colours drawn as bold.
+- When the TUI does fall back to classic output, DendROS now prints a one-line notice with the reason, instead of only under `DENDROS_DEBUG=1`.
+
 ## [1.1.0] - 2026-10-12
 
 The headline of this release is **TUI mode**: `ros2 launch` now opens in a full-screen viewer where you scroll, search and filter the log while the launch keeps running. It is the new default; set `launch_mode: classic` to keep the 1.0 output.

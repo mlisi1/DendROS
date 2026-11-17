@@ -295,9 +295,50 @@ def decode_navigation_key(final_byte, digits=''):
     return _NAV_LETTER_ACTIONS.get(final_byte)
 
 
+# xterm's stock RGB for the 16 base colors — reference points for fit_color()'s nearest match.
+_BASE16_RGB = (
+    (0, 0, 0), (205, 0, 0), (0, 205, 0), (205, 205, 0),
+    (0, 0, 238), (205, 0, 205), (0, 205, 205), (229, 229, 229),
+    (127, 127, 127), (255, 0, 0), (0, 255, 0), (255, 255, 0),
+    (92, 92, 255), (255, 0, 255), (0, 255, 255), (255, 255, 255),
+)
+
+
+def index_to_rgb(idx):
+    """RGB of an xterm-256 palette index (stock values; 0-15 per _BASE16_RGB)."""
+    if idx < 16:
+        return _BASE16_RGB[idx]
+    if idx < 232:
+        n = idx - 16
+        return _CUBE_LEVELS[n // 36], _CUBE_LEVELS[(n // 6) % 6], _CUBE_LEVELS[n % 6]
+    v = 8 + (idx - 232) * 10
+    return v, v, v
+
+
+def fit_color(color, ncolors):
+    """Map a palette index to one the terminal has: returns (color, brighten).
+
+    Needed because curses.init_pair() raises for any color >= curses.COLORS — on an
+    8-color terminal (TERM=xterm, e.g. inside `docker exec`) every bright/256/RGB node color
+    would otherwise crash the TUI. 16-255 go to the nearest of the 16 base colors; with fewer
+    than 16, bright 8-15 become their base color + `brighten` (the classic bold-is-bright
+    convention, only meaningful for a foreground). Fewer than 8 colors → -1 (default)."""
+    if color is None or color < 0 or color < ncolors:
+        return color, False
+    if ncolors < 8:
+        return -1, False
+    if color >= 16:
+        r, g, b = index_to_rgb(min(color, 255))
+        color = min(range(16), key=lambda i: (
+            (r - _BASE16_RGB[i][0]) ** 2 + (g - _BASE16_RGB[i][1]) ** 2 + (b - _BASE16_RGB[i][2]) ** 2))
+        if color < ncolors:
+            return color, False
+    return color - 8, True
+
+
 class PairCache:
     """Lazily allocates/reuses curses color-pair slots, LRU-evicted once COLOR_PAIRS is used up.
-    `curses_module` is injectable for tests (a fake needs only init_pair/color_pair/COLOR_PAIRS/A_BOLD)."""
+    `curses_module` is injectable for tests (a fake needs only init_pair/color_pair/COLOR_PAIRS/A_BOLD; optional COLORS, default 256)."""
 
     def __init__(self, curses_module, max_pairs=None):
         self._curses = curses_module
@@ -331,8 +372,11 @@ class PairCache:
 
     def attr_for(self, fg=None, bg=None, bold=False):
         """Return the combined curses attribute (color pair + bold) for one rendered segment."""
-        pair_num = self.get_pair(-1 if fg is None else fg, -1 if bg is None else bg)
+        ncolors = getattr(self._curses, 'COLORS', 256)
+        fg, brighten = fit_color(-1 if fg is None else fg, ncolors)
+        bg, _ = fit_color(-1 if bg is None else bg, ncolors)
+        pair_num = self.get_pair(fg, bg)
         attr = self._curses.color_pair(pair_num)
-        if bold:
+        if bold or brighten:
             attr |= getattr(self._curses, 'A_BOLD', 0)
         return attr
