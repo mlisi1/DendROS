@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- YAML launch files (`.yaml` / `.yml`) are now supported alongside Python and XML ones. `dendros init` finds their `node:` declarations and, with `--recursive`, follows their `include:` entries; config merging picks up packages they include via `$(find-pkg-share ...)`. YAML files without a top-level `launch:` key, such as parameter files kept in `launch/`, are skipped. — [docs](https://mlisi1.github.io/DendROS/dendros-init/)
+
 ### Fixed
 
 - TUI mode now works on 8- and 16-colour terminals (e.g. `TERM=xterm`, which `docker exec` and `docker compose exec` set). It used to crash at startup and silently fall back to classic output. Colours the terminal lacks are mapped to the nearest base colour, with bright colours drawn as bold.
