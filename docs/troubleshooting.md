@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Common problems and how to fix them. When in doubt, start with [debug mode](runtime-control.md#debug-output-dendros_debug).
+Common problems and how to fix them. Start with [`dendros test`](dendros-test.md): it checks the dependencies, the shell setup and every config file, and shows what your terminal does with colors. For a single launch, use [debug mode](runtime-control.md#debug-output-dendros_debug).
 
 ---
 
@@ -34,11 +34,21 @@ Common problems and how to fix them. When in doubt, start with [debug mode](runt
 
 ## Colors
 
+!!! tip "Start with `dendros test`"
+    [`dendros test`](dendros-test.md) prints every named, extended and 256-palette color,
+    24-bit gradients and a sample launch with your own settings, all as **your** terminal
+    draws them. Compare the output with the [Terminator, Konsole and Yakuake
+    screenshots](dendros-test.md) to see whether a color problem comes from the terminal
+    or from your config. Its *bold text vs. inverted badge* row shows straight away whether
+    you need `ignore_bold` (see below).
+
 ??? warning "A node's [TAG] badge is a different shade than its own text"
     Some terminals brighten bold *foreground* text but never brighten backgrounds — since a
     node's regular text is bold foreground and its inverted `[TAG]` badge uses that same
     color as a background, the two can end up looking like different shades of the same
-    color on terminals that do this. It's a terminal rendering quirk, not a config problem:
+    color on terminals that do this. It's a terminal rendering quirk, not a config problem.
+    To check your terminal, run [`dendros test`](dendros-test.md#text-attributes-and-bold)
+    and look at the *bold text vs. inverted badge* row:
 
 
     === "Mismatched Colors"
@@ -147,7 +157,8 @@ Common problems and how to fix them. When in doubt, start with [debug mode](runt
         </div>
         </div>
 
-    Use [extended/hex colors](colors.md) (`"#FF6600"`, `teal`, `coral`, …) instead of the 8
+    Run [`dendros test`](dendros-test.md) to see all colors in your terminal before you pick
+    them. Use [extended/hex colors](colors.md) (`"#FF6600"`, `teal`, `coral`, …) instead of the 8
     standard names if you want an exact, portable color regardless of terminal theme. If
     instead a node's text and its `[TAG]` badge look like different shades, see the entry
     above.

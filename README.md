@@ -112,6 +112,7 @@ It falls back to the classic output on its own when the output is piped or redir
 ```bash
 git clone https://github.com/mlisi1/DendROS
 cd DendROS && bash install.sh && source ~/.bashrc
+dendros test          # check dependencies and see what colors your terminal shows
 ```
 
 ## Quick start

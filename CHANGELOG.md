@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ### Added
 
 - YAML launch files (`.yaml` / `.yml`) are now supported alongside Python and XML ones. `dendros init` finds their `node:` declarations and, with `--recursive`, follows their `include:` entries; config merging picks up packages they include via `$(find-pkg-share ...)`. YAML files without a top-level `launch:` key, such as parameter files kept in `launch/`, are skipped. — [docs](https://mlisi1.github.io/DendROS/dendros-init/)
+- `dendros test`: a self-test that checks the dependencies (Python, PyYAML, curses, `ros2`, rclpy, a clipboard tool), the shell setup, the global config (invalid values and unknown keys, which DendROS otherwise ignores silently) and every installed package config. It then opens the TUI once and prints color charts: the named colors with their modifiers, the extended colors as the TUI draws them, the 256-color palette, 24-bit gradients and a sample launch with your display settings. The docs page shows the output in Terminator, Konsole and Yakuake, and Troubleshooting → Colors now starts from it. — [docs](https://mlisi1.github.io/DendROS/dendros-test/)
 
 ### Fixed
 

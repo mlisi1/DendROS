@@ -68,6 +68,7 @@ nav:
   - Getting Started:
     - Installation: installation.md
     - Quick Start: quickstart.md
+    - Self-test: dendros-test.md
     - Troubleshooting: troubleshooting.md
   - Configuration:
     - Package Config: configuration.md

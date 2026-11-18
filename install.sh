@@ -52,6 +52,7 @@ $SUDO cp "${SCRIPT_DIR}/dendROS/dendROS_pipe.py" "$INSTALL_DIR/"
 $SUDO cp "${SCRIPT_DIR}/dendROS/dendros_config.py" "$INSTALL_DIR/"
 $SUDO cp "${SCRIPT_DIR}/dendROS/dendros_init.py" "$INSTALL_DIR/"
 $SUDO cp "${SCRIPT_DIR}/dendROS/dendros_reopen.py" "$INSTALL_DIR/"
+$SUDO cp "${SCRIPT_DIR}/dendROS/dendros_selftest.py" "$INSTALL_DIR/"
 $SUDO cp "${SCRIPT_DIR}/dendROS/dendros_node_info.py" "$INSTALL_DIR/"
 $SUDO cp "${SCRIPT_DIR}/dendROS/dendros_node_list.py" "$INSTALL_DIR/"
 $SUDO cp "${SCRIPT_DIR}/dendROS/dendros_service_list.py" "$INSTALL_DIR/"
@@ -65,6 +66,7 @@ $SUDO chmod +x "$INSTALL_DIR/dendROS_pipe.py"
 $SUDO chmod +x "$INSTALL_DIR/dendros_config.py"
 $SUDO chmod +x "$INSTALL_DIR/dendros_init.py"
 $SUDO chmod +x "$INSTALL_DIR/dendros_reopen.py"
+$SUDO chmod +x "$INSTALL_DIR/dendros_selftest.py"
 $SUDO chmod +x "$INSTALL_DIR/dendros_node_list.py"
 $SUDO chmod +x "$INSTALL_DIR/dendros_node_info.py"
 $SUDO chmod +x "$INSTALL_DIR/dendros_service_list.py"
@@ -96,4 +98,4 @@ else
     fi
 fi
 
-echo -e "${DENDROS_TAG} ${GREEN}Done!${RESET}"
+echo -e "${DENDROS_TAG} ${GREEN}Done!${RESET} Run ${YELLOW}dendros test${RESET} in a new terminal to check the setup."

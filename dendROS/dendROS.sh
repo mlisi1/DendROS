@@ -68,6 +68,12 @@ set_disable_flag(False)
             _dendros_send_tui_command "$1 $2" "$1"
             ;;
         reopen)  DENDROS_SHELL_PID=$$ python3 "${_DENDROS_DIR}/dendros_reopen.py" ;;
+        test)
+            # The shell-side facts Python can't see: whether `ros2` is still our function
+            # (an alias or a later function would shadow it) and where the real binary is.
+            DENDROS_ROS2_TYPE="$(type -t ros2)" DENDROS_ROS2_BIN="$(type -P ros2)" \
+                python3 "${_DENDROS_DIR}/dendros_selftest.py" "${@:2}"
+            ;;
         clear)
             _dendros_send_tui_command clear clear
             ;;
@@ -119,6 +125,9 @@ set_disable_flag(False)
             echo "  tee       Save the lines a running TUI currently shows (filters applied) to a file"
             echo "            (dendros tee <file> [-c keep colors] [-a append])"
             echo "  reopen    Reopen this terminal's last ros2 launch TUI run (read-only scrollback)"
+            echo "  test      Check dependencies, shell and config, open the TUI once, print color charts"
+            echo "            Options: --no-tui     don't open the TUI"
+            echo "                     --no-colors  skip the color charts"
             ;;
     esac
 }
@@ -127,7 +136,7 @@ _dendros_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
 
     if [[ $COMP_CWORD -eq 1 ]]; then
-        COMPREPLY=($(compgen -W "config init disable enable focus find grep level mute unmute clear mark tee reopen" -- "$cur"))
+        COMPREPLY=($(compgen -W "config init disable enable focus find grep level mute unmute clear mark tee reopen test" -- "$cur"))
         return
     fi
 
@@ -137,6 +146,9 @@ _dendros_complete() {
             ;;
         level)
             COMPREPLY=($(compgen -W "debug info warn error fatal" -- "$cur"))
+            ;;
+        test)
+            COMPREPLY=($(compgen -W "--no-tui --no-colors" -- "$cur"))
             ;;
         tee)
             compopt -o filenames 2>/dev/null

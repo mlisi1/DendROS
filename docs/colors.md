@@ -3,7 +3,7 @@
 The `color:` field accepts three formats.
 
 !!! warning "Colors look different from terminal to terminal"
-    Standard names (`red`, `blue`, `bold cyan`, …) and raw ANSI codes are drawn with **your terminal's own color theme**, so the same config can look different in Terminator, Konsole or GNOME Terminal. Some terminals also brighten bold text. Use hex colors (`#RRGGBB`) when you need the exact same shade everywhere. See [Troubleshooting](troubleshooting.md#colors) for side-by-side examples.
+    Standard names (`red`, `blue`, `bold cyan`, …) and raw ANSI codes are drawn with **your terminal's own color theme**, so the same config can look different in Terminator, Konsole or GNOME Terminal. Some terminals also brighten bold text. Use hex colors (`#RRGGBB`) when you need the exact same shade everywhere. See [Troubleshooting](troubleshooting.md#colors) for side-by-side examples, and run [`dendros test`](dendros-test.md) to see every color below as your terminal draws it.
 
 ---
 

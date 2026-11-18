@@ -101,6 +101,8 @@ ros2 launch demo_nodes_cpp talker_listener_launch.py
 
 If the launch opens in the full-screen viewer with `[dendROS]` and the version in the header, DendROS is active. Press ++ctrl+c++ to stop the launch and ++q++ to close the viewer.
 
+To check the dependencies and see which colors your terminal can display, run [`dendros test`](dendros-test.md).
+
 This package has no `dendROS.yaml` yet, so its lines aren't colored. Continue with the [Quick Start](quickstart.md) to create a config for your own package.
 
 To check which config DendROS finds for a package, use [debug output](runtime-control.md#debug-output-dendros_debug):

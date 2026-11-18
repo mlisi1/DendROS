@@ -100,6 +100,7 @@ The `ros2()` shell wrapper intercepts specific subcommands; everything else call
 | `dendros disable` | Disable colorization **system-wide** — every terminal, including an already-running `ros2 launch`, switches to plain passthrough within about a second. Also sets `DENDROS_DISABLE=1` in the current shell. |
 | `dendros enable` | Re-enable colorization **system-wide**. Also unsets `DENDROS_DISABLE` in the current shell. |
 | `dendros reopen` | Reopen this terminal's last TUI launch, read-only. See [Reopen the last run](tui-remote.md#reopen-the-last-run). |
+| `dendros test [--no-tui] [--no-colors]` | Check dependencies, shell and config files, open the TUI once and print color charts. See [Self-test](dendros-test.md). |
 | `dendros focus <node>...` | Send `focus` to a running TUI launch. |
 | `dendros level [lvl]` | Send `level` to a running TUI launch (no level removes the filter). |
 | `dendros grep [text]` | Send `grep` to a running TUI launch (no text removes the filter). |
